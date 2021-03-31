@@ -391,12 +391,6 @@ func tableKubernetesPod(ctx context.Context) *plugin.Table {
 				Transform:   transform.FromField("Name"),
 			},
 			{
-				Name:        "akas",
-				Type:        proto.ColumnType_JSON,
-				Description: ColumnDescriptionAkas,
-				Transform:   transform.FromField("UID").Transform(ensureStringArray),
-			},
-			{
 				Name:        "tags",
 				Type:        proto.ColumnType_JSON,
 				Description: ColumnDescriptionTags,
@@ -446,7 +440,7 @@ func getK8sPod(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) 
 		return nil, err
 	}
 
-	return pod, nil
+	return *pod, nil
 }
 
 //// TRANSFORM FUNCTIONS

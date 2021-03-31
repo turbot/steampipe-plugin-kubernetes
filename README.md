@@ -29,7 +29,7 @@ Notes...
     - `Spec` and `status` should be expanded into individual columns, not included as a giant JSON column
         - do not prefix with with `spec_` and `status_` ?
 
-    - Omit the TypeMeta columns?  They're always missing??
+    - Why are the TypeMeta columns?  They're always missing??
 
 
 - Auth / creds / Scope: 

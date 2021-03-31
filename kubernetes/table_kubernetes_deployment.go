@@ -24,18 +24,18 @@ func tableKubernetesDeployment(ctx context.Context) *plugin.Table {
 		},
 		Columns: k8sCommonColumns([]*plugin.Column{
 
+			//// Spec Columns
+			// To do - add Spec Columns...
+
+			//// Status Columns
+			// To do - add Status Columns...
+
 			//// Steampipe Standard Columns
 			{
 				Name:        "title",
 				Type:        proto.ColumnType_STRING,
 				Description: ColumnDescriptionTitle,
 				Transform:   transform.FromField("Name"),
-			},
-			{
-				Name:        "akas",
-				Type:        proto.ColumnType_JSON,
-				Description: ColumnDescriptionAkas,
-				Transform:   transform.FromField("UID").Transform(ensureStringArray),
 			},
 			{
 				Name:        "tags",
@@ -87,7 +87,7 @@ func getK8sDeployment(ctx context.Context, d *plugin.QueryData, h *plugin.Hydrat
 		return nil, err
 	}
 
-	return deployment, nil
+	return *deployment, nil
 }
 
 //// TRANSFORM FUNCTIONS
