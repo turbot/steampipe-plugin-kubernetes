@@ -73,10 +73,7 @@ func v1TimeToRFC3339(_ context.Context, d *transform.TransformData) (interface{}
 }
 
 func isNotFoundError(err error) bool {
-	if strings.HasSuffix(err.Error(), "not found") {
-		return true
-	}
-	return false
+	return strings.HasSuffix(err.Error(), "not found")
 }
 
 func mergeTags(labels map[string]string, annotations map[string]string) map[string]string {
