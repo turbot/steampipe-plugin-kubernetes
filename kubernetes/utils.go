@@ -54,7 +54,7 @@ func GetNewClientset(ctx context.Context, connectionManager *connection.Manager)
 	return clientset, err
 }
 
-func v1TimeToRFC3339(ctx context.Context, d *transform.TransformData) (interface{}, error) {
+func v1TimeToRFC3339(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	if d.Value == nil {
 		return nil, nil
 	}
@@ -93,7 +93,7 @@ func mergeTags(labels map[string]string, annotations map[string]string) map[stri
 //// HYDRATE FUNCTIONS
 
 // There's probably a better way to do this than opening and parsing the config file again...
-func getKubectlContext(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+func getKubectlContext(ctx context.Context, _ *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
 	logger := plugin.Logger(ctx)
 	logger.Trace("getKubectlContext")
 
