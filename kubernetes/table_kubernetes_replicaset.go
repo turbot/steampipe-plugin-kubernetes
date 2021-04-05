@@ -70,7 +70,7 @@ func listK8sReplicaSets(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 	return nil, nil
 }
 
-func getK8sReplicaSet(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+func getK8sReplicaSet(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
 	logger := plugin.Logger(ctx)
 	logger.Trace("getK8sReplicaSet")
 

@@ -70,7 +70,7 @@ func listK8sNamespaces(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 	return nil, nil
 }
 
-func getK8sNamespace(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+func getK8sNamespace(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
 	logger := plugin.Logger(ctx)
 	logger.Trace("getK8sNamespace")
 
