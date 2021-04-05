@@ -24,11 +24,27 @@ func tableKubernetesNamespace(ctx context.Context) *plugin.Table {
 		},
 		Columns: k8sCommonColumns([]*plugin.Column{
 
-			//// Spec Columns
-			// To do - add Spec Columns...
+			//// NamespaceSpec Columns
+			// {
+			// 	Name:        "finalizers",
+			// 	Type:        proto.ColumnType_JSON,
+			// 	Description: "Finalizers is an opaque list of values that must be empty to permanently remove object from storage.",
+			// 	Transform:   transform.FromField("Spec.Finalizers"),
+			// },
 
-			//// Status Columns
-			// To do - add Status Columns...
+			//// NamespaceStatus Columns
+			{
+				Name:        "phase",
+				Type:        proto.ColumnType_STRING,
+				Description: "The current lifecycle phase of the namespace.",
+				Transform:   transform.FromField("Status.Phase"),
+			},
+			{
+				Name:        "conditions",
+				Type:        proto.ColumnType_JSON,
+				Description: "The latest available observations of namespace's current state.",
+				Transform:   transform.FromField("Status.NamespaceCondition"),
+			},
 
 			//// Steampipe Standard Columns
 			{
