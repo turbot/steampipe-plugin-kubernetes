@@ -12,6 +12,13 @@ const (
 	ColumnDescriptionTags  = "A map of tags for the resource. This includes both labels and annotations."
 )
 
+var objectMetadataPrimaryColumnsWithoutNamespace = []*plugin.Column{
+	//{Name: "raw", Type: proto.ColumnType_JSON, Transform: transform.FromValue()},
+	{Name: "name", Type: proto.ColumnType_STRING, Description: "Name of the object.  Name must be unique within a namespace."},
+	// {Name: "namespace", Type: proto.ColumnType_STRING, Description: "Namespace defines the space within which each name must be unique."},
+	{Name: "uid", Type: proto.ColumnType_STRING, Description: "UID is the unique in time and space value for this object."},
+}
+
 var objectMetadataPrimaryColumns = []*plugin.Column{
 	//{Name: "raw", Type: proto.ColumnType_JSON, Transform: transform.FromValue()},
 	{Name: "name", Type: proto.ColumnType_STRING, Description: "Name of the object.  Name must be unique within a namespace."},
@@ -72,6 +79,18 @@ var kubectlConfigColumns = []*plugin.Column{
 // append the common aws columns for REGIONAL resources onto the column list
 func k8sCommonColumns(columns []*plugin.Column) []*plugin.Column {
 	allColumns := objectMetadataPrimaryColumns
+	allColumns = append(allColumns, columns...)
+	//allColumns = append(allColumns, typeMetaColumns...)
+	//allColumns = append(allColumns, specStatusColumns...)
+	allColumns = append(allColumns, objectMetadataSecondaryColumns...)
+	allColumns = append(allColumns, kubectlConfigColumns...)
+
+	return allColumns
+}
+
+// append the common kubernetes columns for non-namespaced resources onto the column list
+func k8sCommonGlobalColumns(columns []*plugin.Column) []*plugin.Column {
+	allColumns := objectMetadataPrimaryColumnsWithoutNamespace
 	allColumns = append(allColumns, columns...)
 	//allColumns = append(allColumns, typeMetaColumns...)
 	//allColumns = append(allColumns, specStatusColumns...)
