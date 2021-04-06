@@ -14,7 +14,7 @@ import (
 func tableKubernetesClusterRole(ctx context.Context) *plugin.Table {
 	return &plugin.Table{
 		Name:        "kubernetes_cluster_role",
-		Description: "A role at the cluster level and in all namespaces.",
+		Description: "ClusterRole contains rules that represent a set of permissions.",
 		Get: &plugin.GetConfig{
 			KeyColumns: plugin.SingleColumn("name"),
 			Hydrate:    getK8sClusterRole,
@@ -22,18 +22,17 @@ func tableKubernetesClusterRole(ctx context.Context) *plugin.Table {
 		List: &plugin.ListConfig{
 			Hydrate: listK8sClusterRoles,
 		},
+		// ClusterRole, is a non-namespaced resource.
 		Columns: k8sCommonGlobalColumns([]*plugin.Column{
 			{
 				Name:        "rules",
 				Type:        proto.ColumnType_JSON,
 				Description: "List of the PolicyRules for this Role.",
-				// Transform:   transform.FromField("Rules"),
 			},
 			{
 				Name:        "aggregation_rule",
 				Type:        proto.ColumnType_JSON,
 				Description: "An optional field that describes how to build the Rules for this ClusterRole",
-				Transform:   transform.FromField("Spec.Containers"),
 			},
 
 			//// Steampipe Standard Columns
@@ -47,7 +46,7 @@ func tableKubernetesClusterRole(ctx context.Context) *plugin.Table {
 				Name:        "tags",
 				Type:        proto.ColumnType_JSON,
 				Description: ColumnDescriptionTags,
-				Transform:   transform.From(transformRoleTags),
+				Transform:   transform.From(transformClusterRoleTags),
 			},
 		}),
 	}
@@ -86,7 +85,6 @@ func getK8sClusterRole(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 	}
 
 	name := d.KeyColumnQuals["name"].GetStringValue()
-	// namespace := d.KeyColumnQuals["namespace"].GetStringValue()
 
 	clusterRole, err := clientset.RbacV1().ClusterRoles().Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
@@ -98,7 +96,7 @@ func getK8sClusterRole(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 
 //// TRANSFORM FUNCTIONS
 
-func transformRoleTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
+func transformClusterRoleTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(v1.ClusterRole)
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }
