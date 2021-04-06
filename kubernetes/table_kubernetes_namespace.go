@@ -25,12 +25,12 @@ func tableKubernetesNamespace(ctx context.Context) *plugin.Table {
 		Columns: k8sCommonColumns([]*plugin.Column{
 
 			//// NamespaceSpec Columns
-			// {
-			// 	Name:        "finalizers",
-			// 	Type:        proto.ColumnType_JSON,
-			// 	Description: "Finalizers is an opaque list of values that must be empty to permanently remove object from storage.",
-			// 	Transform:   transform.FromField("Spec.Finalizers"),
-			// },
+			{
+				Name:        "spec_finalizers",
+				Type:        proto.ColumnType_JSON,
+				Description: "Finalizers is an opaque list of values that must be empty to permanently remove object from storage.",
+				Transform:   transform.FromField("Spec.Finalizers"),
+			},
 
 			//// NamespaceStatus Columns
 			{
