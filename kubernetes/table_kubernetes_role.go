@@ -62,8 +62,8 @@ func listK8sRoles(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 		return nil, err
 	}
 
-	for _, clusterRole := range response.Items {
-		d.StreamListItem(ctx, clusterRole)
+	for _, role := range response.Items {
+		d.StreamListItem(ctx, role)
 	}
 
 	return nil, nil
@@ -80,6 +80,11 @@ func getK8sRole(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData)
 
 	name := d.KeyColumnQuals["name"].GetStringValue()
 	namespace := d.KeyColumnQuals["namespace"].GetStringValue()
+
+	// return if namespace or name is empty
+	if namespace == "" || name == "" {
+		return nil, nil
+	}
 
 	role, err := clientset.RbacV1().Roles(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
