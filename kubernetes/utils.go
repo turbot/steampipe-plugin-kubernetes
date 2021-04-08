@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -44,11 +45,14 @@ func GetNewClientset(ctx context.Context, connectionManager *connection.Manager)
 		return nil, err
 	}
 
-	connectionManager.Cache.Set(serviceCacheKey, clientset)
-	if _, ok := connectionManager.Cache.Get(serviceCacheKey); ok {
+	success := connectionManager.Cache.Set(serviceCacheKey, clientset)
+
+	logger.Warn("@@@@@@@  GetNewClientset SET cache status ", "success", success)
+	time.Sleep(5000 * time.Millisecond)
+	if value, ok := connectionManager.Cache.Get(serviceCacheKey); ok {
 		logger.Warn("!!!! Clientset added to cache !!!!")
 	} else {
-		logger.Warn("!!!! Clientset NOT Found in Cache after adding !!!!")
+		logger.Warn("!!!! Clientset NOT Found in Cache after adding !!!!", "serviceCacheKey", serviceCacheKey, "Value", value)
 	}
 
 	return clientset, err

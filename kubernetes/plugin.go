@@ -26,6 +26,7 @@ func Plugin(ctx context.Context) *plugin.Plugin {
 		TableMap: map[string]*plugin.Table{
 			"kubernetes_cluster_role":         tableKubernetesClusterRole(ctx),
 			"kubernetes_cluster_role_binding": tableKubernetesClusterRoleBinding(ctx),
+			"kubernetes_config_map":           tableKubernetesConfigMap(ctx),
 			"kubernetes_deployment":           tableKubernetesDeployment(ctx),
 			"kubernetes_namespace":            tableKubernetesNamespace(ctx),
 			"kubernetes_node":                 tableKubernetesNode(ctx),
