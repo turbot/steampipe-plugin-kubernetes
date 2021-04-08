@@ -11,31 +11,36 @@ import (
 	"github.com/turbot/steampipe-plugin-sdk/plugin/transform"
 )
 
-func tableKubernetesConfigMap(ctx context.Context) *plugin.Table {
+func tableKubernetesSecret(ctx context.Context) *plugin.Table {
 	return &plugin.Table{
-		Name:        "kubernetes_config_map",
-		Description: "Config Map can be used to store fine-grained information like individual properties or coarse-grained information like entire config files or JSON blobs.",
+		Name:        "kubernetes_secret",
+		Description: "Secrets can be used to store sensitive information either as individual properties or coarse-grained entries like entire files or JSON blobs.",
 		Get: &plugin.GetConfig{
 			KeyColumns: plugin.SingleColumn("name"),
-			Hydrate:    getK8sConfigMap,
+			Hydrate:    getK8sSecret,
 		},
 		List: &plugin.ListConfig{
-			Hydrate: listK8sConfigMaps,
+			Hydrate: listK8sSecrets,
 		},
 		// ClusterRole, is a non-namespaced resource.
 		Columns: k8sCommonColumns([]*plugin.Column{
 			{
 				Name:        "immutable",
 				Type:        proto.ColumnType_BOOL,
-				Description: "If set to true, ensures that data stored in the ConfigMap cannot be updated (only object metadata can be modified). If not set to true, the field can be modified at any time. Defaulted to nil.",
+				Description: "If set to true, ensures that data stored in the Secret cannot be updated (only object metadata can be modified). If not set to true, the field can be modified at any time. Defaulted to nil.",
+			},
+			{
+				Name:        "type",
+				Type:        proto.ColumnType_STRING,
+				Description: "Type of the secret data.",
 			},
 			{
 				Name:        "data",
 				Type:        proto.ColumnType_JSON,
-				Description: "Contains the configuration data.",
+				Description: "Contains the secret data.",
 			},
 			{
-				Name:        "binary_data",
+				Name:        "string_data",
 				Type:        proto.ColumnType_JSON,
 				Description: "Contains the configuration binary data.",
 			},
@@ -51,7 +56,7 @@ func tableKubernetesConfigMap(ctx context.Context) *plugin.Table {
 				Name:        "tags",
 				Type:        proto.ColumnType_JSON,
 				Description: ColumnDescriptionTags,
-				Transform:   transform.From(transformConfigMapTags),
+				Transform:   transform.From(transformSecretTags),
 			},
 		}),
 	}
@@ -59,30 +64,30 @@ func tableKubernetesConfigMap(ctx context.Context) *plugin.Table {
 
 //// HYDRATE FUNCTIONS
 
-func listK8sConfigMaps(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
+func listK8sSecrets(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
 	logger := plugin.Logger(ctx)
-	logger.Trace("listK8sConfigMaps")
+	logger.Trace("listK8sSecrets")
 
 	clientset, err := GetNewClientset(ctx, d.ConnectionManager)
 	if err != nil {
 		return nil, err
 	}
 
-	response, err := clientset.CoreV1().ConfigMaps("").List(ctx, metav1.ListOptions{})
+	response, err := clientset.CoreV1().Secrets("").List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
 
-	for _, configMap := range response.Items {
-		d.StreamListItem(ctx, configMap)
+	for _, secret := range response.Items {
+		d.StreamListItem(ctx, secret)
 	}
 
 	return nil, nil
 }
 
-func getK8sConfigMap(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
+func getK8sSecret(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
 	logger := plugin.Logger(ctx)
-	logger.Trace("getK8sConfigMap")
+	logger.Trace("getK8sSecret")
 
 	clientset, err := GetNewClientset(ctx, d.ConnectionManager)
 	if err != nil {
@@ -92,17 +97,17 @@ func getK8sConfigMap(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 	name := d.KeyColumnQuals["name"].GetStringValue()
 	namespace := d.KeyColumnQuals["namespace"].GetStringValue()
 
-	configMap, err := clientset.CoreV1().ConfigMaps(namespace).Get(ctx, name, metav1.GetOptions{})
+	secret, err := clientset.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
 		return nil, err
 	}
 
-	return *configMap, nil
+	return *secret, nil
 }
 
 //// TRANSFORM FUNCTIONS
 
-func transformConfigMapTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	obj := d.HydrateItem.(v1.ConfigMap)
+func transformSecretTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
+	obj := d.HydrateItem.(v1.Secret)
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }
