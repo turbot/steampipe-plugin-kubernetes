@@ -31,6 +31,8 @@ func Plugin(ctx context.Context) *plugin.Plugin {
 			"kubernetes_namespace":            tableKubernetesNamespace(ctx),
 			"kubernetes_node":                 tableKubernetesNode(ctx),
 			"kubernetes_pod":                  tableKubernetesPod(ctx),
+			"kubernetes_pod_security_policy":  tableKubernetesPodSecurityPolicy(ctx),
+			"kubernetes_pod_template_spec":    tableKubernetesPodTemplateSpec(ctx),
 			"kubernetes_replicaset":           tableKubernetesReplicaSet(ctx),
 			"kubernetes_role":                 tableKubernetesRole(ctx),
 			"kubernetes_role_binding":         tableKubernetesRoleBinding(ctx),
