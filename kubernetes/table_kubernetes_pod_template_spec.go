@@ -14,7 +14,6 @@ func tableKubernetesPodTemplateSpec(ctx context.Context) *plugin.Table {
 	return &plugin.Table{
 		Name: "kubernetes_pod_template_spec",
 		// Description: "Role contains rules that represent a set of permissions.",
-		// DefaultTransform: transform.FromJSONTag(),
 		List: &plugin.ListConfig{
 			KeyColumns: plugin.SingleColumn("template"),
 			Hydrate:    listPodTemplateSpec,
@@ -22,7 +21,7 @@ func tableKubernetesPodTemplateSpec(ctx context.Context) *plugin.Table {
 		Columns: []*plugin.Column{
 			{
 				Name:        "template",
-				Type:        proto.ColumnType_STRING,
+				Type:        proto.ColumnType_JSON,
 				Description: "List of the PolicyRules for this Role.",
 				Transform:   transform.FromField("template"),
 			},
@@ -295,12 +294,12 @@ func listPodTemplateSpec(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 	logger := plugin.Logger(ctx)
 	logger.Warn("listPodTemplate")
 
-	template := d.KeyColumnQuals["template"].GetStringValue()
-	logger.Warn("listPodTemplate", "template", template)
+	template := d.KeyColumnQuals["template"].GetJsonbValue()
+	// logger.Warn("listPodTemplate", "template", template)
 
-	if template == "" {
-		return nil, nil
-	}
+	// if template == "" {
+	// 	return nil, nil
+	// }
 
 	var rawPolicyMap map[string]interface{}
 	err := json.Unmarshal([]byte(template), &rawPolicyMap)
@@ -311,7 +310,7 @@ func listPodTemplateSpec(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 
 	rawPolicyMap["template"] = template
 
-	logger.Warn("listPodTemplate", "rawPolicyMap", rawPolicyMap)
+	// logger.Warn("listPodTemplate", "rawPolicyMap", rawPolicyMap)
 	d.StreamListItem(ctx, rawPolicyMap)
 
 	return nil, nil
