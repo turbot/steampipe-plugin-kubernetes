@@ -63,7 +63,7 @@ func listK8sConfigMaps(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 	logger := plugin.Logger(ctx)
 	logger.Trace("listK8sConfigMaps")
 
-	clientset, err := GetNewClientset(ctx, d.ConnectionManager)
+	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +84,7 @@ func getK8sConfigMap(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 	logger := plugin.Logger(ctx)
 	logger.Trace("getK8sConfigMap")
 
-	clientset, err := GetNewClientset(ctx, d.ConnectionManager)
+	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
 	}

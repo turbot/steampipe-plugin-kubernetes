@@ -111,7 +111,7 @@ func listK8sReplicaSets(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 	logger := plugin.Logger(ctx)
 	logger.Trace("listK8sReplicaSets")
 
-	clientset, err := GetNewClientset(ctx, d.ConnectionManager)
+	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +132,7 @@ func getK8sReplicaSet(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 	logger := plugin.Logger(ctx)
 	logger.Trace("getK8sReplicaSet")
 
-	clientset, err := GetNewClientset(ctx, d.ConnectionManager)
+	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
 	}

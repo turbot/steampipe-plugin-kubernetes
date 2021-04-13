@@ -72,7 +72,7 @@ func listK8sRoleBindings(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 	logger := plugin.Logger(ctx)
 	logger.Trace("listK8sRoleBindings")
 
-	clientset, err := GetNewClientset(ctx, d.ConnectionManager)
+	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +93,7 @@ func getK8sRoleBinding(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 	logger := plugin.Logger(ctx)
 	logger.Trace("getK8sRoleBinding")
 
-	clientset, err := GetNewClientset(ctx, d.ConnectionManager)
+	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
 	}

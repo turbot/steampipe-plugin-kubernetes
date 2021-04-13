@@ -69,7 +69,7 @@ func listK8sNamespaces(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 	logger := plugin.Logger(ctx)
 	logger.Trace("listK8sNamespaces")
 
-	clientset, err := GetNewClientset(ctx, d.ConnectionManager)
+	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +90,7 @@ func getK8sNamespace(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 	logger := plugin.Logger(ctx)
 	logger.Trace("getK8sNamespace")
 
-	clientset, err := GetNewClientset(ctx, d.ConnectionManager)
+	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
 	}

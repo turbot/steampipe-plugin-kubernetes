@@ -406,7 +406,7 @@ func listK8sPods(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 	logger := plugin.Logger(ctx)
 	logger.Trace("listK8sPods")
 
-	clientset, err := GetNewClientset(ctx, d.ConnectionManager)
+	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
 	}
@@ -427,7 +427,7 @@ func getK8sPod(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) 
 	logger := plugin.Logger(ctx)
 	logger.Trace("getK8sPod")
 
-	clientset, err := GetNewClientset(ctx, d.ConnectionManager)
+	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
 	}

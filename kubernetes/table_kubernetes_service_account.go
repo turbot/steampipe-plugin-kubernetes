@@ -63,7 +63,7 @@ func listK8sServiceAccounts(ctx context.Context, d *plugin.QueryData, _ *plugin.
 	logger := plugin.Logger(ctx)
 	logger.Trace("listK8sServiceAccounts")
 
-	clientset, err := GetNewClientset(ctx, d.ConnectionManager)
+	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +84,7 @@ func getK8sServiceAccount(ctx context.Context, d *plugin.QueryData, _ *plugin.Hy
 	logger := plugin.Logger(ctx)
 	logger.Trace("getK8sServiceAccount")
 
-	clientset, err := GetNewClientset(ctx, d.ConnectionManager)
+	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
 	}

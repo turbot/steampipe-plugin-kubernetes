@@ -141,7 +141,7 @@ func listK8sDaemonSets(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 	logger := plugin.Logger(ctx)
 	logger.Trace("listK8sDaemonSets")
 
-	clientset, err := GetNewClientset(ctx, d.ConnectionManager)
+	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +162,7 @@ func getK8sDaemonSet(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 	logger := plugin.Logger(ctx)
 	logger.Trace("getK8sDaemonSet")
 
-	clientset, err := GetNewClientset(ctx, d.ConnectionManager)
+	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
 	}

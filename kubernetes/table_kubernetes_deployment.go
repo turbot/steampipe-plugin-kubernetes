@@ -147,7 +147,7 @@ func listK8sDeployments(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 	logger := plugin.Logger(ctx)
 	logger.Trace("listK8sDeployments")
 
-	clientset, err := GetNewClientset(ctx, d.ConnectionManager)
+	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
 	}
@@ -168,7 +168,7 @@ func getK8sDeployment(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 	logger := plugin.Logger(ctx)
 	logger.Trace("getK8sDeployment")
 
-	clientset, err := GetNewClientset(ctx, d.ConnectionManager)
+	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
 	}

@@ -153,7 +153,7 @@ func listK8sNodes(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 	logger := plugin.Logger(ctx)
 	logger.Trace("listK8sNodes")
 
-	clientset, err := GetNewClientset(ctx, d.ConnectionManager)
+	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +174,7 @@ func getK8sNode(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData)
 	logger := plugin.Logger(ctx)
 	logger.Trace("getK8sNode")
 
-	clientset, err := GetNewClientset(ctx, d.ConnectionManager)
+	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
 	}

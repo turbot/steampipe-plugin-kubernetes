@@ -52,7 +52,7 @@ func listK8sRoles(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 	logger := plugin.Logger(ctx)
 	logger.Trace("listK8sRoles")
 
-	clientset, err := GetNewClientset(ctx, d.ConnectionManager)
+	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +73,7 @@ func getK8sRole(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData)
 	logger := plugin.Logger(ctx)
 	logger.Trace("getK8sRole")
 
-	clientset, err := GetNewClientset(ctx, d.ConnectionManager)
+	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
 	}

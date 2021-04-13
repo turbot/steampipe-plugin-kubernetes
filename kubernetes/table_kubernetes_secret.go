@@ -68,7 +68,7 @@ func listK8sSecrets(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateD
 	logger := plugin.Logger(ctx)
 	logger.Trace("listK8sSecrets")
 
-	clientset, err := GetNewClientset(ctx, d.ConnectionManager)
+	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +89,7 @@ func getK8sSecret(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 	logger := plugin.Logger(ctx)
 	logger.Trace("getK8sSecret")
 
-	clientset, err := GetNewClientset(ctx, d.ConnectionManager)
+	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
 	}

@@ -23,6 +23,10 @@ func Plugin(ctx context.Context) *plugin.Plugin {
 		// DefaultGetConfig: &plugin.GetConfig{
 		// 	ShouldIgnoreError: isNotFoundError([]string{"ResourceNotFoundException", "NoSuchEntity"}),
 		// },
+		ConnectionConfigSchema: &plugin.ConnectionConfigSchema{
+			NewInstance: ConfigInstance,
+			Schema:      ConfigSchema,
+		},
 		TableMap: map[string]*plugin.Table{
 			"kubernetes_cluster_role":         tableKubernetesClusterRole(ctx),
 			"kubernetes_cluster_role_binding": tableKubernetesClusterRoleBinding(ctx),

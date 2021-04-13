@@ -72,7 +72,7 @@ func listK8sClusterRoleBindings(ctx context.Context, d *plugin.QueryData, _ *plu
 	logger := plugin.Logger(ctx)
 	logger.Trace("listK8sClusterRoleBindings")
 
-	clientset, err := GetNewClientset(ctx, d.ConnectionManager)
+	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +93,7 @@ func getK8sClusterRoleBinding(ctx context.Context, d *plugin.QueryData, _ *plugi
 	logger := plugin.Logger(ctx)
 	logger.Trace("getK8sClusterRoleBinding")
 
-	clientset, err := GetNewClientset(ctx, d.ConnectionManager)
+	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
 	}
