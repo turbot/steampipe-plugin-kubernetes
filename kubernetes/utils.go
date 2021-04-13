@@ -160,7 +160,7 @@ func getK8Config(ctx context.Context, d *plugin.QueryData) (clientcmd.ClientConf
 func getKubectlContext(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
 	cacheKey := "getKubectlContext"
 	if cachedData, ok := d.ConnectionManager.Cache.Get(cacheKey); ok {
-		plugin.Logger(ctx).Warn("getKubectlContext", "######## CACHED CURRENT CONTEXT", cachedData.(string))
+		// plugin.Logger(ctx).Warn("getKubectlContext", "######## CACHED CURRENT CONTEXT", cachedData.(string))
 		return cachedData.(string), nil
 	}
 
@@ -180,7 +180,7 @@ func getKubectlContext(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 		currentContext = *kubernetesConfig.ConfigContext
 	}
 
-	plugin.Logger(ctx).Warn("getKubectlContext", "######## CURRENT CONTEXT", currentContext)
+	// plugin.Logger(ctx).Warn("getKubectlContext", "######## CURRENT CONTEXT", currentContext)
 
 	// save current context in cache
 	d.ConnectionManager.Cache.Set(cacheKey, currentContext)
