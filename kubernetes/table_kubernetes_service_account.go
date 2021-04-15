@@ -22,8 +22,8 @@ func tableKubernetesServiceAccount(ctx context.Context) *plugin.Table {
 		List: &plugin.ListConfig{
 			Hydrate: listK8sServiceAccounts,
 		},
-		// Service Account, is a non-namespaced resource.
-		Columns: k8sCommonGlobalColumns([]*plugin.Column{
+		// Service Account, is namespaced resource.
+		Columns: k8sCommonColumns([]*plugin.Column{
 			{
 				Name:        "automount_service_account_token",
 				Type:        proto.ColumnType_BOOL,

@@ -2,14 +2,14 @@
 
 Pods are the smallest deployable units of computing that you can create and manage in Kubernetes.
 
-A Pod is a group of one or more containers, with shared storage and network resources, and a specification for how to run the containers. 
+A Pod is a group of one or more containers, with shared storage and network resources, and a specification for how to run the containers.
 
 ## Examples
 
 ### Basic Info
 
 ```sql
-select 
+select
   namespace,
   name,
   phase,
@@ -19,50 +19,49 @@ select
   jsonb_array_length(containers) as container_count,
   jsonb_array_length(init_containers) as init_container_count,
   jsonb_array_length(ephemeral_containers) as ephemeral_container_count
-from 
+from
   kubernetes_pod
 order by
   namespace,
   name;
 ```
 
-
 ### List Unowned (Naked) Pods
 
 ```sql
-select 
+select
   name,
   namespace,
   phase,
   pod_ip,
   node_name
-from 
+from
   kubernetes_pod
 where
   owner_references is null;
 ```
 
 ### List Privileged Containers
+
 ```sql
-select 
+select
   name as pod_name,
   namespace,
   phase,
   jsonb_pretty(owner_references) as owners,
   c ->> 'name' as container_name,
   c ->> 'image' as container_image
-from 
+from
   kubernetes_pod,
   jsonb_array_elements(containers) as c
 where
   c -> 'securityContext' ->> 'privileged' = 'true';
 ```
 
-
-### List Pods with access to the to the host process ID, IPC, or network namespace 
+### List Pods with access to the to the host process ID, IPC, or network namespace
 
 ```sql
-select 
+select
   name,
   namespace,
   phase,
@@ -70,18 +69,16 @@ select
   host_ipc,
   host_network,
   jsonb_pretty(owner_references) as owners
-from 
+from
   kubernetes_pod
 where
   host_pid or host_ipc or host_network;
 ```
 
-
-
 ### Container Statuses
 
 ```sql
-select 
+select
   namespace,
   name as pod_name,
   phase,
@@ -91,7 +88,7 @@ select
   cs_state as state,
   cs ->> 'started' as started,
   cs ->> 'restartCount' as restarts
-from 
+from
   kubernetes_pod,
   jsonb_array_elements(container_statuses) as cs,
   jsonb_object_keys(cs -> 'state') as cs_state
@@ -100,7 +97,6 @@ order by
   name,
   container_name;
 ```
-
 
 ### `kubectl get pods` columns
 
@@ -133,4 +129,3 @@ group by
   namespace,
   name;
 ```
-
