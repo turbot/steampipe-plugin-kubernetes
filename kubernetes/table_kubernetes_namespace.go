@@ -22,7 +22,7 @@ func tableKubernetesNamespace(ctx context.Context) *plugin.Table {
 		List: &plugin.ListConfig{
 			Hydrate: listK8sNamespaces,
 		},
-		Columns: k8sCommonColumns([]*plugin.Column{
+		Columns: k8sCommonGlobalColumns([]*plugin.Column{
 
 			//// NamespaceSpec Columns
 			{
