@@ -22,7 +22,7 @@ func tableKubernetesNode(ctx context.Context) *plugin.Table {
 		List: &plugin.ListConfig{
 			Hydrate: listK8sNodes,
 		},
-		Columns: k8sCommonColumns([]*plugin.Column{
+		Columns: k8sCommonGlobalColumns([]*plugin.Column{
 			//// NodeSpec
 			{
 				Name:        "pod_cidr",
