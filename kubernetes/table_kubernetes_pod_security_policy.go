@@ -70,7 +70,7 @@ func tableKubernetesPodSecurityPolicy(ctx context.Context) *plugin.Table {
 				Transform:   transform.FromField("Spec.Privileged"),
 			},
 			{
-				Name:        "readOnlyRootFilesystem",
+				Name:        "read_only_root_filesystem",
 				Type:        proto.ColumnType_BOOL,
 				Description: "If set to true will force containers to run with a read only root file system. If set to false the container may run with a read only root file system if it wishes but it will not be forced to.",
 				Transform:   transform.FromField("Spec.ReadOnlyRootFilesystem"),

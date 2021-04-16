@@ -58,7 +58,7 @@ where
   c -> 'securityContext' ->> 'privileged' = 'true';
 ```
 
-### List Pods with access to the to the host process ID, IPC, or network namespace
+### List Pods with access to the host process ID, IPC, or network namespace
 
 ```sql
 select
