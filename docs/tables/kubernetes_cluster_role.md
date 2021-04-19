@@ -6,8 +6,6 @@ ClusterRole contains rules that represent a set of permissions. You can use them
 - non-resource endpoints (like /healthz)
 - namespaced resources (like Pods), across all namespaces
 
-For example: you can use a ClusterRole to allow a particular user to run `kubectl get pods --all-namespaces`
-
 ## Examples
 
 ### Basic Info
@@ -28,15 +26,16 @@ order by
 
 ```sql
 select
-  cr.name as role_name,
-  cr_rule ->> 'apiGroups' as rule_api_groups,
-  cr_rule ->> 'resources' as rule_resources,
-  cr_rule ->> 'verbs' as rule_verbs,
-  cr_rule ->> 'resourceNames' as rule_resource_names
+  name as role_name,
+  rule ->> 'apiGroups' as api_groups,
+  rule ->> 'resources' as resources,
+  rule ->> 'nonResourceURLs' as non_resource_urls,
+  rule ->> 'verbs' as verbs,
+  rule ->> 'resourceNames' as resource_names
 from
-  kubernetes_cluster_role as cr,
-  jsonb_array_elements(cr.rules) as cr_rule
+  kubernetes_cluster_role,
+  jsonb_array_elements(rules) as rule
 order by
   role_name,
-  rule_api_groups
+  api_groups
 ```
