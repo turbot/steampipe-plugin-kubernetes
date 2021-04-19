@@ -22,12 +22,112 @@ func tableKubernetesNode(ctx context.Context) *plugin.Table {
 		List: &plugin.ListConfig{
 			Hydrate: listK8sNodes,
 		},
-		Columns: k8sCommonColumns([]*plugin.Column{
+		Columns: k8sCommonGlobalColumns([]*plugin.Column{
+			//// NodeSpec
+			{
+				Name:        "pod_cidr",
+				Type:        proto.ColumnType_CIDR,
+				Description: "Pod IP range assigned to the node.",
+				Transform:   transform.FromField("Spec.PodCIDR"),
+			},
+			{
+				Name:        "pod_cidrs",
+				Type:        proto.ColumnType_JSON,
+				Description: "List of the IP ranges assigned to the node for usage by Pods.",
+				Transform:   transform.FromField("Spec.PodCIDRs"),
+			},
+			{
+				Name:        "provider_id",
+				Type:        proto.ColumnType_STRING,
+				Description: "ID of the node assigned by the cloud provider in the format: <ProviderName>://<ProviderSpecificNodeID>.",
+				Transform:   transform.FromField("Spec.ProviderID"),
+			},
+			{
+				Name:        "unschedulable",
+				Type:        proto.ColumnType_BOOL,
+				Description: "Unschedulable controls node schedulability of new pods. By default, node is schedulable.",
+				Transform:   transform.FromField("Spec.Unschedulable"),
+			},
+			{
+				Name:        "taints",
+				Type:        proto.ColumnType_JSON,
+				Description: "List of the taints attached to the node to has the \"effect\" on pod that does not tolerate the Taint",
+				Transform:   transform.FromField("Spec.Taints"),
+			},
+			{
+				Name:        "config_source",
+				Type:        proto.ColumnType_JSON,
+				Description: "The source to get node configuration from.",
+				Transform:   transform.FromField("Spec.ConfigSource"),
+			},
 
-			//// Spec Columns
-			// To do - add Spec Columns...
-
-			//// Status Columns
+			//// NodeStatus Columns
+			{
+				Name:        "capacity",
+				Type:        proto.ColumnType_JSON,
+				Description: "Capacity represents the total resources of a node.",
+				Transform:   transform.FromField("Status.Capacity"),
+			},
+			{
+				Name:        "allocatable",
+				Type:        proto.ColumnType_JSON,
+				Description: "Allocatable represents the resources of a node that are available for scheduling. Defaults to capacity.",
+				Transform:   transform.FromField("Status.Allocatable"),
+			},
+			{
+				Name:        "phase",
+				Type:        proto.ColumnType_STRING,
+				Description: "The recently observed lifecycle phase of the node.",
+				Transform:   transform.FromField("Status.Phase"),
+			},
+			{
+				Name:        "conditions",
+				Type:        proto.ColumnType_JSON,
+				Description: "List of current observed node conditions.",
+				Transform:   transform.FromField("Status.Conditions"),
+			},
+			{
+				Name:        "addresses",
+				Type:        proto.ColumnType_JSON,
+				Description: "Endpoints of daemons running on the Node.",
+				Transform:   transform.FromField("Status.Addresses"),
+			},
+			{
+				Name:        "daemon_endpoints",
+				Type:        proto.ColumnType_JSON,
+				Description: "Set of ids/uuids to uniquely identify the node.",
+				Transform:   transform.FromField("Status.DaemonEndpoints"),
+			},
+			{
+				Name:        "node_info",
+				Type:        proto.ColumnType_JSON,
+				Description: "List of container images on this node.",
+				Transform:   transform.FromField("Status.NodeInfo"),
+			},
+			{
+				Name:        "images",
+				Type:        proto.ColumnType_JSON,
+				Description: "List of container images on this node.",
+				Transform:   transform.FromField("Status.Images"),
+			},
+			{
+				Name:        "volumes_in_use",
+				Type:        proto.ColumnType_JSON,
+				Description: "List of attachable volumes in use (mounted) by the node.",
+				Transform:   transform.FromField("Status.VolumesInUse"),
+			},
+			{
+				Name:        "volumes_attached",
+				Type:        proto.ColumnType_JSON,
+				Description: "List of volumes that are attached to the node.",
+				Transform:   transform.FromField("Status.VolumesAttached"),
+			},
+			{
+				Name:        "config",
+				Type:        proto.ColumnType_JSON,
+				Description: "Status of the config assigned to the node via the dynamic Kubelet config feature.",
+				Transform:   transform.FromField("Status.Config"),
+			},
 			// To do - add Status Columns...
 
 			//// Steampipe Standard Columns
@@ -53,7 +153,7 @@ func listK8sNodes(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 	logger := plugin.Logger(ctx)
 	logger.Trace("listK8sNodes")
 
-	clientset, err := GetNewClientset(ctx, d.ConnectionManager)
+	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
 	}
@@ -70,11 +170,11 @@ func listK8sNodes(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 	return nil, nil
 }
 
-func getK8sNode(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+func getK8sNode(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
 	logger := plugin.Logger(ctx)
 	logger.Trace("getK8sNode")
 
-	clientset, err := GetNewClientset(ctx, d.ConnectionManager)
+	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
 	}

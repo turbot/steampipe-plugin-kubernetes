@@ -22,13 +22,29 @@ func tableKubernetesNamespace(ctx context.Context) *plugin.Table {
 		List: &plugin.ListConfig{
 			Hydrate: listK8sNamespaces,
 		},
-		Columns: k8sCommonColumns([]*plugin.Column{
+		Columns: k8sCommonGlobalColumns([]*plugin.Column{
 
-			//// Spec Columns
-			// To do - add Spec Columns...
+			//// NamespaceSpec Columns
+			{
+				Name:        "spec_finalizers",
+				Type:        proto.ColumnType_JSON,
+				Description: "Finalizers is an opaque list of values that must be empty to permanently remove object from storage.",
+				Transform:   transform.FromField("Spec.Finalizers"),
+			},
 
-			//// Status Columns
-			// To do - add Status Columns...
+			//// NamespaceStatus Columns
+			{
+				Name:        "phase",
+				Type:        proto.ColumnType_STRING,
+				Description: "The current lifecycle phase of the namespace.",
+				Transform:   transform.FromField("Status.Phase"),
+			},
+			{
+				Name:        "conditions",
+				Type:        proto.ColumnType_JSON,
+				Description: "The latest available observations of namespace's current state.",
+				Transform:   transform.FromField("Status.NamespaceCondition"),
+			},
 
 			//// Steampipe Standard Columns
 			{
@@ -53,7 +69,7 @@ func listK8sNamespaces(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 	logger := plugin.Logger(ctx)
 	logger.Trace("listK8sNamespaces")
 
-	clientset, err := GetNewClientset(ctx, d.ConnectionManager)
+	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
 	}
@@ -70,11 +86,11 @@ func listK8sNamespaces(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 	return nil, nil
 }
 
-func getK8sNamespace(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+func getK8sNamespace(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
 	logger := plugin.Logger(ctx)
 	logger.Trace("getK8sNamespace")
 
-	clientset, err := GetNewClientset(ctx, d.ConnectionManager)
+	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
 	}

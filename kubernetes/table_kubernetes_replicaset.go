@@ -25,10 +25,68 @@ func tableKubernetesReplicaSet(ctx context.Context) *plugin.Table {
 		Columns: k8sCommonColumns([]*plugin.Column{
 
 			//// Spec Columns
-			// To do - add Spec Columns...
+			{
+				Name:        "replicas",
+				Type:        proto.ColumnType_INT,
+				Description: "Replicas is the number of desired replicas. Defaults to 1.",
+				Transform:   transform.FromField("Spec.Replicas"),
+			},
+			{
+				Name:        "min_ready_seconds",
+				Type:        proto.ColumnType_INT,
+				Description: "Minimum number of seconds for which a newly created pod should be ready without any of its container crashing, for it to be considered available. Defaults to 0",
+				Transform:   transform.FromField("Spec.MinReadySeconds"),
+			},
+			{
+				Name:        "selector",
+				Type:        proto.ColumnType_JSON,
+				Description: "Selector is a label query over pods that should match the replica count. Label keys and values that must match in order to be controlled by this replica set.",
+				Transform:   transform.FromField("Spec.Selector"),
+			},
+			{
+				Name:        "template",
+				Type:        proto.ColumnType_JSON,
+				Description: "Template is the object that describes the pod that will be created if insufficient replicas are detected.",
+				Transform:   transform.FromField("Spec.Template"),
+			},
 
 			//// Status Columns
-			// To do - add Status Columns...
+			{
+				Name:        "status_replicas",
+				Type:        proto.ColumnType_INT,
+				Description: "The most recently oberved number of replicas.",
+				Transform:   transform.FromField("Status.Replicas"),
+			},
+			{
+				Name:        "fully_labeled_replicas",
+				Type:        proto.ColumnType_INT,
+				Description: "The number of pods that have labels matching the labels of the pod template of the replicaset.",
+				Transform:   transform.FromField("Status.FullyLabeledReplicas"),
+			},
+			{
+				Name:        "ReadyReplicas",
+				Type:        proto.ColumnType_INT,
+				Description: "The number of ready replicas for this replica set.",
+				Transform:   transform.FromField("Status.ReadyReplicas"),
+			},
+			{
+				Name:        "available_replicas",
+				Type:        proto.ColumnType_INT,
+				Description: "The number of available replicas (ready for at least minReadySeconds) for this replica set.",
+				Transform:   transform.FromField("Status.AvailableReplicas"),
+			},
+			{
+				Name:        "observed_generation",
+				Type:        proto.ColumnType_INT,
+				Description: "ObservedGeneration reflects the generation of the most recently observed ReplicaSet.",
+				Transform:   transform.FromField("Status.ObservedGeneration"),
+			},
+			{
+				Name:        "conditions",
+				Type:        proto.ColumnType_JSON,
+				Description: "Represents the latest available observations of a replica set's current state.",
+				Transform:   transform.FromField("Status.Conditions"),
+			},
 
 			//// Steampipe Standard Columns
 			{
@@ -53,7 +111,7 @@ func listK8sReplicaSets(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 	logger := plugin.Logger(ctx)
 	logger.Trace("listK8sReplicaSets")
 
-	clientset, err := GetNewClientset(ctx, d.ConnectionManager)
+	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
 	}
@@ -70,11 +128,11 @@ func listK8sReplicaSets(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 	return nil, nil
 }
 
-func getK8sReplicaSet(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+func getK8sReplicaSet(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
 	logger := plugin.Logger(ctx)
 	logger.Trace("getK8sReplicaSet")
 
-	clientset, err := GetNewClientset(ctx, d.ConnectionManager)
+	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
 	}

@@ -2,39 +2,42 @@ package kubernetes
 
 import (
 	"context"
-
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"encoding/json"
+	"fmt"
 
 	"github.com/turbot/steampipe-plugin-sdk/grpc/proto"
 	"github.com/turbot/steampipe-plugin-sdk/plugin"
 	"github.com/turbot/steampipe-plugin-sdk/plugin/transform"
 )
 
-func tableKubernetesPod(ctx context.Context) *plugin.Table {
+func tableKubernetesPodTemplateSpec(ctx context.Context) *plugin.Table {
 	return &plugin.Table{
-		Name:        "kubernetes_pod",
-		Description: "Kubernetes Pod is a collection of containers that can run on a host. This resource is created by clients and scheduled onto hosts.",
-		Get: &plugin.GetConfig{
-			KeyColumns: plugin.AllColumns([]string{"name", "namespace"}),
-			Hydrate:    getK8sPod,
-		},
+		Name: "kubernetes_pod_template_spec",
+		// Description: "Role contains rules that represent a set of permissions.",
 		List: &plugin.ListConfig{
-			Hydrate: listK8sPods,
+			KeyColumns: plugin.SingleColumn("template"),
+			Hydrate:    listPodTemplateSpec,
 		},
-		Columns: k8sCommonColumns([]*plugin.Column{
+		Columns: []*plugin.Column{
+			{
+				Name:        "template",
+				Type:        proto.ColumnType_JSON,
+				Description: "List of the PolicyRules for this Role.",
+				Transform:   transform.FromField("template"),
+			},
+
 			//// PodSpec Columns
 			{
 				Name:        "volumes",
 				Type:        proto.ColumnType_JSON,
 				Description: "List of volumes that can be mounted by containers belonging to the pod.",
-				Transform:   transform.FromField("Spec.Volumes"),
+				Transform:   transform.FromField("spec.volumes"),
 			},
 			{
 				Name:        "containers",
 				Type:        proto.ColumnType_JSON,
 				Description: "List of containers belonging to the pod.",
-				Transform:   transform.FromField("Spec.Containers"),
+				Transform:   transform.FromField("spec.containers"),
 			},
 			{
 				Name: "ephemeral_containers",
@@ -44,7 +47,7 @@ func tableKubernetesPod(ctx context.Context) *plugin.Table {
 					"creating a pod, and it cannot be modified by updating the pod spec. In order to add an " +
 					"ephemeral container to an existing pod, use the pod's ephemeralcontainers subresource. " +
 					"This field is alpha-level and is only honored by servers that enable the EphemeralContainers feature.",
-				Transform: transform.FromField("Spec.EphemeralContainers"),
+				Transform: transform.FromField("spec.ephemeralContainers"),
 			},
 			{
 				Name: "init_containers",
@@ -54,13 +57,13 @@ func tableKubernetesPod(ctx context.Context) *plugin.Table {
 					"init container fails, the pod is considered to have failed and is handled according " +
 					"to its restartPolicy. The name for an init container or normal container must be " +
 					"unique among all containers.",
-				Transform: transform.FromField("Spec.InitContainers"),
+				Transform: transform.FromField("spec.initContainers"),
 			},
 			{
 				Name:        "restart_policy",
 				Type:        proto.ColumnType_STRING,
 				Description: "Restart policy for all containers within the pod. One of Always, OnFailure, Never.",
-				Transform:   transform.FromField("Spec.RestartPolicy"),
+				Transform:   transform.FromField("spec.restartPolicy"),
 			},
 			{
 				Name: "termination_grace_period_seconds",
@@ -71,32 +74,32 @@ func tableKubernetesPod(ctx context.Context) *plugin.Table {
 					"The grace period is the duration in seconds after the processes running in the pod are sent " +
 					"a termination signal and the time when the processes are forcibly halted with a kill signal. " +
 					"Set this value longer than the expected cleanup time for your process.",
-				Transform: transform.FromField("Spec.TerminationGracePeriodSeconds"),
+				Transform: transform.FromField("spec.terminationGracePeriodSeconds"),
 			},
 			{
 				Name: "active_deadline_seconds",
 				Type: proto.ColumnType_STRING,
 				Description: "Optional duration in seconds the pod may be active on the node relative to " +
 					"StartTime before the system will actively try to mark it failed and kill associated containers.",
-				Transform: transform.FromField("Spec.ActiveDeadlineSeconds"),
+				Transform: transform.FromField("spec.activeDeadlineSeconds"),
 			},
 			{
 				Name:        "dns_policy",
 				Type:        proto.ColumnType_STRING,
 				Description: "DNS policy for pod.  Valid values are 'ClusterFirstWithHostNet', 'ClusterFirst', 'Default' or 'None'.",
-				Transform:   transform.FromField("Spec.DNSPolicy"),
+				Transform:   transform.FromField("spec.dnsPolicy"),
 			},
 			{
 				Name:        "node_selector",
 				Type:        proto.ColumnType_JSON,
 				Description: "NodeSelector is a selector which must be true for the pod to fit on a node.",
-				Transform:   transform.FromField("Spec.NodeSelector"),
+				Transform:   transform.FromField("spec.nodeSelector"),
 			},
 			{
 				Name:        "service_account_name",
 				Type:        proto.ColumnType_STRING,
 				Description: "ServiceAccountName is the name of the ServiceAccount to use to run this pod.",
-				Transform:   transform.FromField("Spec.ServiceAccountName"),
+				Transform:   transform.FromField("spec.serviceAccountName"),
 			},
 			// // Dont include deprecated columns...
 			// {
@@ -104,13 +107,13 @@ func tableKubernetesPod(ctx context.Context) *plugin.Table {
 			// 	Type: proto.ColumnType_STRING,
 			// 	Description: "DeprecatedServiceAccount is a depreciated alias for ServiceAccountName. " +
 			// 		"Deprecated: Use serviceAccountName instead.",
-			// 	Transform: transform.FromField("Spec.DeprecatedServiceAccount"),
+			// 	Transform: transform.FromField("DeprecatedServiceAccount"),
 			// },
 			{
 				Name:        "automount_service_account_token",
 				Type:        proto.ColumnType_BOOL,
 				Description: "AutomountServiceAccountToken indicates whether a service account token should be automatically mounted.",
-				Transform:   transform.FromField("Spec.AutomountServiceAccountToken"),
+				Transform:   transform.FromField("spec.automountServiceAccountToken"),
 			},
 			{
 				Name: "node_name",
@@ -118,26 +121,26 @@ func tableKubernetesPod(ctx context.Context) *plugin.Table {
 				Description: "NodeName is a request to schedule this pod onto a specific node. If it is non-empty, " +
 					"the scheduler simply schedules this pod onto that node, assuming that it fits resource " +
 					"requirements.",
-				Transform: transform.FromField("Spec.NodeName"),
+				Transform: transform.FromField("spec.nodeName"),
 			},
 			{
 				Name: "host_network",
 				Type: proto.ColumnType_BOOL,
 				Description: "Host networking requested for this pod. Use the host's network namespace. " +
 					"If this option is set, the ports that will be used must be specified.",
-				Transform: transform.FromField("Spec.HostNetwork"),
+				Transform: transform.FromField("spec.hostNetwork"),
 			},
 			{
 				Name:        "host_pid",
 				Type:        proto.ColumnType_BOOL,
 				Description: "Use the host's pid namespace.",
-				Transform:   transform.FromField("Spec.HostPID"),
+				Transform:   transform.FromField("spec.hostPID"),
 			},
 			{
 				Name:        "host_ipc",
 				Type:        proto.ColumnType_BOOL,
 				Description: "Use the host's ipc namespace.",
-				Transform:   transform.FromField("Spec.HostIPC"),
+				Transform:   transform.FromField("spec.hostIPC"),
 			},
 			{
 				Name: "share_process_namespace",
@@ -146,58 +149,58 @@ func tableKubernetesPod(ctx context.Context) *plugin.Table {
 					"When this is set containers will be able to view and signal processes from other containers " +
 					"in the same pod, and the first process in each container will not be assigned PID 1. " +
 					"HostPID and ShareProcessNamespace cannot both be set.",
-				Transform: transform.FromField("Spec.ShareProcessNamespace"),
+				Transform: transform.FromField("spec.shareProcessNamespace"),
 			},
 			{
 				Name:        "security_context",
 				Type:        proto.ColumnType_JSON,
 				Description: "SecurityContext holds pod-level security attributes and common container settings.",
-				Transform:   transform.FromField("Spec.SecurityContext"),
+				Transform:   transform.FromField("spec.securityContext"),
 			},
 
 			{
 				Name:        "image_pull_secrets",
 				Type:        proto.ColumnType_JSON,
 				Description: "ImagePullSecrets is an optional list of references to secrets in the same namespace to use for pulling any of the images used by this PodSpec.",
-				Transform:   transform.FromField("Spec.ImagePullSecrets"),
+				Transform:   transform.FromField("spec.imagePullSecrets"),
 			},
 			{
 				Name:        "hostname",
 				Type:        proto.ColumnType_STRING,
 				Description: "Specifies the hostname of the Pod. If not specified, the pod's hostname will be set to a system-defined value.",
-				Transform:   transform.FromField("Spec.Hostname"),
+				Transform:   transform.FromField("spec.hostname"),
 			},
 			{
 				Name: "subdomain",
 				Type: proto.ColumnType_STRING,
 				Description: "If specified, the fully qualified Pod hostname will be '<hostname>.<subdomain>.<pod namespace>.svc.<cluster domain>'. " +
 					"If not specified, the pod will not have a domainname at all.",
-				Transform: transform.FromField("Spec.Subdomain"),
+				Transform: transform.FromField("spec.subdomain"),
 			},
 			{
 				Name:        "affinity",
 				Type:        proto.ColumnType_JSON,
 				Description: "If specified, the pod's scheduling constraints.",
-				Transform:   transform.FromField("Spec.Affinity"),
+				Transform:   transform.FromField("spec.affinity"),
 			},
 			{
 				Name:        "scheduler_name",
 				Type:        proto.ColumnType_STRING,
 				Description: "If specified, the pod will be dispatched by specified scheduler.",
-				Transform:   transform.FromField("Spec.SchedulerName"),
+				Transform:   transform.FromField("spec.schedulerName"),
 			},
 			{
 				Name:        "tolerations",
 				Type:        proto.ColumnType_JSON,
 				Description: "If specified, the pod's tolerations.",
-				Transform:   transform.FromField("Spec.Tolerations"),
+				Transform:   transform.FromField("spec.tolerations"),
 			},
 			{
 				Name: "host_aliases",
 				Type: proto.ColumnType_JSON,
 				Description: "HostAliases is an optional list of hosts and IPs that will be injected into the pod's hosts " +
 					"file if specified. This is only valid for non-hostNetwork pods.",
-				Transform: transform.FromField("Spec.HostAliases"),
+				Transform: transform.FromField("spec.hostAliases"),
 			},
 			{
 				Name: "priority_class_name",
@@ -206,7 +209,7 @@ func tableKubernetesPod(ctx context.Context) *plugin.Table {
 					"'system-cluster-critical' are two special keywords which indicate the " +
 					"highest priorities with the former being the highest priority. Any other " +
 					"name must be defined by creating a PriorityClass object with that name.",
-				Transform: transform.FromField("Spec.PriorityClassName"),
+				Transform: transform.FromField("spec.priorityClassName"),
 			},
 			{
 				Name: "priority",
@@ -216,7 +219,7 @@ func tableKubernetesPod(ctx context.Context) *plugin.Table {
 					"prevents users from setting this field. The admission controller populates " +
 					"this field from PriorityClassName. " +
 					"The higher the value, the higher the priority.",
-				Transform: transform.FromField("Spec.Priority"),
+				Transform: transform.FromField("spec.priority"),
 			},
 			{
 				Name: "dns_config",
@@ -224,7 +227,7 @@ func tableKubernetesPod(ctx context.Context) *plugin.Table {
 				Description: "Specifies the DNS parameters of a pod. " +
 					"Parameters specified here will be merged to the generated DNS " +
 					"configuration based on DNSPolicy.",
-				Transform: transform.FromField("Spec.DNSConfig"),
+				Transform: transform.FromField("spec.dnsConfig"),
 			},
 
 			{
@@ -233,7 +236,7 @@ func tableKubernetesPod(ctx context.Context) *plugin.Table {
 				Description: "If specified, all readiness gates will be evaluated for pod readiness. " +
 					"A pod is ready when all its containers are ready AND " +
 					"all conditions specified in the readiness gates have status equal to 'True'",
-				Transform: transform.FromField("Spec.ReadinessGates"),
+				Transform: transform.FromField("spec.readinessGates"),
 			},
 			{
 				Name: "runtime_class_name",
@@ -242,27 +245,27 @@ func tableKubernetesPod(ctx context.Context) *plugin.Table {
 					"to run this pod.  If no RuntimeClass resource matches the named class, the pod will not be run. " +
 					"If unset or empty, the 'legacy' RuntimeClass will be used, which is an implicit class with an " +
 					"empty definition that uses the default runtime handler.",
-				Transform: transform.FromField("Spec.RuntimeClassName"),
+				Transform: transform.FromField("spec.runtimeClassName"),
 			},
 			{
 				Name: "enable_service_links",
 				Type: proto.ColumnType_BOOL,
 				Description: "EnableServiceLinks indicates whether information about services should be injected into pod's " +
 					"environment variables, matching the syntax of Docker links.",
-				Transform: transform.FromField("Spec.EnableServiceLinks"),
+				Transform: transform.FromField("spec.enableServiceLinks"),
 			},
 			{
 				Name: "preemption_policy",
 				Type: proto.ColumnType_STRING,
 				Description: "PreemptionPolicy is the Policy for preempting pods with lower priority. " +
 					"One of Never, PreemptLowerPriority.",
-				Transform: transform.FromField("Spec.PreemptionPolicy"),
+				Transform: transform.FromField("spec.preemptionPolicy"),
 			},
 			{
 				Name:        "overhead",
 				Type:        proto.ColumnType_JSON,
 				Description: "Overhead represents the resource overhead associated with running a pod for a given RuntimeClass.",
-				Transform:   transform.FromField("Spec.Overhead"),
+				Transform:   transform.FromField("spec.overhead"),
 			},
 			{
 				Name: "topology_spread_constraints",
@@ -270,7 +273,7 @@ func tableKubernetesPod(ctx context.Context) *plugin.Table {
 				Description: "TopologySpreadConstraints describes how a group of pods ought to spread across topology " +
 					"domains. Scheduler will schedule pods in a way which abides by the constraints. " +
 					"All topologySpreadConstraints are ANDed.",
-				Transform: transform.FromField("Spec.TopologySpreadConstraints"),
+				Transform: transform.FromField("spec.topologySpreadConstraints"),
 			},
 			{
 				Name: "set_hostname_as_fqdn",
@@ -279,173 +282,36 @@ func tableKubernetesPod(ctx context.Context) *plugin.Table {
 					"In Linux containers, this means setting the FQDN in the hostname field of the kernel (the nodename field of struct utsname). " +
 					"In Windows containers, this means setting the registry value of hostname for the registry key HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters to FQDN. " +
 					"If a pod does not have FQDN, this has no effect.",
-				Transform: transform.FromField("Spec.SetHostnameAsFQDN"),
+				Transform: transform.FromField("spec.setHostnameAsFQDN"),
 			},
-
-			//// PodStatus Columns
-			{
-				Name: "phase",
-				Type: proto.ColumnType_STRING,
-				Description: "The phase of a Pod is a simple, high-level summary of where the Pod is in its lifecycle. " +
-					"The conditions array, the reason and message fields, and the individual container status " +
-					"arrays contain more detail about the pod's status. There are five possible phase values: " +
-					"Pending, Running, Succeeded, Failed, Unknown",
-				Transform: transform.FromField("Status.Phase"),
-			},
-			{
-				Name:        "conditions",
-				Type:        proto.ColumnType_JSON,
-				Description: "Current service state of pod.",
-				Transform:   transform.FromField("Status.Conditions"),
-			},
-
-			{
-				Name:        "status_message",
-				Type:        proto.ColumnType_STRING,
-				Description: "A human readable message indicating details about why the pod is in this condition.",
-				Transform:   transform.FromField("Status.Message"),
-			},
-			{
-				Name:        "status_reason",
-				Type:        proto.ColumnType_STRING,
-				Description: "A brief CamelCase message indicating details about why the pod is in this state. e.g. 'Evicted'",
-				Transform:   transform.FromField("Status.Reason"),
-			},
-			{
-				Name: "nominated_node_name",
-				Type: proto.ColumnType_STRING,
-				Description: "nominatedNodeName is set only when this pod preempts other pods on the node, but it cannot be " +
-					"scheduled right away as preemption victims receive their graceful termination periods. " +
-					"This field does not guarantee that the pod will be scheduled on this node. Scheduler may decide " +
-					"to place the pod elsewhere if other nodes become available sooner. Scheduler may also decide to " +
-					"give the resources on this node to a higher priority pod that is created after preemption. " +
-					"As a result, this field may be different than PodSpec.nodeName when the pod is " +
-					"scheduled.",
-				Transform: transform.FromField("Status.NominatedNodeName"),
-			},
-			{
-				Name:        "host_ip",
-				Type:        proto.ColumnType_IPADDR,
-				Description: "IP address of the host to which the pod is assigned. Empty if not yet scheduled.",
-				Transform:   transform.FromField("Status.HostIP"),
-			},
-
-			{
-				Name: "pod_ip",
-				Type: proto.ColumnType_IPADDR,
-				Description: "IP address allocated to the pod. Routable at least within the cluster. " +
-					"Empty if not yet allocated.",
-				Transform: transform.FromField("Status.PodIP"),
-			},
-			{
-				Name: "pod_ips",
-				Type: proto.ColumnType_JSON,
-				Description: "podIPs holds the IP addresses allocated to the pod. If this field is specified, the 0th entry must " +
-					"match the podIP field. Pods may be allocated at most 1 value for each of IPv4 and IPv6. This list " +
-					"is empty if no IPs have been allocated yet.",
-				Transform: transform.FromField("Status.PodIPs"),
-			},
-
-			{
-				Name: "start_time",
-				Type: proto.ColumnType_TIMESTAMP,
-				Description: "Date and time at which the object was acknowledged by the Kubelet. " +
-					"This is before the Kubelet pulled the container image(s) for the pod.",
-				Transform: transform.FromField("Status.StartTime").Transform(v1TimeToRFC3339),
-			},
-
-			{
-				Name: "init_container_statuses",
-				Type: proto.ColumnType_JSON,
-				Description: "The list has one entry per init container in the manifest. The most recent successful " +
-					"init container will have ready = true, the most recently started container will have " +
-					"startTime set.",
-				Transform: transform.FromField("Status.InitContainerStatuses"),
-			},
-			{
-				Name: "container_statuses",
-				Type: proto.ColumnType_JSON,
-				Description: "The list has one entry per container in the manifest. Each entry is currently the output " +
-					"of `docker inspect`.",
-				Transform: transform.FromField("Status.ContainerStatuses"),
-			},
-			{
-				Name:        "qos_class",
-				Type:        proto.ColumnType_STRING,
-				Description: "The Quality of Service (QOS) classification assigned to the pod based on resource requirements.",
-				Transform:   transform.FromField("Status.QOSClass"),
-			},
-			{
-				Name: "ephemeral_container_statuses",
-				Type: proto.ColumnType_JSON,
-				Description: "Status for any ephemeral containers that have run in this pod. " +
-					"This field is alpha-level and is only populated by servers that enable the EphemeralContainers feature.",
-				Transform: transform.FromField("Status.EphemeralContainerStatuses"),
-			},
-
-			//// Steampipe Standard Columns
-			{
-				Name:        "title",
-				Type:        proto.ColumnType_STRING,
-				Description: ColumnDescriptionTitle,
-				Transform:   transform.FromField("Name"),
-			},
-			{
-				Name:        "tags",
-				Type:        proto.ColumnType_JSON,
-				Description: ColumnDescriptionTags,
-				Transform:   transform.From(transformPodTags),
-			},
-		}),
+		},
 	}
 }
 
 //// HYDRATE FUNCTIONS
 
-func listK8sPods(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
+func listPodTemplateSpec(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
 	logger := plugin.Logger(ctx)
-	logger.Trace("listK8sPods")
+	logger.Warn("listPodTemplate")
 
-	clientset, err := GetNewClientset(ctx, d)
+	template := d.KeyColumnQuals["template"].GetJsonbValue()
+	// logger.Warn("listPodTemplate", "template", template)
+
+	// if template == "" {
+	// 	return nil, nil
+	// }
+
+	var rawPolicyMap map[string]interface{}
+	err := json.Unmarshal([]byte(template), &rawPolicyMap)
 	if err != nil {
+		fmt.Println("error:", err)
 		return nil, err
 	}
 
-	pods, err := clientset.CoreV1().Pods("").List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
+	rawPolicyMap["template"] = template
 
-	for _, pod := range pods.Items {
-		d.StreamListItem(ctx, pod)
-	}
+	// logger.Warn("listPodTemplate", "rawPolicyMap", rawPolicyMap)
+	d.StreamListItem(ctx, rawPolicyMap)
 
 	return nil, nil
-}
-
-func getK8sPod(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
-	logger := plugin.Logger(ctx)
-	logger.Trace("getK8sPod")
-
-	clientset, err := GetNewClientset(ctx, d)
-	if err != nil {
-		return nil, err
-	}
-
-	name := d.KeyColumnQuals["name"].GetStringValue()
-	namespace := d.KeyColumnQuals["namespace"].GetStringValue()
-
-	pod, err := clientset.CoreV1().Pods(namespace).Get(ctx, name, metav1.GetOptions{})
-	if err != nil && !isNotFoundError(err) {
-		return nil, err
-	}
-
-	return *pod, nil
-}
-
-//// TRANSFORM FUNCTIONS
-
-func transformPodTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	obj := d.HydrateItem.(v1.Pod)
-	return mergeTags(obj.Labels, obj.Annotations), nil
 }
