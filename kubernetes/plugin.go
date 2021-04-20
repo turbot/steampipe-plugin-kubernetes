@@ -33,6 +33,7 @@ func Plugin(ctx context.Context) *plugin.Plugin {
 			"kubernetes_config_map":           tableKubernetesConfigMap(ctx),
 			"kubernetes_daemonset":            tableKubernetesDaemonset(ctx),
 			"kubernetes_deployment":           tableKubernetesDeployment(ctx),
+			"kubernetes_endpoint_slice":       tableKubernetesEndpointSlice(ctx),
 			"kubernetes_endpoints":            tableKubernetesEndpoints(ctx),
 			"kubernetes_namespace":            tableKubernetesNamespace(ctx),
 			"kubernetes_node":                 tableKubernetesNode(ctx),
