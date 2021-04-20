@@ -1,1 +1,11 @@
-[]
+[
+  {
+    "container_count": 1,
+    "ephemeral_container_count": null,
+    "init_container_count": null,
+    "name": "static-web",
+    "namespace": "default",
+    "node_name": "gke-dev-steampipe-morale-default-pool-03958ae1-a7mf",
+    "phase": "Running"
+  }
+]

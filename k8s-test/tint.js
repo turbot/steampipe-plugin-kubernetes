@@ -12,12 +12,12 @@ const envVariable = require("custom-env");
 
 const TMP_DIR = os.tmpdir();
 
-const _targetGlobs = function() {
+const _targetGlobs = function () {
   var args = process.argv.slice(2);
   if (args.length == 0) {
     args.push("*");
   }
-  var targets = args.map(i => {
+  var targets = args.map((i) => {
     var tmp;
     if (i.includes("/")) {
       tmp = i;
@@ -33,18 +33,18 @@ const _targetGlobs = function() {
   return targets;
 };
 
-const _targetDirs = function(targetGlobs) {
-  var targetDirs = targetGlobs.map(i => {
+const _targetDirs = function (targetGlobs) {
+  var targetDirs = targetGlobs.map((i) => {
     return i.split("/")[0];
   });
   return [...new Set(targetDirs)];
 };
 
-const _availableTests = function(targetDirs) {
+const _availableTests = function (targetDirs) {
   var result = [];
   for (const d of targetDirs) {
     result = result.concat(
-      fs.readdirSync(d).map(i => {
+      fs.readdirSync(d).map((i) => {
         return d + "/" + i;
       })
     );
@@ -52,7 +52,7 @@ const _availableTests = function(targetDirs) {
   return result;
 };
 
-const _testPrerequisites = function(testDir) {
+const _testPrerequisites = function (testDir) {
   var dependenciesSrc;
   try {
     dependenciesSrc = fs.readFileSync(testDir + "/dependencies.txt", "utf8");
@@ -65,13 +65,13 @@ const _testPrerequisites = function(testDir) {
   var dependencies = dependenciesSrc.split(/\s+/g);
   var testsDir = path.resolve(testDir, "..");
   var integrationTestsDir = path.resolve(testsDir, "..");
-  var prereqs = _.compact(dependencies).map(i => {
+  var prereqs = _.compact(dependencies).map((i) => {
     return path.relative(integrationTestsDir, path.resolve(testsDir, i));
   });
   return prereqs;
 };
 
-const _testsWithPrerequisites = function(tests) {
+const _testsWithPrerequisites = function (tests) {
   var result = [];
   for (const t of tests) {
     var prereqs = _testPrerequisites(t);
@@ -85,7 +85,7 @@ const _testsWithPrerequisites = function(tests) {
       pretest: {},
       test: {},
       posttest: {},
-      teardown: {}
+      teardown: {},
     };
     result.push(_testsWithPrerequisites(prereqs));
     result.push(testObj);
@@ -94,7 +94,12 @@ const _testsWithPrerequisites = function(tests) {
   return [...new Set(flatResult)];
 };
 
-const _renderToTmp = function(test, sourcePath, defaultRendered = null, tmpDir = null) {
+const _renderToTmp = function (
+  test,
+  sourcePath,
+  defaultRendered = null,
+  tmpDir = null
+) {
   _.templateSettings.interpolate = /{{([\s\S]+?)}}/g;
   var template, tmpPath, rendered;
   tmpPath = path.resolve(tmpDir || test.tmpDir, path.basename(sourcePath));
@@ -114,7 +119,7 @@ const _renderToTmp = function(test, sourcePath, defaultRendered = null, tmpDir =
   return tmpPath;
 };
 
-const _runTerraformInit = async function(test, phase) {
+const _runTerraformInit = async function (test, phase) {
   return new Promise((resolve, reject) => {
     const tfDir = path.resolve(test.tmpDir, "terraform", phase);
     const args = ["init"];
@@ -122,21 +127,21 @@ const _runTerraformInit = async function(test, phase) {
 
     var result = {
       stdout: "",
-      stderr: ""
+      stderr: "",
     };
     var resultSent = false;
 
     console.log(chalk.yellow("Running terraform"));
-    cmd.stdout.on("data", data => {
+    cmd.stdout.on("data", (data) => {
       result.stdout += data;
     });
 
-    cmd.stderr.on("data", data => {
+    cmd.stderr.on("data", (data) => {
       process.stdout.write(chalk.gray(data));
       result.stderr += data;
     });
 
-    cmd.on("exit", code => {
+    cmd.on("exit", (code) => {
       if (resultSent) {
         return;
       }
@@ -152,7 +157,7 @@ const _runTerraformInit = async function(test, phase) {
       resolve(test);
     });
 
-    cmd.on("error", err => {
+    cmd.on("error", (err) => {
       if (resultSent) {
         return;
       }
@@ -162,40 +167,40 @@ const _runTerraformInit = async function(test, phase) {
   });
 };
 
-const _runTerraformApply = function(test, phase) {
+const _runTerraformApply = function (test, phase) {
   return new Promise((resolve, reject) => {
     const tfDir = path.resolve(test.tmpDir, "terraform", phase);
 
     let environment = Object.assign(process.env, {
       TF_VAR_resource_name: process.env.TURBOT_TEST_RESOURCE_NAME,
       TF_VAR_resource_name_1: process.env.TURBOT_TEST_RESOURCE_NAME_1,
-      TF_VAR_resource_name_2: process.env.TURBOT_TEST_RESOURCE_NAME_2
+      TF_VAR_resource_name_2: process.env.TURBOT_TEST_RESOURCE_NAME_2,
     });
 
     const args = ["apply", "-auto-approve", "-no-color"];
     const cmd = spawn("terraform", args, {
       encoding: "utf8",
       cwd: tfDir,
-      env: environment
+      env: environment,
     });
 
     var result = {
       stdout: "",
-      stderr: ""
+      stderr: "",
     };
     var resultSent = false;
 
-    cmd.stdout.on("data", data => {
+    cmd.stdout.on("data", (data) => {
       process.stdout.write(chalk.dim(data));
       result.stdout += data;
     });
 
-    cmd.stderr.on("data", data => {
+    cmd.stderr.on("data", (data) => {
       process.stdout.write(chalk.gray(data));
       result.stderr += data;
     });
 
-    cmd.on("exit", code => {
+    cmd.on("exit", (code) => {
       if (resultSent) {
         return;
       }
@@ -211,7 +216,7 @@ const _runTerraformApply = function(test, phase) {
       resolve(test);
     });
 
-    cmd.on("error", err => {
+    cmd.on("error", (err) => {
       if (resultSent) {
         return;
       }
@@ -221,14 +226,18 @@ const _runTerraformApply = function(test, phase) {
   });
 };
 
-const _runTerraformDestroy = function(test, phase = "test") {
+const _runTerraformDestroy = function (test, phase = "test") {
   return new Promise((resolve, reject) => {
     const tfDir = path.resolve(test.tmpDir, "terraform", phase);
     console.log("");
 
     // TODO: Why do we enter this function if there is no Terraform tmp dir?
     if (!fs.existsSync(tfDir)) {
-      console.log(chalk.yellow(`Terraform tmp directory does not exist for ${test.dir} for ${phase} phase`));
+      console.log(
+        chalk.yellow(
+          `Terraform tmp directory does not exist for ${test.dir} for ${phase} phase`
+        )
+      );
       resolve(test);
     }
 
@@ -236,25 +245,25 @@ const _runTerraformDestroy = function(test, phase = "test") {
 
     const cmd = spawn("terraform", args, {
       encoding: "utf8",
-      cwd: tfDir
+      cwd: tfDir,
     });
 
     var result = {
       stdout: "",
-      stderr: ""
+      stderr: "",
     };
     var resultSent = false;
 
-    cmd.stdout.on("data", data => {
+    cmd.stdout.on("data", (data) => {
       result.stdout += data;
     });
 
-    cmd.stderr.on("data", data => {
+    cmd.stderr.on("data", (data) => {
       process.stdout.write(chalk.gray(data));
       result.stderr += data;
     });
 
-    cmd.on("exit", code => {
+    cmd.on("exit", (code) => {
       if (resultSent) {
         return;
       }
@@ -271,7 +280,7 @@ const _runTerraformDestroy = function(test, phase = "test") {
       resolve(test);
     });
 
-    cmd.on("error", err => {
+    cmd.on("error", (err) => {
       if (resultSent) {
         return;
       }
@@ -281,7 +290,7 @@ const _runTerraformDestroy = function(test, phase = "test") {
   });
 };
 
-const _runTerraformOutput = async function(test, phase) {
+const _runTerraformOutput = async function (test, phase) {
   return new Promise((resolve, reject) => {
     const tfDir = path.resolve(test.tmpDir, "terraform", phase);
     const args = ["output", "--json"];
@@ -289,20 +298,20 @@ const _runTerraformOutput = async function(test, phase) {
 
     var result = {
       stdout: "",
-      stderr: ""
+      stderr: "",
     };
     var resultSent = false;
 
-    cmd.stdout.on("data", data => {
+    cmd.stdout.on("data", (data) => {
       result.stdout += data;
     });
 
-    cmd.stderr.on("data", data => {
+    cmd.stderr.on("data", (data) => {
       process.stdout.write(chalk.gray(data));
       result.stderr += data;
     });
 
-    cmd.on("exit", code => {
+    cmd.on("exit", (code) => {
       if (resultSent) {
         return;
       }
@@ -310,10 +319,18 @@ const _runTerraformOutput = async function(test, phase) {
       result.status = code;
       try {
         let terraformOutput = JSON.parse(result.stdout);
-        Object.assign(test.output, { resourceId: _.get(terraformOutput, "resource_id.value", "") });
-        Object.assign(test.output, { resourceName: _.get(terraformOutput, "resource_name.value", "") });
-        Object.assign(test, { resourceId: _.get(terraformOutput, "resource_id.value", "") });
-        Object.assign(test, { resourceName: _.get(terraformOutput, "resource_name.value", "") });
+        Object.assign(test.output, {
+          resourceId: _.get(terraformOutput, "resource_id.value", ""),
+        });
+        Object.assign(test.output, {
+          resourceName: _.get(terraformOutput, "resource_name.value", ""),
+        });
+        Object.assign(test, {
+          resourceId: _.get(terraformOutput, "resource_id.value", ""),
+        });
+        Object.assign(test, {
+          resourceName: _.get(terraformOutput, "resource_name.value", ""),
+        });
         Object.assign(test.output, terraformOutput);
       } catch (e) {
         result.output = {};
@@ -321,7 +338,7 @@ const _runTerraformOutput = async function(test, phase) {
       resolve(test);
     });
 
-    cmd.on("error", err => {
+    cmd.on("error", (err) => {
       if (resultSent) {
         return;
       }
@@ -331,14 +348,29 @@ const _runTerraformOutput = async function(test, phase) {
   });
 };
 
-const _runTerraformApplyForTestPhase = async function(test, phase) {
+const _runTerraformApplyForTestPhase = async function (test, phase) {
+  // console.log("phase", phase, "\ntest.dir", test.dir);
+
   const files = fs
     .readdirSync(test.dir)
     .sort()
-    .filter(i => {
+    .filter((i) => {
+      // To allow other useful files required for deployment(.i.e .yml and .yaml required for deployment of k8s resources)
+      if ([".yml", ".yaml"].includes(path.extname(i))) {
+        return true;
+      }
+
+      // To not allow files other than terraform files
       if (![".tf", ".tfvars"].includes(path.extname(i))) {
         return false;
       }
+
+      // Allow terraform files based on the stage of the integration test
+      /**
+       * If stage is test -- all the terraform file without a prefix is allowed
+       * If stage is pretest -- terraform files with prefix "pretest-" allowed
+       * If stage is posttest -- terraform files with prefix "posttest-" allowed
+       */
       var basename = path.basename(i);
       if (phase != "test") {
         return basename.startsWith(phase + "-");
@@ -346,6 +378,8 @@ const _runTerraformApplyForTestPhase = async function(test, phase) {
         return !/^(setup|pretest|posttest|teardown)-/.test(basename);
       }
     });
+
+  // console.log("files", files); display the list of files for stage
   if (_.isEmpty(files)) {
     return test;
   }
@@ -362,7 +396,9 @@ const _runTerraformApplyForTestPhase = async function(test, phase) {
       _renderToTmp(test, path.resolve(".", testDirWithFile), null, tfDir);
     }
   } catch (e) {
-    console.log(chalk.red(`Terraform template rendering error in: ${test.dir}`));
+    console.log(
+      chalk.red(`Terraform template rendering error in: ${test.dir}`)
+    );
     console.log(chalk.red(e.message));
     throw e;
   }
@@ -370,11 +406,10 @@ const _runTerraformApplyForTestPhase = async function(test, phase) {
   test = await _runTerraformInit(test, phase);
   test = await _runTerraformApply(test, phase);
   test = await _runTerraformOutput(test, phase);
-
   return test;
 };
 
-const _runGraphqlQuery = function(test, query) {
+const _runGraphqlQuery = function (test, query) {
   return new Promise((resolve, reject) => {
     try {
       var queryTmp = _renderToTmp(test, query.query);
@@ -387,37 +422,34 @@ const _runGraphqlQuery = function(test, query) {
       throw e;
     }
 
-    console.log(chalk.yellow(`\nRunning SQL query: ${path.basename(query.query)}`));
+    console.log(
+      chalk.yellow(`\nRunning SQL query: ${path.basename(query.query)}`)
+    );
 
     q = fs.readFileSync(queryTmp, { encoding: "utf8" });
     q = q.replace(/\n/, " ");
     q = q.replace(/\r/, "");
     // console.log({ q, queryTmp });
-    const args = [
-      "query",
-      "--output",
-      "json",
-      q
-    ];
+    const args = ["query", "--output", "json", q];
 
     const cmd = spawn("steampipe", args, { encoding: "utf8" });
 
     var result = {
       stdout: "",
-      stderr: ""
+      stderr: "",
     };
     var resultSent = false;
 
-    cmd.stdout.on("data", data => {
+    cmd.stdout.on("data", (data) => {
       result.stdout += data;
     });
 
-    cmd.stderr.on("data", data => {
+    cmd.stderr.on("data", (data) => {
       process.stdout.write(chalk.dim(data));
       result.stderr += data;
     });
 
-    cmd.on("exit", code => {
+    cmd.on("exit", (code) => {
       // console.log(result);
       if (resultSent) {
         return;
@@ -431,15 +463,17 @@ const _runGraphqlQuery = function(test, query) {
       }
       if (true) {
         var outputStr = JSON.stringify(result.output, null, 2) + "\n";
-        var expectedStr = JSON.stringify(JSON.parse(fs.readFileSync(expectedTmp)), null, 2) + "\n";
+        var expectedStr =
+          JSON.stringify(JSON.parse(fs.readFileSync(expectedTmp)), null, 2) +
+          "\n";
         var differences = diff.diffLines(outputStr, expectedStr);
         console.log("");
-        differences.forEach(part => {
+        differences.forEach((part) => {
           if (part.added) {
-            result.status = 1
+            result.status = 1;
             process.stdout.write(chalk.green(part.value));
           } else if (part.removed) {
-            result.status = 1
+            result.status = 1;
             process.stdout.write(chalk.red(part.value));
           } else {
             process.stdout.write(chalk.dim(part.value));
@@ -449,7 +483,7 @@ const _runGraphqlQuery = function(test, query) {
       resolve(result);
     });
 
-    cmd.on("error", err => {
+    cmd.on("error", (err) => {
       if (resultSent) {
         return;
       }
@@ -459,18 +493,22 @@ const _runGraphqlQuery = function(test, query) {
   });
 };
 
-const _runGraphqlQueriesForTestPhase = async function(test, phase, terraformSuccessful) {
+const _runGraphqlQueriesForTestPhase = async function (
+  test,
+  phase,
+  terraformSuccessful
+) {
   const queries = fs
     .readdirSync(test.dir)
     .sort()
-    .map(i => {
+    .map((i) => {
       if (phase == "test" && i == "query.sql") {
         return {
           name: "",
           phase,
           query: `${test.dir}/query.sql`,
           variables: `${test.dir}/variables.json`,
-          expected: `${test.dir}/expected.json`
+          expected: `${test.dir}/expected.json`,
         };
       }
       if (i.startsWith(phase + "-") && i.endsWith("-query.sql")) {
@@ -480,25 +518,27 @@ const _runGraphqlQueriesForTestPhase = async function(test, phase, terraformSucc
           phase,
           query: `${test.dir}/${phase}-${name}-query.sql`,
           variables: `${test.dir}/${phase}-${name}-variables.json`,
-          expected: `${test.dir}/${phase}-${name}-expected.json`
+          expected: `${test.dir}/${phase}-${name}-expected.json`,
         };
       }
       return null;
     })
-    .filter(i => !!i);
+    .filter((i) => !!i);
 
-    // console.log({queries: queries})
-    for (const q of queries) {
+  // console.log({queries: queries})
+  for (const q of queries) {
     var queryResult;
     // Skip running GraphQL to avoid wasting time if the Terraform run
     // wasn't successful
     if (terraformSuccessful) {
       queryResult = await _runGraphqlQuery(test, q);
     } else {
-      console.log(chalk.redBright.bold("Terraform run failed, skipping SQL queries"));
+      console.log(
+        chalk.redBright.bold("Terraform run failed, skipping SQL queries")
+      );
       // TODO: Do we need additional info in the queryResult object?
       queryResult = {
-        status: 1
+        status: 1,
       };
     }
     if (queryResult.status) {
@@ -518,8 +558,8 @@ const _runGraphqlQueriesForTestPhase = async function(test, phase, terraformSucc
   return test;
 };
 
-const _run = async function(tests) {
-  var testNames = tests.map(i => i.dir);
+const _run = async function (tests) {
+  var testNames = tests.map((i) => i.dir);
   var results = _.keyBy(tests, "dir");
 
   // TODO: Do we need prefix to be confiurable?
@@ -530,21 +570,24 @@ const _run = async function(tests) {
   const setupData = {
     resourceName: resourceNamePrefix + _.random(10000),
     resourceName1: resourceNamePrefix + _.random(10000),
-    resourceName2: resourceNamePrefix + _.random(10000)
+    resourceName2: resourceNamePrefix + _.random(10000),
   };
-
-  console.log("Test names:", testNames);
 
   try {
     for (const t of testNames) {
       results[t] = await _runSetup(results[t], setupData);
       const phases = ["pretest", "test", "posttest"];
       for (const phase of phases) {
+        // console.log("\n\nRUNNING PHASE " + phase + "\n\n"); // For debugging
         results[t] = await _runTestPhase(results[t], phase);
       }
     }
   } catch (e) {
-    console.log(chalk.bold.red("\nERROR DETECTED: Stopping test run and entering teardown phase."));
+    console.log(
+      chalk.bold.red(
+        "\nERROR DETECTED: Stopping test run and entering teardown phase."
+      )
+    );
     console.log(chalk.bold.red(e.message));
     if (process.env.TURBOT_TEST_LOG_LEVEL == "debug") {
       console.log(e);
@@ -558,7 +601,7 @@ const _run = async function(tests) {
   return results;
 };
 
-const _runSetup = async function(test, setupData) {
+const _runSetup = async function (test, setupData) {
   /**
    * Set the environment variable from the env file
    *
@@ -574,9 +617,12 @@ const _runSetup = async function(test, setupData) {
 
   // Set this after the env file has been loaded since any env variables in the
   // custom env file wil NOT override existing env variable values
-  process.env.TURBOT_TEST_RESOURCE_NAME = process.env.TURBOT_TEST_RESOURCE_NAME || setupData.resourceName;
-  process.env.TURBOT_TEST_RESOURCE_NAME_1 = process.env.TURBOT_TEST_RESOURCE_NAME_1 || setupData.resourceName1;
-  process.env.TURBOT_TEST_RESOURCE_NAME_2 = process.env.TURBOT_TEST_RESOURCE_NAME_2 || setupData.resourceName2;
+  process.env.TURBOT_TEST_RESOURCE_NAME =
+    process.env.TURBOT_TEST_RESOURCE_NAME || setupData.resourceName;
+  process.env.TURBOT_TEST_RESOURCE_NAME_1 =
+    process.env.TURBOT_TEST_RESOURCE_NAME_1 || setupData.resourceName1;
+  process.env.TURBOT_TEST_RESOURCE_NAME_2 =
+    process.env.TURBOT_TEST_RESOURCE_NAME_2 || setupData.resourceName2;
 
   if (test.failed) {
     return test;
@@ -586,8 +632,9 @@ const _runSetup = async function(test, setupData) {
   return test;
 };
 
-const _runTestPhase = async function(test, phase) {
-  if (test.failed) {
+const _runTestPhase = async function (test, phase) {
+  // allow the resources to be destroyed even if the test failed in earlier stages
+  if (test.failed && phase != "posttest") {
     return test;
   }
 
@@ -597,7 +644,11 @@ const _runTestPhase = async function(test, phase) {
     test = await _runTerraformApplyForTestPhase(test, phase);
   } catch (e) {
     test.failed = true;
-    console.log(chalk.red(`Error running Terraform applying in ${test.dir} for ${phase} phase`));
+    console.log(
+      chalk.red(
+        `Error running Terraform applying in ${test.dir} for ${phase} phase`
+      )
+    );
     console.log(chalk.red(e.message));
     throw e;
   }
@@ -606,20 +657,27 @@ const _runTestPhase = async function(test, phase) {
   // Default to 0 if there is no status because this phase didn't have
   // Terraform to run
   terraformSuccessful =
-    _.get(test, "test.terraform.init.status", 0) === 0 && _.get(test, "test.terraform.apply.status", 0) === 0;
+    _.get(test, "test.terraform.init.status", 0) === 0 &&
+    _.get(test, "test.terraform.apply.status", 0) === 0;
 
   try {
-    test = await _runGraphqlQueriesForTestPhase(test, phase, terraformSuccessful);
+    test = await _runGraphqlQueriesForTestPhase(
+      test,
+      phase,
+      terraformSuccessful
+    );
   } catch (e) {
     test.failed = true;
-    console.log(chalk.red(`Error running SQL queries in ${test.dir} for ${phase} phase`));
+    console.log(
+      chalk.red(`Error running SQL queries in ${test.dir} for ${phase} phase`)
+    );
     console.log(chalk.red(e.message));
     throw e;
   }
   return test;
 };
 
-const _runTeardown = async function(test) {
+const _runTeardown = async function (test) {
   console.log(chalk.bold(`\nTEARDOWN: ${test.dir}`));
   // Check for pretest / test / posttest keys
   let getKeys = Object.keys(test);
@@ -654,9 +712,10 @@ async function main() {
   }
 
   var numTests = resolvedTargets.length;
-  var numTestsPassing = _.filter(result, testResult => !testResult.failed).length;
+  var numTestsPassing = _.filter(result, (testResult) => !testResult.failed)
+    .length;
   var failingTests = _.chain(result)
-    .map(i => {
+    .map((i) => {
       return i.failed ? i : null;
     })
     .compact()
