@@ -38,6 +38,7 @@ func Plugin(ctx context.Context) *plugin.Plugin {
 			"kubernetes_ingress":              tableKubernetesIngress(ctx),
 			"kubernetes_job":                  tableKubernetesJob(ctx),
 			"kubernetes_namespace":            tableKubernetesNamespace(ctx),
+			"kubernetes_network_policy":       tableKubernetesNetworkPolicy(ctx),
 			"kubernetes_node":                 tableKubernetesNode(ctx),
 			"kubernetes_pod":                  tableKubernetesPod(ctx),
 			"kubernetes_pod_security_policy":  tableKubernetesPodSecurityPolicy(ctx),
