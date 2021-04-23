@@ -40,6 +40,7 @@ func Plugin(ctx context.Context) *plugin.Plugin {
 			"kubernetes_namespace":            tableKubernetesNamespace(ctx),
 			"kubernetes_network_policy":       tableKubernetesNetworkPolicy(ctx),
 			"kubernetes_node":                 tableKubernetesNode(ctx),
+			"kubernetes_persistent_volume":    tableKubernetesPersistentVolume(ctx),
 			"kubernetes_pod":                  tableKubernetesPod(ctx),
 			"kubernetes_pod_security_policy":  tableKubernetesPodSecurityPolicy(ctx),
 			"kubernetes_replicaset":           tableKubernetesReplicaSet(ctx),
