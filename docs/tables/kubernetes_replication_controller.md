@@ -16,7 +16,7 @@ select
   age(current_timestamp, creation_timestamp),
   selector
 from
-  k8s_minikube.kubernetes_replication_controller;
+  kubernetes_replication_controller;
 ```
 
 ### Get details of containers and image
@@ -30,5 +30,7 @@ select
 from
   kubernetes_replication_controller,
   jsonb_array_elements(template -> 'spec' -> 'containers') as container
-group by name, namespace;
+group by 
+  name,
+  namespace;
 ```

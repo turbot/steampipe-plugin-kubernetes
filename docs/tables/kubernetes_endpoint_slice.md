@@ -18,21 +18,20 @@ from
   kubernetes_endpoint_slice;
 ```
 
-### Get subsets info for a specific endpoint
+### Endpoint Slice IP Information
 
 ```sql
+
 select
   name,
   namespace,
-  (addresse ->> 'ip')::inet as address,
+  addr,
   port -> 'port' as port,
   port ->> 'protocol' as protocol
 from
-  kubernetes_endpoints,
-  jsonb_array_elements(subsets) as subset,
-  jsonb_array_elements(subset -> 'addresses') as addresse,
-  jsonb_array_elements(subset -> 'ports') as port
-where
-  name = 'frontend'
-  and namespace = 'default';
+    kubernetes_endpoint_slice,
+    jsonb_array_elements(endpoints) as ep,
+    jsonb_array_elements(ep -> 'addresses') as addr,
+    jsonb_array_elements(ports) as port;
 ```
+

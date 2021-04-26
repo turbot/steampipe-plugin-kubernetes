@@ -37,7 +37,7 @@ from
   jsonb_array_elements(rules) as rule
 order by
   role_name,
-  api_groups
+  api_groups;
 ```
 
 ### Group cluster roles by same set of aggregation rules

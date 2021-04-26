@@ -13,7 +13,7 @@ import (
 
 func tableKubernetesEndpoints(ctx context.Context) *plugin.Table {
 	return &plugin.Table{
-		Name:        "kubernetes_endpoints",
+		Name:        "kubernetes_endpoint",
 		Description: "Set of addresses and ports that comprise a service. More info: https://kubernetes.io/docs/concepts/services-networking/service/#services-without-selectors.",
 		Get: &plugin.GetConfig{
 			KeyColumns: plugin.AllColumns([]string{"name", "namespace"}),
