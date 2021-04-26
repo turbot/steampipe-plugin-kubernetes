@@ -45,6 +45,7 @@ func Plugin(ctx context.Context) *plugin.Plugin {
 			"kubernetes_pod":                     tableKubernetesPod(ctx),
 			"kubernetes_pod_security_policy":     tableKubernetesPodSecurityPolicy(ctx),
 			"kubernetes_replicaset":              tableKubernetesReplicaSet(ctx),
+			"kubernetes_replication_controller":  tableKubernetesReplicaController(ctx),
 			"kubernetes_role":                    tableKubernetesRole(ctx),
 			"kubernetes_role_binding":            tableKubernetesRoleBinding(ctx),
 			"kubernetes_secret":                  tableKubernetesSecret(ctx),
