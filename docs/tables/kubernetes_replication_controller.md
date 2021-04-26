@@ -28,7 +28,7 @@ select
   jsonb_agg(container.value -> 'name') as containers,
   jsonb_agg(container.value -> 'image') as images
 from
-  k8s_minikube.kubernetes_replication_controller,
+  kubernetes_replication_controller,
   jsonb_array_elements(template -> 'spec' -> 'containers') as container
-group by name, namespace
+group by name, namespace;
 ```

@@ -39,3 +39,15 @@ order by
   role_name,
   api_groups
 ```
+
+### Group cluster roles by same set of aggregation rules
+
+```sql
+select
+  jsonb_agg(name) as roles,
+  aggregation_rule
+from
+  kubernetes_cluster_role
+group by
+  aggregation_rule;
+```
