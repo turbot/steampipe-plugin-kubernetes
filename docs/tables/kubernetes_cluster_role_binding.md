@@ -9,10 +9,10 @@ A ClusterRoleBinding grants the permissions defined in a cluster role to a user 
 ```sql
 select
   name,
-  creation_timestamp,
-  subjects,
   role_name,
-  role_kind
+  role_kind,
+  jsonb_pretty(subjects),
+  creation_timestamp
 from
   kubernetes_cluster_role_binding
 order by
@@ -28,7 +28,7 @@ select
   subject ->> 'name' as subject_name,
   subject ->> 'namespace' as subject_namespace,
   subject ->> 'apiGroup' as subject_api_group,
-  subject ->> 'kind' as subject_kind,
+  subject ->> 'kind' as subject_kind
 from
   kubernetes_cluster_role_binding,
   jsonb_array_elements(subjects) as subject

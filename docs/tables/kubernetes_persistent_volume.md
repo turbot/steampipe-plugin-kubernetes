@@ -18,7 +18,7 @@ select
   volume_mode,
   age(current_timestamp, creation_timestamp)
 from
-  kubernetes_persistent_volume
+  kubernetes_persistent_volume;
 ```
 
 ### Get hostpath details for the volume
@@ -29,5 +29,5 @@ select
   persistent_volume_source -> 'hostPath' ->> 'path' as path,
   persistent_volume_source -> 'hostPath' ->> 'type' as type
 from
-  k8s_minikube.kubernetes_persistent_volume
+  kubernetes_persistent_volume;
 ```

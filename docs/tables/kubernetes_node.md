@@ -33,6 +33,9 @@ select
 from
   kubernetes_node,
   jsonb_array_elements(conditions) as cond
+order by
+  name,
+  status desc;
 ```
 
 ### Get system info for nodes
@@ -51,5 +54,31 @@ select
   node_info ->> 'kubeletVersion' as kubeletVersion,
   node_info ->> 'kubeProxyVersion' as kubeProxyVersion
 from
-  kubernetes_node
+  kubernetes_node;
+```
+
+
+### Node IP info 
+
+```sql
+select
+  name,
+  jsonb_path_query_array(
+    addresses,
+    '$[*] ? (@.type == "ExternalIP").address'
+  ) as public_ips,
+  jsonb_path_query_array(
+    addresses,
+    '$[*] ? (@.type == "InternalIP").address'
+  ) as internal_ips,
+    jsonb_path_query_array(
+    addresses,
+    '$[*] ? (@.type == "InternalDNS").address'
+  ) as internal_dns,
+  jsonb_path_query_array(
+    addresses,
+    '$[*] ? (@.type == "Hostname").address'
+  ) as hostnames
+from
+  kubernetes_node;
 ```

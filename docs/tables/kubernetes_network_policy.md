@@ -17,54 +17,86 @@ select
   labels,
   annotations
 from
-  k8s_minikube.kubernetes_network_policy;
+  kubernetes_network_policy;
 ```
 
-### Get ingress rules for a specific network policy
-
+### List policies that allow all egress
 ```sql
 select
   name,
   namespace,
-  concat(ports -> 'port', '/', ports ->> 'protocol') as to_port,
-  case when from_source ? 'ipBlock' then
-    'ip_block'
-  when from_source ? 'namespaceSelector' then
-    'namespace_selector'
-  when from_source ? 'podSelector' then
-    'pod_selector'
-  end as source_type,
-  coalesce(from_source -> 'ipBlock', from_source -> 'namespaceSelector', from_source -> 'podSelector') as source
+  policy_types,
+  pod_selector,
+  egress 
 from
-  k8s_minikube.kubernetes_network_policy,
-  jsonb_array_elements(ingress) as ingress_rule,
-  jsonb_array_elements(ingress_rule -> 'ports') as ports,
-  jsonb_array_elements(ingress_rule -> 'from') as from_source
+  kubernetes_network_policy
 where
-  name = 'test-network-policy'
-  and namespace = 'default';
+  policy_types @> '["Egress"]'
+  and pod_selector = '{}'
+  and egress @> '[{}]';
 ```
 
-### Get egress rules for a specific network policy
+
+### List default deny egress policies
+```sql
+select
+  name,
+  namespace,
+  policy_types,
+  pod_selector,
+  egress 
+from
+  kubernetes_network_policy
+where
+  policy_types @> '["Egress"]'
+  and pod_selector = '{}'
+  and egress is null;
+
+```
+### List policies that allow all ingress
+```sql
+select
+  name,
+  namespace,
+  policy_types,
+  pod_selector,
+  ingress 
+from
+  kubernetes_network_policy
+where
+  policy_types @> '["Ingress"]'
+  and pod_selector = '{}'
+  and ingress @> '[{}]';
+```
+
+### List default deny ingress policies
+```sql
+select
+  name,
+  namespace,
+  policy_types,
+  pod_selector,
+  ingress 
+from
+  kubernetes_network_policy
+where
+  policy_types @> '["Ingress"]'
+  and pod_selector = '{}'
+  and ingress is null;
+```
+
+
+### View rules for a specific network policy
 
 ```sql
 select
   name,
   namespace,
-  concat(ports -> 'port', '/', ports ->> 'protocol') as to_port,
-  case when to_destination ? 'ipBlock' then
-    'ip_block'
-  when to_destination ? 'namespaceSelector' then
-    'namespace_selector'
-  when to_destination ? 'podSelector' then
-    'pod_selector'
-  end as destination_type,
-  coalesce(to_destination -> 'ipBlock', to_destination -> 'namespaceSelector', to_destination -> 'podSelector') as destination
+  policy_types,
+  jsonb_pretty(ingress),
+  jsonb_pretty(egress)
 from
-  k8s_minikube.kubernetes_network_policy,
-  jsonb_array_elements(egress) as egress_rule,
-  jsonb_array_elements(egress_rule -> 'ports') as ports,
-  jsonb_array_elements(egress_rule -> 'to') as to_destination
+  kubernetes_network_policy
 where
   name = 'test-network-policy'
   and namespace = 'default';
