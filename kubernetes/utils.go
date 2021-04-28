@@ -190,25 +190,6 @@ func getKubectlContext(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 
 //// COMMON TRANSFORM FUNCTIONS
 
-func ensureStringArray(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	if d.Value == nil {
-		// Should we return empty list instead???
-		// return []string{}, nil
-
-		return nil, fmt.Errorf("ensureStringArray - Cannot transform nil value")
-	}
-
-	switch v := d.Value.(type) {
-	case []string:
-		return v, nil
-	case string:
-		return []string{v}, nil
-	default:
-		str := fmt.Sprintf("%v", d.Value)
-		return []string{string(str)}, nil
-	}
-}
-
 func v1TimeToRFC3339(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	if d.Value == nil {
 		return nil, nil
