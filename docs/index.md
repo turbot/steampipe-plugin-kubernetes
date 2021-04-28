@@ -63,6 +63,8 @@ connection "kubernetes" {
 }
 ```
 
+This will create a `kubernetes` connection that uses the default kubeconfig context.
+
 ## Get involved
 
 - Open source: https://github.com/turbot/steampipe-plugin-kubernetes
@@ -72,7 +74,7 @@ connection "kubernetes" {
 
 If you have a kube config setup using the kubectl CLI Steampipe just works with that connection.
 
-The Kubernetes plugin allows you set the name of kube cluster with the `config_context` argument in any connection profile. You may also specify the path to kube config file with `config_path` argument.
+The Kubernetes plugin allows you set the name of kube kubectl context with the `config_context` argument in any connection profile. You may also specify the path to kube config file with `config_path` argument.
 
 ### Credentials via kube config
 
