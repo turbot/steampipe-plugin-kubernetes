@@ -14,7 +14,7 @@ import (
 func tableKubernetesReplicaSet(ctx context.Context) *plugin.Table {
 	return &plugin.Table{
 		Name:        "kubernetes_replicaset",
-		Description: "Kubernetes ReplicaSet ensures that a specified number of pod replicas are running at any given time.",
+		Description: "Kubernetes replica set ensures that a specified number of pod replicas are running at any given time.",
 		Get: &plugin.GetConfig{
 			KeyColumns: plugin.AllColumns([]string{"name", "namespace"}),
 			Hydrate:    getK8sReplicaSet,
