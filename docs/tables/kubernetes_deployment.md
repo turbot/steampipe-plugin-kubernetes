@@ -42,7 +42,7 @@ from
 ```
 
 
-### Container Images
+### Container Images used in Deployments
 ```sql
 select 
   name as deployment_name,
@@ -84,8 +84,7 @@ order by
   pod.namespace,
   d.name,
   rs.name,
-  pod.name
-;
+  pod.name;
 ```
 
 
@@ -104,5 +103,5 @@ from
 where
   template -> 'spec' ->> 'hostPID' = 'true' or
   template -> 'spec' ->> 'hostIPC' = 'true' or
-  template -> 'spec' ->> 'hostNetwork' = 'true'
+  template -> 'spec' ->> 'hostNetwork' = 'true';
 ```

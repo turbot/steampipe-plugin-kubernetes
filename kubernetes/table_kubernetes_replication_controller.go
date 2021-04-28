@@ -3,7 +3,7 @@ package kubernetes
 import (
 	"context"
 
-	v1 "k8s.io/api/apps/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/turbot/steampipe-plugin-sdk/grpc/proto"
@@ -11,16 +11,16 @@ import (
 	"github.com/turbot/steampipe-plugin-sdk/plugin/transform"
 )
 
-func tableKubernetesReplicaSet(ctx context.Context) *plugin.Table {
+func tableKubernetesReplicaController(ctx context.Context) *plugin.Table {
 	return &plugin.Table{
-		Name:        "kubernetes_replicaset",
-		Description: "Kubernetes replica set ensures that a specified number of pod replicas are running at any given time.",
+		Name:        "kubernetes_replication_controller",
+		Description: "A Replication Controller makes sure that a pod or homogeneous set of pods are always up and available. If there are too many pods, it will kill some. If there are too few, the Replication Controller will start more.",
 		Get: &plugin.GetConfig{
 			KeyColumns: plugin.AllColumns([]string{"name", "namespace"}),
-			Hydrate:    getK8sReplicaSet,
+			Hydrate:    getK8sReplicaController,
 		},
 		List: &plugin.ListConfig{
-			Hydrate: listK8sReplicaSets,
+			Hydrate: listK8sReplicaControllers,
 		},
 		Columns: k8sCommonColumns([]*plugin.Column{
 
@@ -78,13 +78,13 @@ func tableKubernetesReplicaSet(ctx context.Context) *plugin.Table {
 			{
 				Name:        "observed_generation",
 				Type:        proto.ColumnType_INT,
-				Description: "ObservedGeneration reflects the generation of the most recently observed ReplicaSet.",
+				Description: "Reflects the generation of the most recently observed replication controller.",
 				Transform:   transform.FromField("Status.ObservedGeneration"),
 			},
 			{
 				Name:        "conditions",
 				Type:        proto.ColumnType_JSON,
-				Description: "Represents the latest available observations of a replica set's current state.",
+				Description: "Represents the latest available observations of a replication controller's current state.",
 				Transform:   transform.FromField("Status.Conditions"),
 			},
 
@@ -99,7 +99,7 @@ func tableKubernetesReplicaSet(ctx context.Context) *plugin.Table {
 				Name:        "tags",
 				Type:        proto.ColumnType_JSON,
 				Description: ColumnDescriptionTags,
-				Transform:   transform.From(transformReplicaSetTags),
+				Transform:   transform.From(transformReplicaControllerTags),
 			},
 		}),
 	}
@@ -107,30 +107,30 @@ func tableKubernetesReplicaSet(ctx context.Context) *plugin.Table {
 
 //// HYDRATE FUNCTIONS
 
-func listK8sReplicaSets(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
+func listK8sReplicaControllers(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
 	logger := plugin.Logger(ctx)
-	logger.Trace("listK8sReplicaSets")
+	logger.Trace("listK8sReplicaControllers")
 
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
 	}
 
-	replicaSets, err := clientset.AppsV1().ReplicaSets("").List(ctx, metav1.ListOptions{})
+	replicaControllers, err := clientset.CoreV1().ReplicationControllers("").List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
 
-	for _, item := range replicaSets.Items {
-		d.StreamListItem(ctx, item)
+	for _, replicaController := range replicaControllers.Items {
+		d.StreamListItem(ctx, replicaController)
 	}
 
 	return nil, nil
 }
 
-func getK8sReplicaSet(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
+func getK8sReplicaController(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
 	logger := plugin.Logger(ctx)
-	logger.Trace("getK8sReplicaSet")
+	logger.Trace("getK8sReplicaController")
 
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
@@ -140,17 +140,17 @@ func getK8sReplicaSet(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 	name := d.KeyColumnQuals["name"].GetStringValue()
 	namespace := d.KeyColumnQuals["namespace"].GetStringValue()
 
-	rs, err := clientset.AppsV1().ReplicaSets(namespace).Get(ctx, name, metav1.GetOptions{})
+	replicaController, err := clientset.CoreV1().ReplicationControllers(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
 		return nil, err
 	}
 
-	return *rs, nil
+	return *replicaController, nil
 }
 
 //// TRANSFORM FUNCTIONS
 
-func transformReplicaSetTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	obj := d.HydrateItem.(v1.ReplicaSet)
+func transformReplicaControllerTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
+	obj := d.HydrateItem.(v1.ReplicationController)
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }

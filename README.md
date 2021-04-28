@@ -1,46 +1,72 @@
-# steampipe-plugin-kuberenetes
+![image](https://hub.steampipe.io/images/plugins/turbot/kubernetes-social-graphic.png)
 
-A steampipe plugin for kubernetes.   This is a WIP and not yet ready for use....
+# Kubernetes Plugin for Steampipe
 
-To build, run `make`.  Copy the `config/kubernetes.spc` file to `~/.steampipe/config/` to create a  connection.  Currently, uses kubectl current context.
+Use SQL to query Kubernetes components.
 
+- **[Get started →](https://hub.steampipe.io/plugins/turbot/kubernetes)**
+- Documentation: [Table definitions & examples](https://hub.steampipe.io/plugins/turbot/kubernetes/tables)
+- Community: [Discussion forums](https://github.com/turbot/steampipe/discussions)
+- Get involved: [Issues](https://github.com/turbot/steampipe-plugin-kubernetes/issues)
 
+## Quick start
 
-Notes...
-- Steampipe Standard Fields:
-    - `title`:  `name` (from metadata)
-    - Omit for now:  `akas`: `uid`  (from metadata)
-    - `tags`: merge `labels` and `annotations`  (from metadata).  If there is a name collision, prefer `label`
+Install the plugin with [Steampipe](https://steampipe.io):
 
-- K8S standard fields:
-    - all the metadata fields?
-        - include `namespace` for non-namespaced resources (node, namespace, etc) ??
-        - Omit `cluster_name` 
-            - Per https://v1-18.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta:  This field is not set anywhere right now and apiserver is going to ignore it if set in create or update request.
+```shell
+steampipe plugin install kubernetes
+```
 
-        - Omit: `self_link`:
-            - DEPRECATED: Kubernetes will stop propagating this field in 1.20 release and the field is planned to be removed in 1.21 release.
+Run a query:
 
-        - omit `managed_fields`:
-           - 'users typically shouldn't need to set or understand this field.' Will add later if requested / required.
+```sql
+select name, creation_timestamp, addresses, capacity from kubernetes_node;
+```
 
-    - We need the `cluster_name` or `kubectl_context` to disambiguate connections...
+## Developing
 
-    - `Spec` and `status` should be expanded into individual columns, not included as a giant JSON column
-        - do not prefix with with `spec_` and `status_` ?
+Prerequisites:
 
-    - Why are the TypeMeta columns?  They're always missing??
+- [Steampipe](https://steampipe.io/downloads)
+- [Golang](https://golang.org/doc/install)
 
+Clone:
 
-- Auth / creds / Scope: 
-    - support these.... https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs
+```sh
+git clone git@github.com:turbot/steampipe-plugin-kubernetes
+cd steampipe-plugin-kubernetes
+```
 
-    - 1 connection = 1 context from kubeconfig file
+Build, which automatically installs the new version to your `~/.steampipe/plugins` directory:
 
-    - use kubeconfig file
-        - default `config_path` to `KUBE_CONFIG_PATH`, then "~/.kube/config"
-        - default `config_context` to current active (default) config
+```
+make
+```
 
+Configure the plugin:
 
-- session cache is not working????
+```
+cp config/* ~/.steampipe/config
+vi ~/.steampipe/config/kubernetes.spc
+```
 
+Try it!
+
+```
+steampipe query
+> .inspect kubernetes
+```
+
+Further reading:
+
+- [Writing plugins](https://steampipe.io/docs/develop/writing-plugins)
+- [Writing your first table](https://steampipe.io/docs/develop/writing-your-first-table)
+
+## Contributing
+
+Please see the [contribution guidelines](https://github.com/turbot/steampipe/blob/main/CONTRIBUTING.md) and our [code of conduct](https://github.com/turbot/steampipe/blob/main/CODE_OF_CONDUCT.md). All contributions are subject to the [MPL-2.0 open source license](https://github.com/turbot/steampipe-plugin-kubernetes/blob/main/LICENSE).
+
+`help wanted` issues:
+
+- [Steampipe](https://github.com/turbot/steampipe/labels/help%20wanted)
+- [Kubernetes Plugin](https://github.com/turbot/steampipe-plugin-kubernetes/labels/help%20wanted)
