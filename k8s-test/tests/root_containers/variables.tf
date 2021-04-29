@@ -14,7 +14,7 @@ resource "null_resource" "root_containers_passed" {
 
 resource "null_resource" "delay" {
   provisioner "local-exec" {
-    command = "sleep 100"
+    command = "sleep 60"
   }
 }
 
