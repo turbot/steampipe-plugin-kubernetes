@@ -1,0 +1,18 @@
+[
+  {
+    "name": "pod1",
+    "namespace": "default",
+    "run_as_non_root": true,
+    "security_context": {
+      "runAsNonRoot": true
+    }
+  },
+  {
+    "name": "pod7",
+    "namespace": "default",
+    "run_as_non_root": true,
+    "security_context": {
+      "runAsNonRoot": true
+    }
+  }
+]
