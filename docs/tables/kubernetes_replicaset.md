@@ -20,7 +20,7 @@ from
   kubernetes_replicaset;
 ```
 
-### Get conatiner and image used in the replicaset
+### Get container and image used in the replicaset
 
 ```sql
 select
@@ -34,4 +34,29 @@ from
 order by
   namespace,
   name;
+```
+
+
+### List pods for a replicaset (by name)
+```sql
+select
+  pod.namespace,
+  rs.name as replicaset_name,
+  pod.name as pod_name,
+  pod.phase,
+  age(current_timestamp, pod.creation_timestamp),
+  pod.pod_ip,
+  pod.node_name
+from 
+  kubernetes_pod as pod,
+  jsonb_array_elements(pod.owner_references) as pod_owner,
+  kubernetes_replicaset as rs
+where 
+  pod_owner ->> 'kind' = 'ReplicaSet'
+  and rs.uid = pod_owner ->> 'uid'
+  and rs.name = 'frontend-56fc5b6b47'
+order by
+  pod.namespace,
+  rs.name,
+  pod.name;
 ```

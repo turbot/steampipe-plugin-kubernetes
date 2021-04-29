@@ -27,5 +27,5 @@ select
   namespace,
   jsonb_pretty(rules) as rules
 from
-  kubernetes_ingress
+  kubernetes_ingress;
 ```

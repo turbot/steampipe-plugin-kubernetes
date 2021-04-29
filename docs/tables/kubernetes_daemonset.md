@@ -26,7 +26,7 @@ from
   kubernetes_daemonset;
 ```
 
-### Get conatiner and image used in the daemonset
+### Get container and image used in the daemonset
 
 ```sql
 select
