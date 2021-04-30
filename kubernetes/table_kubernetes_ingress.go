@@ -109,6 +109,11 @@ func getK8sIngress(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDa
 	name := d.KeyColumnQuals["name"].GetStringValue()
 	namespace := d.KeyColumnQuals["namespace"].GetStringValue()
 
+	// return if namespace or name is empty
+	if namespace == "" || name == "" {
+		return nil, nil
+	}
+
 	ingress, err := clientset.ExtensionsV1beta1().Ingresses(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
 		return nil, err

@@ -140,6 +140,11 @@ func getK8sReplicaController(ctx context.Context, d *plugin.QueryData, _ *plugin
 	name := d.KeyColumnQuals["name"].GetStringValue()
 	namespace := d.KeyColumnQuals["namespace"].GetStringValue()
 
+	// return if namespace or name is empty
+	if namespace == "" || name == "" {
+		return nil, nil
+	}
+
 	replicaController, err := clientset.CoreV1().ReplicationControllers(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
 		return nil, err
