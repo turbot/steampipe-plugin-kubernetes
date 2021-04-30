@@ -86,7 +86,7 @@ func getK8sClusterRole(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 
 	name := d.KeyColumnQuals["name"].GetStringValue()
 
-	// return if namespace or name is empty
+	// return if name is empty
 	if name == "" {
 		return nil, nil
 	}
