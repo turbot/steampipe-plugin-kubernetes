@@ -1,0 +1,14 @@
+[
+  {
+    "name": "jenkins",
+    "role_kind": "ClusterRole",
+    "role_name": "jenkins",
+    "subjects": [
+      {
+        "kind": "ServiceAccount",
+        "name": "jenkins",
+        "namespace": "kubernetes-plugin-test"
+      }
+    ]
+  }
+]

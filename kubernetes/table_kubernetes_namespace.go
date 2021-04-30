@@ -97,6 +97,11 @@ func getK8sNamespace(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 
 	name := d.KeyColumnQuals["name"].GetStringValue()
 
+	// return if name is empty
+	if name == "" {
+		return nil, nil
+	}
+
 	namespace, err := clientset.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
 		return nil, err

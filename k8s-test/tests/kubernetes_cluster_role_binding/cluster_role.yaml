@@ -1,0 +1,57 @@
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: jenkins
+rules:
+- apiGroups: [""]
+  resources: ["namespaces"]
+  verbs: ["create","delete","get","list","patch","update","watch"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["create","delete","get","list","patch","update","watch"]
+- apiGroups: [""]
+  resources: ["pods/exec"]
+  verbs: ["create","delete","get","list","patch","update","watch"]
+- apiGroups: [""]
+  resources: ["pods/log"]
+  verbs: ["get","list","watch"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["watch"]
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["list"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["create","delete","get","list","patch","update","watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments"] # KubernetesPipelineTest#cascadingDelete
+  verbs: ["create","delete","get","list","patch","update","watch"]
+- apiGroups: ["extensions"]
+  resources: ["deployments"] # ditto
+  verbs: ["create","delete","get","list","patch","update","watch"]
+- apiGroups: ["apps"]
+  resources: ["replicasets"] # ditto
+  verbs: ["create","delete","get","list","patch","update","watch"]
+- apiGroups: [""]
+  resources: ["persistentvolumeclaims"] # KubernetesPipelineTest#dynamicPVC
+  verbs: ["create","delete","get","list","patch","update","watch"]
+- apiGroups: ['policy']
+  resources: ['podsecuritypolicies']
+  verbs:     ['use']
+  resourceNames:
+  - privileged
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: jenkins
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: jenkins
+subjects:
+- kind: ServiceAccount
+  name: jenkins
+  namespace: kubernetes-plugin-test
+---

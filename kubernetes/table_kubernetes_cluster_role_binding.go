@@ -100,6 +100,11 @@ func getK8sClusterRoleBinding(ctx context.Context, d *plugin.QueryData, _ *plugi
 
 	name := d.KeyColumnQuals["name"].GetStringValue()
 
+	// return if name is empty
+	if name == "" {
+		return nil, nil
+	}
+
 	clusterRoleBinding, err := clientset.RbacV1().ClusterRoleBindings().Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
 		return nil, err

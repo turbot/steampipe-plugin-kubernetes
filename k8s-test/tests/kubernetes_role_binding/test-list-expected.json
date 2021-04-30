@@ -1,0 +1,14 @@
+[
+  {
+    "name": "jenkins",
+    "namespace": "default",
+    "role_kind": "Role",
+    "role_name": "jenkins",
+    "subjects": [
+      {
+        "kind": "ServiceAccount",
+        "name": "jenkins"
+      }
+    ]
+  }
+]

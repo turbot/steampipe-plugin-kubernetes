@@ -1,0 +1,77 @@
+[
+  {
+    "name": "jenkins",
+    "namespace": "default",
+    "rules": [
+      {
+        "apiGroups": [
+          ""
+        ],
+        "resources": [
+          "pods"
+        ],
+        "verbs": [
+          "create",
+          "delete",
+          "get",
+          "list",
+          "patch",
+          "update",
+          "watch"
+        ]
+      },
+      {
+        "apiGroups": [
+          ""
+        ],
+        "resources": [
+          "pods/exec"
+        ],
+        "verbs": [
+          "create",
+          "delete",
+          "get",
+          "list",
+          "patch",
+          "update",
+          "watch"
+        ]
+      },
+      {
+        "apiGroups": [
+          ""
+        ],
+        "resources": [
+          "pods/log"
+        ],
+        "verbs": [
+          "get",
+          "list",
+          "watch"
+        ]
+      },
+      {
+        "apiGroups": [
+          ""
+        ],
+        "resources": [
+          "events"
+        ],
+        "verbs": [
+          "watch"
+        ]
+      },
+      {
+        "apiGroups": [
+          ""
+        ],
+        "resources": [
+          "secrets"
+        ],
+        "verbs": [
+          "get"
+        ]
+      }
+    ]
+  }
+]

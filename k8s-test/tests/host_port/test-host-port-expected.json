@@ -1,0 +1,8 @@
+
+[
+  {
+    "host_port": 9100,
+    "name": "prometheus-node-exporter",
+    "namespace": "monitoring"
+  }
+]

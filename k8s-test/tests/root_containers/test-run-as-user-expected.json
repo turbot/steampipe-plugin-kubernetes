@@ -1,0 +1,18 @@
+[
+  {
+   "name": "pod4",
+   "namespace": "default",
+   "run_as_user": 1000,
+   "security_context": {
+    "runAsUser": 1000
+   }
+  },
+  {
+   "name": "pod9",
+   "namespace": "default",
+   "run_as_user": 1000,
+   "security_context": {
+    "runAsUser": 1000
+   }
+  }
+ ]

@@ -170,6 +170,11 @@ func getK8sDaemonSet(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 	name := d.KeyColumnQuals["name"].GetStringValue()
 	namespace := d.KeyColumnQuals["namespace"].GetStringValue()
 
+	// return if namespace or name is empty
+	if namespace == "" || name == "" {
+		return nil, nil
+	}
+
 	daemonSet, err := clientset.AppsV1().DaemonSets(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
 		return nil, err

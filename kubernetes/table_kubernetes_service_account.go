@@ -16,7 +16,7 @@ func tableKubernetesServiceAccount(ctx context.Context) *plugin.Table {
 		Name:        "kubernetes_service_account",
 		Description: "A service account provides an identity for processes that run in a Pod.",
 		Get: &plugin.GetConfig{
-			KeyColumns: plugin.SingleColumn("name"),
+			KeyColumns: plugin.AllColumns([]string{"name", "namespace"}),
 			Hydrate:    getK8sServiceAccount,
 		},
 		List: &plugin.ListConfig{
@@ -91,6 +91,11 @@ func getK8sServiceAccount(ctx context.Context, d *plugin.QueryData, _ *plugin.Hy
 
 	name := d.KeyColumnQuals["name"].GetStringValue()
 	namespace := d.KeyColumnQuals["namespace"].GetStringValue()
+
+	// handle empty name and namespace value
+	if name == "" || namespace == "" {
+		return nil, nil
+	}
 
 	serviceAccount, err := clientset.CoreV1().ServiceAccounts(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {

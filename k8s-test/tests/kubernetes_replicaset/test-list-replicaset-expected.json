@@ -1,0 +1,15 @@
+[
+  {
+    "available": 3,
+    "desired": 3,
+    "fully_labeled_replicas": 3,
+    "name": "frontend",
+    "namespace": "default",
+    "ready": 3,
+    "selector": {
+      "matchLabels": {
+        "tier": "frontend"
+      }
+    }
+  }
+]

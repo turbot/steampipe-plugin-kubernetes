@@ -1,0 +1,11 @@
+[
+  {
+    "available": 0,
+    "current": 0,
+    "desired": 0,
+    "name": "prometheus-node-exporter",
+    "namespace": "monitoring",
+    "ready": 0,
+    "selector": null
+  }
+]

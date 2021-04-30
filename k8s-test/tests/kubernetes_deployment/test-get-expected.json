@@ -1,0 +1,11 @@
+[
+  {
+    "available_replicas": 3,
+    "name": "nginx-deployment-test",
+    "namespace": "default",
+    "ready_replicas": 3,
+    "status_replicas": 3,
+    "unavailable_replicas": 0,
+    "updated_replicas": 3
+  }
+]
