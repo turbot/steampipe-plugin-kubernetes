@@ -16,7 +16,7 @@ func tableKubernetesConfigMap(ctx context.Context) *plugin.Table {
 		Name:        "kubernetes_config_map",
 		Description: "Config Map can be used to store fine-grained information like individual properties or coarse-grained information like entire config files or JSON blobs.",
 		Get: &plugin.GetConfig{
-			KeyColumns: plugin.SingleColumn("name"),
+			KeyColumns: plugin.AllColumns([]string{"name", "namespace"}),
 			Hydrate:    getK8sConfigMap,
 		},
 		List: &plugin.ListConfig{
@@ -91,6 +91,11 @@ func getK8sConfigMap(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 
 	name := d.KeyColumnQuals["name"].GetStringValue()
 	namespace := d.KeyColumnQuals["namespace"].GetStringValue()
+
+	// return if namespace or name is empty
+	if namespace == "" || name == "" {
+		return nil, nil
+	}
 
 	configMap, err := clientset.CoreV1().ConfigMaps(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {

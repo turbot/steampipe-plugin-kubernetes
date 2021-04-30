@@ -1,0 +1,26 @@
+[
+  {
+    "key": "game.properties",
+    "name": "game-demo",
+    "namespace": "default",
+    "value": "enemy.types=aliens,monsters\nplayer.maximum-lives=5\n"
+  },
+  {
+    "key": "player_initial_lives",
+    "name": "game-demo",
+    "namespace": "default",
+    "value": "3"
+  },
+  {
+    "key": "ui_properties_file_name",
+    "name": "game-demo",
+    "namespace": "default",
+    "value": "user-interface.properties"
+  },
+  {
+    "key": "user-interface.properties",
+    "name": "game-demo",
+    "namespace": "default",
+    "value": "color.good=purple\ncolor.bad=yellow\nallow.textmode=true\n"
+  }
+]
