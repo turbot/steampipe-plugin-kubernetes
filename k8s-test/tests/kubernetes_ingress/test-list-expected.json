@@ -1,0 +1,23 @@
+[
+  {
+    "class": null,
+    "name": "minimal-ingress",
+    "namespace": "default",
+    "rules": [
+      {
+        "http": {
+          "paths": [
+            {
+              "backend": {
+                "serviceName": "test",
+                "servicePort": 80
+              },
+              "path": "/testpath",
+              "pathType": "Prefix"
+            }
+          ]
+        }
+      }
+    ]
+  }
+]
