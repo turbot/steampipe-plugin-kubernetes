@@ -1,0 +1,19 @@
+[
+	{
+		"cluster_ip": "10.108.144.78",
+		"cluster_ips": ["10.108.144.78"],
+		"name": "jenkins",
+		"namespace": "default",
+		"ports": [
+			{
+				"port": 80,
+				"protocol": "TCP",
+				"targetPort": 9376
+			}
+		],
+		"selector": {
+			"app": "MyApp"
+		},
+		"type": "ClusterIP"
+	}
+]
