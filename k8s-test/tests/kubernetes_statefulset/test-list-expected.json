@@ -1,0 +1,8 @@
+[
+	{
+		"name": "web",
+		"namespace": "default",
+		"replicas": 2,
+		"service_name": "nginx"
+	}
+]

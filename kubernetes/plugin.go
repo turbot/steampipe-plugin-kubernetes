@@ -33,8 +33,8 @@ func Plugin(ctx context.Context) *plugin.Plugin {
 			"kubernetes_config_map":              tableKubernetesConfigMap(ctx),
 			"kubernetes_daemonset":               tableKubernetesDaemonset(ctx),
 			"kubernetes_deployment":              tableKubernetesDeployment(ctx),
-			"kubernetes_endpoint_slice":          tableKubernetesEndpointSlice(ctx),
 			"kubernetes_endpoint":                tableKubernetesEndpoints(ctx),
+			"kubernetes_endpoint_slice":          tableKubernetesEndpointSlice(ctx),
 			"kubernetes_ingress":                 tableKubernetesIngress(ctx),
 			"kubernetes_job":                     tableKubernetesJob(ctx),
 			"kubernetes_namespace":               tableKubernetesNamespace(ctx),
@@ -50,6 +50,7 @@ func Plugin(ctx context.Context) *plugin.Plugin {
 			"kubernetes_role_binding":            tableKubernetesRoleBinding(ctx),
 			"kubernetes_secret":                  tableKubernetesSecret(ctx),
 			"kubernetes_service_account":         tableKubernetesServiceAccount(ctx),
+			"kubernetes_statefulset":             tableKubernetesStatefulSet(ctx),
 
 			// "kubernetes_pod_template_spec":    tableKubernetesPodTemplateSpec(ctx),
 		},
