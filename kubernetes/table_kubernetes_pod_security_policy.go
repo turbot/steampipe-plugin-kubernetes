@@ -218,6 +218,12 @@ func getPodSecurityPolicy(ctx context.Context, d *plugin.QueryData, _ *plugin.Hy
 	}
 
 	name := d.KeyColumnQuals["name"].GetStringValue()
+
+	// return if  name is empty
+	if name == "" {
+		return nil, nil
+	}
+
 	podSecurityPolicy, err := clientset.PolicyV1beta1().PodSecurityPolicies().Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
 		return nil, err

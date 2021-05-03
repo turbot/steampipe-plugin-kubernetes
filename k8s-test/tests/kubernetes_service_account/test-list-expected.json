@@ -1,0 +1,7 @@
+[
+  {
+   "name": "jenkins",
+   "namespace": "default",
+   "secrets": 1
+  }
+ ]

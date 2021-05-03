@@ -23,7 +23,7 @@ select
   name,
   namespace,
   phase,
-  creation_timestamp
+  creation_timestamp,
   pod_ip
 from
   kubernetes_pod;

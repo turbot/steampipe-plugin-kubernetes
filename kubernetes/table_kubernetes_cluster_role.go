@@ -86,6 +86,11 @@ func getK8sClusterRole(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 
 	name := d.KeyColumnQuals["name"].GetStringValue()
 
+	// return if name is empty
+	if name == "" {
+		return nil, nil
+	}
+
 	clusterRole, err := clientset.RbacV1().ClusterRoles().Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
 		return nil, err

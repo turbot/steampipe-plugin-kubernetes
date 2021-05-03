@@ -16,7 +16,7 @@ func tableKubernetesSecret(ctx context.Context) *plugin.Table {
 		Name:        "kubernetes_secret",
 		Description: "Secrets can be used to store sensitive information either as individual properties or coarse-grained entries like entire files or JSON blobs.",
 		Get: &plugin.GetConfig{
-			KeyColumns: plugin.SingleColumn("name"),
+			KeyColumns: plugin.AllColumns([]string{"name", "namespace"}),
 			Hydrate:    getK8sSecret,
 		},
 		List: &plugin.ListConfig{
@@ -96,6 +96,11 @@ func getK8sSecret(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 
 	name := d.KeyColumnQuals["name"].GetStringValue()
 	namespace := d.KeyColumnQuals["namespace"].GetStringValue()
+
+	// return if namespace or name is empty
+	if namespace == "" || name == "" {
+		return nil, nil
+	}
 
 	secret, err := clientset.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {

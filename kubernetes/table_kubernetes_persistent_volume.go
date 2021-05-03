@@ -16,7 +16,7 @@ func tableKubernetesPersistentVolume(ctx context.Context) *plugin.Table {
 		Name:        "kubernetes_persistent_volume",
 		Description: "A PersistentVolume (PV) is a piece of storage in the cluster that has been provisioned by an administrator or dynamically provisioned using Storage Classes. PVs are volume plugins like Volumes, but have a lifecycle independent of any individual Pod that uses the PV.",
 		Get: &plugin.GetConfig{
-			KeyColumns: plugin.AllColumns([]string{"name", "namespace"}),
+			KeyColumns: plugin.SingleColumn("name"),
 			Hydrate:    getK8sPV,
 		},
 		List: &plugin.ListConfig{
@@ -149,6 +149,11 @@ func getK8sPV(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (
 	}
 
 	name := d.KeyColumnQuals["name"].GetStringValue()
+
+	// return if  name is empty
+	if name == "" {
+		return nil, nil
+	}
 
 	persistentVolume, err := clientset.CoreV1().PersistentVolumes().Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {

@@ -1,0 +1,56 @@
+# runAsNonRoot and runAsUser not set (pod or container)
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod6
+spec:
+  containers:
+  - name: main
+    image: alpine
+    command: ["/bin/sleep", "999999"]
+---
+# runAsNonRoot set at pod, but overridden at container
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod7
+spec:
+  securityContext:
+    runAsNonRoot: true
+  containers:
+  - name: main
+    image: alpine
+    command: ["/bin/sleep", "999999"]
+    securityContext:
+      runAsNonRoot: false
+---
+# runAsNonRoot not set, runAsUser set to 0 at pod level
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod8
+spec:
+  securityContext:
+    runAsUser: 0
+  containers:
+  - name: main
+    image: alpine
+    command: ["/bin/sleep", "999999"]
+---
+# runAsNonRoot not set, runAsUser >1000 defined at pod, but overridden to 0 at container level
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod9
+spec:
+  securityContext:
+    runAsUser: 1000
+  containers:
+  - name: main
+    image: alpine
+    command: ["/bin/sleep", "999999"]
+  - name: main2
+    image: alpine
+    command: ["/bin/sleep", "999999"]
+    securityContext:
+      runAsUser: 0
