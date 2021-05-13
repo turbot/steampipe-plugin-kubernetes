@@ -6,7 +6,7 @@ brand_color: "#326CE5"
 display_name: "Kubernetes"
 short_name: "kubernetes"
 description: "Steampipe plugin for Kubernetes components."
-og_description: Query Kubernetes with SQL! Open source CLI. No DB required.
+og_description: "Query Kubernetes with SQL! Open source CLI. No DB required."
 og_image: "/images/plugins/turbot/kubernetes-social-graphic.png"
 ---
 
@@ -68,7 +68,7 @@ This will create a `kubernetes` connection that uses the default kubeconfig cont
 ## Get involved
 
 - Open source: https://github.com/turbot/steampipe-plugin-kubernetes
-- Community: [Discussion forums](https://github.com/turbot/steampipe/discussions)
+- Community: [Slack Channel](https://join.slack.com/t/steampipe/shared_invite/zt-oij778tv-lYyRTWOTMQYBVAbtPSWs3g)
 
 ## Advanced configuration options
 
