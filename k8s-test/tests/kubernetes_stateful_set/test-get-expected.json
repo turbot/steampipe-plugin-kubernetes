@@ -1,0 +1,21 @@
+[
+	{
+		"collision_count": 0,
+		"current_replicas": 2,
+		"name": "web",
+		"namespace": "default",
+		"observed_generation": 1,
+		"pod_management_policy": "OrderedReady",
+		"ready_replicas": 2,
+		"replicas": 2,
+		"revision_history_limit": 10,
+		"service_name": "nginx",
+		"update_strategy": {
+			"rollingUpdate": {
+				"partition": 0
+			},
+			"type": "RollingUpdate"
+		},
+		"updated_replicas": 2
+	}
+]
