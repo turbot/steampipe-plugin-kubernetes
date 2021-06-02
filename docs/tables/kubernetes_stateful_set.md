@@ -1,6 +1,6 @@
 # Table: kubernetes_stateful_set
 
-In Kubernetes, statefulSets represent a set of Pods with unique, persistent identities and stable hostnames that GKE maintains regardless of where they are scheduled.
+In Kubernetes, stateful sets represent a set of pods with unique, persistent identities and stable hostnames that GKE maintains regardless of where they are scheduled.
 
 ## Examples
 
