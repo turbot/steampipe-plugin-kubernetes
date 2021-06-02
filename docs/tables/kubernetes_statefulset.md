@@ -20,7 +20,7 @@ order by
   name;
 ```
 
-### List statefulSets requires manual update when the object's configuration is changed
+### List stateful sets that require manual update when the object's configuration is changed
 
 ```sql
 select
