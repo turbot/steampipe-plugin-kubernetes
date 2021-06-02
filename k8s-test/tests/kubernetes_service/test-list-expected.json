@@ -1,0 +1,7 @@
+[
+	{
+		"cluster_ip": "10.108.144.78",
+		"name": "jenkins",
+		"namespace": "default"
+	}
+]
