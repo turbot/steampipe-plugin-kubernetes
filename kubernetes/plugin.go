@@ -51,7 +51,7 @@ func Plugin(ctx context.Context) *plugin.Plugin {
 			"kubernetes_secret":                  tableKubernetesSecret(ctx),
 			"kubernetes_service":                 tableKubernetesService(ctx),
 			"kubernetes_service_account":         tableKubernetesServiceAccount(ctx),
-			"kubernetes_statefulset":             tableKubernetesStatefulSet(ctx),
+			"kubernetes_stateful_set":            tableKubernetesStatefulSet(ctx),
 
 			// "kubernetes_pod_template_spec":    tableKubernetesPodTemplateSpec(ctx),
 		},

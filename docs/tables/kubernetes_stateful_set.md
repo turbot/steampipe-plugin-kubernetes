@@ -1,4 +1,4 @@
-# Table: kubernetes_statefulset
+# Table: kubernetes_stateful_set
 
 In Kubernetes, statefulSets represent a set of Pods with unique, persistent identities and stable hostnames that GKE maintains regardless of where they are scheduled.
 
@@ -14,7 +14,7 @@ select
   replicas,
   age(current_timestamp, creation_timestamp)
 from
-  kubernetes_statefulset
+  kubernetes_stateful_set
 order by
   namespace,
   name;
@@ -29,7 +29,7 @@ select
   service_name,
   update_strategy ->> 'type' as update_strategy_type
 from
-  kubernetes_statefulset
+  kubernetes_stateful_set
 where
   update_strategy ->> 'type' = 'OnDelete';
 ```

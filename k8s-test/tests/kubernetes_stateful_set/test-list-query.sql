@@ -4,7 +4,7 @@ select
   service_name,
   replicas
 from
-  kubernetes.kubernetes_statefulset
+  kubernetes.kubernetes_stateful_set
 where
   name = 'web'
 order by

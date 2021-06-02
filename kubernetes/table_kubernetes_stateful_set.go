@@ -13,7 +13,7 @@ import (
 
 func tableKubernetesStatefulSet(ctx context.Context) *plugin.Table {
 	return &plugin.Table{
-		Name:        "kubernetes_statefulset",
+		Name:        "kubernetes_stateful_set",
 		Description: "A statefulSet is the workload API object used to manage stateful applications.",
 		Get: &plugin.GetConfig{
 			KeyColumns: plugin.AllColumns([]string{"name", "namespace"}),
@@ -93,7 +93,7 @@ func tableKubernetesStatefulSet(ctx context.Context) *plugin.Table {
 			{
 				Name:        "conditions",
 				Type:        proto.ColumnType_JSON,
-				Description: "Represents the latest available observations of a statefulset's current state.",
+				Description: "Represents the latest available observations of a stateful set's current state.",
 				Transform:   transform.FromField("Status.Conditions"),
 			},
 			{

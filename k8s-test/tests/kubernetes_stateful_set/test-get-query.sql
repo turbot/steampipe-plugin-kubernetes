@@ -12,7 +12,7 @@ select
   updated_replicas,
   update_strategy
 from
-  kubernetes.kubernetes_statefulset
+  kubernetes.kubernetes_stateful_set
 where
   name = 'web'
   and namespace = 'default'
