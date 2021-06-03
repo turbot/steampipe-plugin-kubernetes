@@ -1,3 +1,11 @@
+## v0.0.2 [2021-06-03]
+
+_What's new?_
+
+- New tables added
+  - [kubernetes_service](https://hub.steampipe.io/plugins/turbot/kubernetes/tables/kubernetes_service) ([#13](https://github.com/turbot/steampipe-plugin-kubernetes/pull/13))
+  - [kubernetes_stateful_set](https://hub.steampipe.io/plugins/turbot/kubernetes/tables/kubernetes_stateful_set) ([#18](https://github.com/turbot/steampipe-plugin-kubernetes/pull/18))
+
 ## v0.0.1 [2021-04-01]
 
 _What's new?_
