@@ -37,6 +37,7 @@ func Plugin(ctx context.Context) *plugin.Plugin {
 			"kubernetes_endpoint_slice":          tableKubernetesEndpointSlice(ctx),
 			"kubernetes_ingress":                 tableKubernetesIngress(ctx),
 			"kubernetes_job":                     tableKubernetesJob(ctx),
+			"kubernetes_limit_range":             tableKubernetesLimitRange(ctx),
 			"kubernetes_namespace":               tableKubernetesNamespace(ctx),
 			"kubernetes_network_policy":          tableKubernetesNetworkPolicy(ctx),
 			"kubernetes_node":                    tableKubernetesNode(ctx),
