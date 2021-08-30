@@ -19,7 +19,7 @@ order by
   name;
 ```
 
-### Get used pod details for resource quota status
+### Get used pod details of namespaces
 
 ```sql
 select
