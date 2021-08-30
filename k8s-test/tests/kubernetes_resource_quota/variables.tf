@@ -1,6 +1,6 @@
 resource "null_resource" "create_quota" {
   provisioner "local-exec" {
-    command = "kubectl apply -f ${path.cwd}/quota.yaml"
+    command = "kubectl apply -f ${path.cwd}/resource_quota.yaml"
   }
 }
 

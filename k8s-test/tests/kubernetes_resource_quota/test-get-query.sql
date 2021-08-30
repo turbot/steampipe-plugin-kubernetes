@@ -9,4 +9,3 @@ where
 order by
   namespace,
   name;
-
