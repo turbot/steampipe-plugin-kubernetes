@@ -1,0 +1,6 @@
+[
+  {
+    "name": "cpu-limit-range",
+    "namespace": "default"
+  }
+]
