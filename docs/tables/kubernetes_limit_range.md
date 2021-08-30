@@ -24,7 +24,7 @@ order by
   namespace;
 ```
 
-### Get spec limits details
+### Get spec limits details of limit range
 
 ```sql
 select

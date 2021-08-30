@@ -28,7 +28,7 @@ func tableKubernetesLimitRange(ctx context.Context) *plugin.Table {
 			{
 				Name:        "spec_limits",
 				Type:        proto.ColumnType_JSON,
-				Description: "Limits is the list of LimitRangeItem objects that are enforced.",
+				Description: "List of limit range item objects that are enforced.",
 				Transform:   transform.FromField("Spec.Limits"),
 			},
 
