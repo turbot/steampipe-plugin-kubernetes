@@ -54,7 +54,7 @@ func tableKubernetesResourceQuota(ctx context.Context) *plugin.Table {
 			{
 				Name:        "status_used",
 				Type:        proto.ColumnType_JSON,
-				Description: "Current observed total usage of the resource in the namespace.",
+				Description: "Indicates current observed total usage of the resource in the namespace.",
 				Transform:   transform.FromField("Status.Used"),
 			},
 
