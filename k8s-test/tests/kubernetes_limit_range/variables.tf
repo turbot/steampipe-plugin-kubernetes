@@ -1,6 +1,6 @@
 resource "null_resource" "create_limit" {
   provisioner "local-exec" {
-    command = "kubectl apply -f ${path.cwd}/limit.yaml --namespace=default"
+    command = "kubectl apply -f ${path.cwd}/limit_range.yaml --namespace=default"
   }
 }
 
