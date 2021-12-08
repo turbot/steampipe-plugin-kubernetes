@@ -1,3 +1,10 @@
+## v0.2.0 [2021-12-08]
+
+_Enhancements_
+
+- Recompiled plugin with Go version 1.17 ([#36](https://github.com/turbot/steampipe-plugin-kubernetes/pull/36))
+- Recompiled plugin with [steampipe-plugin-sdk v1.8.2](https://github.com/turbot/steampipe-plugin-sdk/blob/main/CHANGELOG.md#v182--2021-11-22) ([#35](https://github.com/turbot/steampipe-plugin-kubernetes/pull/35))
+
 ## v0.1.0 [2021-09-01]
 
 _What's new?_
