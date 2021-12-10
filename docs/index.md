@@ -77,6 +77,8 @@ If you have a kube config setup using the kubectl CLI Steampipe just works with 
 
 The Kubernetes plugin allows you set the name of kube kubectl context with the `config_context` argument in any connection profile. You may also specify the path to kube config file with `config_path` argument.
 
+This plugin also supports querying Kubernetes clusters using [OpenID Connect](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#openid-connect-tokens) (OIDC) authentication. No extra configuration is required in a connection profile to query clusters using OIDC.
+
 ### Credentials via kube config
 
 ```hcl
