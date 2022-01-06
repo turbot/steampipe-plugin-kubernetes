@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	crd "github.com/solo-io/external-apis/pkg/api/k8s/apiextensions.k8s.io/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -58,6 +59,58 @@ func GetNewClientset(ctx context.Context, d *plugin.QueryData) (*kubernetes.Clie
 	// } else {
 	// 	logger.Warn("!!!! Clientset NOT Found in Cache after adding !!!!", "serviceCacheKey", serviceCacheKey, "Value", value)
 	// }
+
+	return clientset, err
+}
+
+func GetNewCrdClientSet(ctx context.Context, d *plugin.QueryData) (crd.Clientset, error) {
+	logger := plugin.Logger(ctx)
+	logger.Trace("GetNewCrdClientSet")
+
+	kubeconfig, err := getK8Config(ctx, d)
+	if err != nil {
+		return nil, err
+	}
+	logger.Trace("Got K8 Config")
+
+	// Get a rest.Config from the kubeconfig file.
+	restconfig, err := kubeconfig.ClientConfig()
+	if err != nil {
+		return nil, err
+	}
+	logger.Trace("Got rest config")
+
+	clientset, err := crd.NewClientsetFromConfig(restconfig)
+	if err != nil {
+		return nil, err
+	}
+	logger.Trace("Framed new CRD Client Set from Config")
+
+	return clientset, err
+}
+
+func GetNewCrdObjectClientSet(ctx context.Context, d *plugin.QueryData) (*CRDConfigV1Alpha1Client, error) {
+	logger := plugin.Logger(ctx)
+	logger.Trace("GetNewCrdObjectClientSet")
+
+	kubeconfig, err := getK8Config(ctx, d)
+	if err != nil {
+		return nil, err
+	}
+	logger.Trace("Got K8 Config")
+
+	// Get a rest.Config from the kubeconfig file.
+	restconfig, err := kubeconfig.ClientConfig()
+	if err != nil {
+		return nil, err
+	}
+	logger.Trace("Got rest config")
+
+	clientset, err := NewClient(restconfig)
+	if err != nil {
+		return nil, err
+	}
+	logger.Trace("Framed new CRD Client Set from Config")
 
 	return clientset, err
 }

@@ -8,9 +8,11 @@ package kubernetes
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/turbot/steampipe-plugin-sdk/plugin"
 	"github.com/turbot/steampipe-plugin-sdk/plugin/transform"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 )
 
 const pluginName = "steampipe-plugin-kubernetes"
@@ -27,37 +29,91 @@ func Plugin(ctx context.Context) *plugin.Plugin {
 			NewInstance: ConfigInstance,
 			Schema:      ConfigSchema,
 		},
-		TableMap: map[string]*plugin.Table{
-			"kubernetes_cluster_role":            tableKubernetesClusterRole(ctx),
-			"kubernetes_cluster_role_binding":    tableKubernetesClusterRoleBinding(ctx),
-			"kubernetes_config_map":              tableKubernetesConfigMap(ctx),
-			"kubernetes_daemonset":               tableKubernetesDaemonset(ctx),
-			"kubernetes_deployment":              tableKubernetesDeployment(ctx),
-			"kubernetes_endpoint":                tableKubernetesEndpoints(ctx),
-			"kubernetes_endpoint_slice":          tableKubernetesEndpointSlice(ctx),
-			"kubernetes_ingress":                 tableKubernetesIngress(ctx),
-			"kubernetes_job":                     tableKubernetesJob(ctx),
-			"kubernetes_limit_range":             tableKubernetesLimitRange(ctx),
-			"kubernetes_namespace":               tableKubernetesNamespace(ctx),
-			"kubernetes_network_policy":          tableKubernetesNetworkPolicy(ctx),
-			"kubernetes_node":                    tableKubernetesNode(ctx),
-			"kubernetes_persistent_volume":       tableKubernetesPersistentVolume(ctx),
-			"kubernetes_persistent_volume_claim": tableKubernetesPersistentVolumeClaim(ctx),
-			"kubernetes_pod":                     tableKubernetesPod(ctx),
-			"kubernetes_pod_security_policy":     tableKubernetesPodSecurityPolicy(ctx),
-			"kubernetes_replicaset":              tableKubernetesReplicaSet(ctx),
-			"kubernetes_replication_controller":  tableKubernetesReplicaController(ctx),
-			"kubernetes_resource_quota":          tableKubernetesResourceQuota(ctx),
-			"kubernetes_role":                    tableKubernetesRole(ctx),
-			"kubernetes_role_binding":            tableKubernetesRoleBinding(ctx),
-			"kubernetes_secret":                  tableKubernetesSecret(ctx),
-			"kubernetes_service":                 tableKubernetesService(ctx),
-			"kubernetes_service_account":         tableKubernetesServiceAccount(ctx),
-			"kubernetes_stateful_set":            tableKubernetesStatefulSet(ctx),
-
-			// "kubernetes_pod_template_spec":    tableKubernetesPodTemplateSpec(ctx),
-		},
+		TableMapFunc: pluginTableDefinitions,
 	}
 
 	return p
+}
+
+func pluginTableDefinitions(ctx context.Context, p *plugin.Plugin) (map[string]*plugin.Table, error) {
+
+	// Initialize tables
+	tables := map[string]*plugin.Table{
+		"kubernetes_cluster_role":            tableKubernetesClusterRole(ctx),
+		"kubernetes_cluster_role_binding":    tableKubernetesClusterRoleBinding(ctx),
+		"kubernetes_config_map":              tableKubernetesConfigMap(ctx),
+		"kubernetes_daemonset":               tableKubernetesDaemonset(ctx),
+		"kubernetes_deployment":              tableKubernetesDeployment(ctx),
+		"kubernetes_endpoint":                tableKubernetesEndpoints(ctx),
+		"kubernetes_endpoint_slice":          tableKubernetesEndpointSlice(ctx),
+		"kubernetes_ingress":                 tableKubernetesIngress(ctx),
+		"kubernetes_job":                     tableKubernetesJob(ctx),
+		"kubernetes_limit_range":             tableKubernetesLimitRange(ctx),
+		"kubernetes_namespace":               tableKubernetesNamespace(ctx),
+		"kubernetes_network_policy":          tableKubernetesNetworkPolicy(ctx),
+		"kubernetes_node":                    tableKubernetesNode(ctx),
+		"kubernetes_persistent_volume":       tableKubernetesPersistentVolume(ctx),
+		"kubernetes_persistent_volume_claim": tableKubernetesPersistentVolumeClaim(ctx),
+		"kubernetes_pod":                     tableKubernetesPod(ctx),
+		"kubernetes_pod_security_policy":     tableKubernetesPodSecurityPolicy(ctx),
+		"kubernetes_replicaset":              tableKubernetesReplicaSet(ctx),
+		"kubernetes_replication_controller":  tableKubernetesReplicaController(ctx),
+		"kubernetes_resource_quota":          tableKubernetesResourceQuota(ctx),
+		"kubernetes_role":                    tableKubernetesRole(ctx),
+		"kubernetes_role_binding":            tableKubernetesRoleBinding(ctx),
+		"kubernetes_secret":                  tableKubernetesSecret(ctx),
+		"kubernetes_service":                 tableKubernetesService(ctx),
+		"kubernetes_service_account":         tableKubernetesServiceAccount(ctx),
+		"kubernetes_stateful_set":            tableKubernetesStatefulSet(ctx),
+	}
+
+	// Get a list of custom resource definitions configured in the server
+	crdList, err := listCustomResourceDefinitions(ctx, p)
+	if err != nil {
+		return nil, err
+	}
+	for _, crd := range crdList.Items {
+		tableCtx := context.WithValue(ctx, "crd", crd)
+		// base := filepath.Base(i)
+		// tableName := base[0 : len(base)-len(filepath.Ext(base))]
+		// Add the table if it does not already exist, ensuring standard tables win
+		tableObj := tableDynamicCRD(tableCtx, p)
+		tables[tableObj.Name] = tableObj
+	}
+
+	return tables, nil
+}
+
+func listCustomResourceDefinitions(ctx context.Context, p *plugin.Plugin) (*v1beta1.CustomResourceDefinitionList, error) {
+	logger := plugin.Logger(ctx)
+	logger.Trace("listCustomResourceDefinitions")
+
+	crdClientSet, err := GetNewCrdClientSet(ctx, &plugin.QueryData{Connection: p.Connection, ConnectionManager: p.ConnectionManager})
+	if err != nil {
+		logger.Error("kubernetes_dynamic_crd.listCustomResourceDefinitions", "get_client_set_error", err)
+		return nil, err
+	}
+	logger.Trace("crd Client Created", crdClientSet)
+
+	crdList, err := crdClientSet.CustomResourceDefinitions().ListCustomResourceDefinition(ctx)
+	if err != nil {
+		logger.Error("kubernetes_dynamic_crd.listCustomResourceDefinitions", "list_crd_error", err)
+		return nil, err
+	}
+
+	logger.Trace("Number of CRDs", len(crdList.Items))
+	crd0 := crdList.Items[0]
+	spec0, _ := json.Marshal(crd0)
+	logger.Trace("crd 0 spec", string(spec0))
+
+	return crdList, nil
+
+	// logger.Trace("Number of CRDs", len(crdList.Items))
+	// crd0 := crdList.Items[0]
+	// crd8 := crdList.Items[8]
+	// spec0, _ := json.Marshal(crd0)
+	// spec8, _ := json.Marshal(crd8)
+	// logger.Trace("crd 0 spec", string(spec0))
+	// logger.Trace("crd 8 spec", string(spec8))
+
 }
