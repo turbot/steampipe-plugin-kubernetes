@@ -31,6 +31,7 @@ func Plugin(ctx context.Context) *plugin.Plugin {
 			"kubernetes_cluster_role":            tableKubernetesClusterRole(ctx),
 			"kubernetes_cluster_role_binding":    tableKubernetesClusterRoleBinding(ctx),
 			"kubernetes_config_map":              tableKubernetesConfigMap(ctx),
+			"kubernetes_cron_job":                tableKubernetesCronJob(ctx),
 			"kubernetes_daemonset":               tableKubernetesDaemonset(ctx),
 			"kubernetes_deployment":              tableKubernetesDeployment(ctx),
 			"kubernetes_endpoint":                tableKubernetesEndpoints(ctx),
