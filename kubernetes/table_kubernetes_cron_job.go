@@ -14,7 +14,7 @@ import (
 func tableKubernetesCronJob(ctx context.Context) *plugin.Table {
 	return &plugin.Table{
 		Name:        "kubernetes_cron_job",
-		Description: "A Job creates one or more Pods and will continue to retry execution of the Pods until a specified number of them successfully terminate.",
+		Description: "Cron jobs are useful for creating periodic and recurring tasks, like running backups or sending emails.",
 		Get: &plugin.GetConfig{
 			KeyColumns: plugin.AllColumns([]string{"name", "namespace"}),
 			Hydrate:    getK8sCronJob,
@@ -117,6 +117,7 @@ func listK8sCronJobs(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 
 	cronJobs, err := clientset.BatchV1().CronJobs("").List(ctx, metav1.ListOptions{})
 	if err != nil {
+		logger.Error("listK8sCronJobs", "list_err", err)
 		return nil, err
 	}
 
@@ -146,6 +147,7 @@ func getK8sCronJob(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDa
 
 	cronJob, err := clientset.BatchV1().CronJobs(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
+		logger.Error("listK8sCronJobs", "get_err", err)
 		return nil, err
 	}
 
