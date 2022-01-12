@@ -13,7 +13,7 @@ import (
 
 func tableKubernetesCronJob(ctx context.Context) *plugin.Table {
 	return &plugin.Table{
-		Name:        "kubernetes_cron_job",
+		Name:        "kubernetes_cronjob",
 		Description: "Cron jobs are useful for creating periodic and recurring tasks, like running backups or sending emails.",
 		Get: &plugin.GetConfig{
 			KeyColumns: plugin.AllColumns([]string{"name", "namespace"}),

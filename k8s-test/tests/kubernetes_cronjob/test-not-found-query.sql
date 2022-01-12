@@ -2,7 +2,7 @@ select
   name,
   namespace
 from
-  kubernetes_cron_job
+  kubernetes_cronjob
 where
   name = 'hello_123_123';
 
