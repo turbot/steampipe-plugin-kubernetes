@@ -97,6 +97,12 @@ func tableKubernetesStatefulSet(ctx context.Context) *plugin.Table {
 				Transform:   transform.FromField("Status.Conditions"),
 			},
 			{
+				Name:        "template",
+				Type:        proto.ColumnType_JSON,
+				Description: "Template is the object that describes the pod that will be created if insufficient replicas are detected.",
+				Transform:   transform.FromField("Spec.Template"),
+			},
+			{
 				Name:        "update_strategy",
 				Type:        proto.ColumnType_JSON,
 				Description: "Indicates the StatefulSetUpdateStrategy that will be employed to update Pods in the StatefulSet when a revision is made to Template.",
