@@ -8,7 +8,6 @@ package kubernetes
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/turbot/steampipe-plugin-sdk/plugin"
 	"github.com/turbot/steampipe-plugin-sdk/plugin/transform"
@@ -93,7 +92,6 @@ func listCustomResourceDefinitions(ctx context.Context, p *plugin.Plugin) (*v1be
 		logger.Error("kubernetes_dynamic_crd.listCustomResourceDefinitions", "get_client_set_error", err)
 		return nil, err
 	}
-	logger.Trace("crd Client Created", crdClientSet)
 
 	crdList, err := crdClientSet.CustomResourceDefinitions().ListCustomResourceDefinition(ctx)
 	if err != nil {
@@ -101,19 +99,5 @@ func listCustomResourceDefinitions(ctx context.Context, p *plugin.Plugin) (*v1be
 		return nil, err
 	}
 
-	logger.Trace("Number of CRDs", len(crdList.Items))
-	crd0 := crdList.Items[0]
-	spec0, _ := json.Marshal(crd0)
-	logger.Trace("crd 0 spec", string(spec0))
-
 	return crdList, nil
-
-	// logger.Trace("Number of CRDs", len(crdList.Items))
-	// crd0 := crdList.Items[0]
-	// crd8 := crdList.Items[8]
-	// spec0, _ := json.Marshal(crd0)
-	// spec8, _ := json.Marshal(crd8)
-	// logger.Trace("crd 0 spec", string(spec0))
-	// logger.Trace("crd 8 spec", string(spec8))
-
 }
