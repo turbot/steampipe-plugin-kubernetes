@@ -6,9 +6,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	crd "github.com/solo-io/external-apis/pkg/api/k8s/apiextensions.k8s.io/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
@@ -71,48 +73,39 @@ func GetNewCrdClientSet(ctx context.Context, d *plugin.QueryData) (crd.Clientset
 	if err != nil {
 		return nil, err
 	}
-	logger.Trace("Got K8 Config")
 
 	// Get a rest.Config from the kubeconfig file.
 	restconfig, err := kubeconfig.ClientConfig()
 	if err != nil {
 		return nil, err
 	}
-	logger.Trace("Got rest config")
 
 	clientset, err := crd.NewClientsetFromConfig(restconfig)
 	if err != nil {
 		return nil, err
 	}
-	logger.Trace("Framed new CRD Client Set from Config")
 
 	return clientset, err
 }
 
-func GetNewCrdObjectClientSet(ctx context.Context, d *plugin.QueryData) (*CRDConfigV1Alpha1Client, error) {
+func GetNewDynamicObjectClientSet(ctx context.Context, d *plugin.QueryData) (dynamic.Interface, error) {
 	logger := plugin.Logger(ctx)
-	logger.Trace("GetNewCrdObjectClientSet")
+	logger.Trace("GetNewDynamicObjectClientSet")
 
 	kubeconfig, err := getK8Config(ctx, d)
 	if err != nil {
 		return nil, err
 	}
-	logger.Trace("Got K8 Config")
 
 	// Get a rest.Config from the kubeconfig file.
 	restconfig, err := kubeconfig.ClientConfig()
 	if err != nil {
 		return nil, err
 	}
-	logger.Trace("Got rest config")
 
-	clientset, err := NewClient(restconfig)
-	if err != nil {
-		return nil, err
-	}
-	logger.Trace("Framed new CRD Client Set from Config")
+	dynamicClient := dynamic.NewForConfigOrDie(restconfig)
 
-	return clientset, err
+	return dynamicClient, err
 }
 
 // Get kubernetes config based on environment variable and plugin config
@@ -277,4 +270,21 @@ func mergeTags(labels map[string]string, annotations map[string]string) map[stri
 		tags[k] = v
 	}
 	return tags
+}
+
+func convertToTimestamp(ctx context.Context, str string) *time.Time {
+	// If there is a blank string, return zero time
+	if str == "" {
+		return &time.Time{}
+	}
+
+	layout := "2006-01-02T15:04:05Z"
+	t, err := time.Parse(layout, str)
+	if err != nil {
+		plugin.Logger(ctx).Error("kubernetes_utils.convertToTimestamp", "conversion_error", err)
+		// Return zero time in case of a conversion error
+		return &time.Time{}
+	}
+	// Return the converted time if conversion is successful
+	return &t
 }
