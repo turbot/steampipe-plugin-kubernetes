@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+	"strings"
 
 	"k8s.io/api/discovery/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,7 +21,8 @@ func tableKubernetesEndpointSlice(ctx context.Context) *plugin.Table {
 			Hydrate:    getK8sEnpointSlice,
 		},
 		List: &plugin.ListConfig{
-			Hydrate: listK8sEnpointSlices,
+			Hydrate:    listK8sEnpointSlices,
+			KeyColumns: getCommonOptionalKeyQuals(),
 		},
 		Columns: k8sCommonColumns([]*plugin.Column{
 			{
@@ -67,13 +69,51 @@ func listK8sEnpointSlices(ctx context.Context, d *plugin.QueryData, _ *plugin.Hy
 		return nil, err
 	}
 
-	nodes, err := clientset.DiscoveryV1beta1().EndpointSlices("").List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, err
+	input := metav1.ListOptions{
+		Limit: 500,
 	}
 
-	for _, endpointSlice := range nodes.Items {
-		d.StreamListItem(ctx, endpointSlice)
+	// Limiting the results
+	limit := d.QueryContext.Limit
+	if d.QueryContext.Limit != nil {
+		if *limit < input.Limit {
+			if *limit < 1 {
+				input.Limit = 1
+			} else {
+				input.Limit = *limit
+			}
+		}
+	}
+
+	commonFieldSelectorValue := getCommonOptionalKeyQualsValueForFieldSelector(d)
+
+	if len(commonFieldSelectorValue) > 0 {
+		input.FieldSelector = strings.Join(commonFieldSelectorValue, ",")
+	}
+
+	var response *v1beta1.EndpointSliceList
+	pageLeft := true
+
+	for pageLeft {
+		response, err = clientset.DiscoveryV1beta1().EndpointSlices("").List(ctx, input)
+		if err != nil {
+			return nil, err
+		}
+
+		if response.GetContinue() != "" {
+			input.Continue = response.Continue
+		} else {
+			pageLeft = false
+		}
+
+		for _, endpointSlice := range response.Items {
+			d.StreamListItem(ctx, endpointSlice)
+
+			// Context can be cancelled due to manual cancellation or the limit has been hit
+			if d.QueryStatus.RowsRemaining(ctx) == 0 {
+				return nil, nil
+			}
+		}
 	}
 
 	return nil, nil
