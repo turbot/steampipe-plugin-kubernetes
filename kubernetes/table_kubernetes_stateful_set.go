@@ -43,6 +43,12 @@ func tableKubernetesStatefulSet(ctx context.Context) *plugin.Table {
 				Transform:   transform.FromField("Status.CollisionCount"),
 			},
 			{
+				Name:        "available_replicas",
+				Type:        proto.ColumnType_INT,
+				Description: "Total number of available pods (ready for at least minReadySeconds) targeted by this statefulset.",
+				Transform:   transform.FromField("Status.AvailableReplicas"),
+			},
+			{
 				Name:        "current_replicas",
 				Type:        proto.ColumnType_INT,
 				Description: "The number of Pods created by the StatefulSet controller from the StatefulSet version indicated by currentRevision.",
