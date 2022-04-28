@@ -6,9 +6,9 @@ import (
 	v1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/turbot/steampipe-plugin-sdk/v2/grpc/proto"
-	"github.com/turbot/steampipe-plugin-sdk/v2/plugin"
-	"github.com/turbot/steampipe-plugin-sdk/v2/plugin/transform"
+	"github.com/turbot/steampipe-plugin-sdk/v3/grpc/proto"
+	"github.com/turbot/steampipe-plugin-sdk/v3/plugin"
+	"github.com/turbot/steampipe-plugin-sdk/v3/plugin/transform"
 )
 
 func tableKubernetesStatefulSet(ctx context.Context) *plugin.Table {
@@ -41,6 +41,12 @@ func tableKubernetesStatefulSet(ctx context.Context) *plugin.Table {
 				Type:        proto.ColumnType_INT,
 				Description: "The count of hash collisions for the StatefulSet.",
 				Transform:   transform.FromField("Status.CollisionCount"),
+			},
+			{
+				Name:        "available_replicas",
+				Type:        proto.ColumnType_INT,
+				Description: "Total number of available pods (ready for at least minReadySeconds) targeted by this statefulset.",
+				Transform:   transform.FromField("Status.AvailableReplicas"),
 			},
 			{
 				Name:        "current_replicas",
