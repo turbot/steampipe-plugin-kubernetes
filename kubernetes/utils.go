@@ -83,7 +83,10 @@ func getK8Config(ctx context.Context, d *plugin.QueryData) (clientcmd.ClientConf
 	overrides := &clientcmd.ConfigOverrides{}
 
 	// variable to store paths for kubernetes config
-	var configPaths = []string{}
+	// default kube config path
+	var configPaths = []string{"~/.kube/config"}
+	// Error: invalid configuration: no configuration has been provided, try setting KUBERNETES_MASTER environment variable
+
 	if kubernetesConfig.ConfigPath != nil {
 		configPaths = []string{*kubernetesConfig.ConfigPath}
 	} else if kubernetesConfig.ConfigPaths != nil && len(kubernetesConfig.ConfigPaths) > 0 {
@@ -92,15 +95,9 @@ func getK8Config(ctx context.Context, d *plugin.QueryData) (clientcmd.ClientConf
 		configPaths = filepath.SplitList(v)
 	} else if v := os.Getenv("KUBERNETES_MASTER"); v != "" {
 		configPaths = []string{v}
-	} else {
-		// default kube config path
-		configPaths = []string{"~/.kube/config"}
-		// Error: invalid configuration: no configuration has been provided, try setting KUBERNETES_MASTER environment variable
-
 	}
 
 	if len(configPaths) > 0 {
-		ctxSuffix := "; default context"
 		expandedPaths := []string{}
 		for _, p := range configPaths {
 			path, err := homedir.Expand(p)
@@ -127,10 +124,10 @@ func getK8Config(ctx context.Context, d *plugin.QueryData) (clientcmd.ClientConf
 		// cluster, clusterOk := d.GetOk("config_context_cluster")
 		// if ctxOk || authInfoOk || clusterOk {
 		if kubernetesConfig.ConfigContext != nil {
-			ctxSuffix = "; overriden context"
+			// ctxSuffix := "; overridden context"
 			// if ctxOk {
 			overrides.CurrentContext = *kubernetesConfig.ConfigContext
-			ctxSuffix += fmt.Sprintf("; config ctx: %s", overrides.CurrentContext)
+			// ctxSuffix += fmt.Sprintf("; overridden context ; config ctx: %s", overrides.CurrentContext)
 			logger.Debug("GetNewClientset", "Using custom current context: %q", overrides.CurrentContext)
 			// }
 
