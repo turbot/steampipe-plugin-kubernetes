@@ -5,6 +5,7 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 
 	"github.com/turbot/steampipe-plugin-sdk/v3/grpc/proto"
 	"github.com/turbot/steampipe-plugin-sdk/v3/plugin"
@@ -77,6 +78,12 @@ func tableKubernetesService(ctx context.Context) *plugin.Table {
 				Type:        proto.ColumnType_BOOL,
 				Description: "Indicates that any agent which deals with endpoints for this service should disregard any indications of ready/not-ready.",
 				Transform:   transform.FromField("Spec.PublishNotReadyAddresses"),
+			},
+			{
+				Name:        "selector_string_format",
+				Type:        proto.ColumnType_STRING,
+				Description: "Route service traffic to pods with label keys and values matching this selector. String format representation.",
+				Transform:   transform.From(selectorToString),
 			},
 			{
 				Name:        "session_affinity",
@@ -204,4 +211,14 @@ func getK8sService(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDa
 func transformServiceTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(v1.Service)
 	return mergeTags(obj.Labels, obj.Annotations), nil
+}
+
+func selectorToString(_ context.Context, d *transform.TransformData) (interface{}, error) {
+	obj := d.HydrateItem.(v1.Service)
+	if obj.Spec.Selector == nil {
+		return nil, nil
+	}
+	selector := labels.SelectorFromSet(obj.Spec.Selector).String()
+
+	return selector, nil
 }
