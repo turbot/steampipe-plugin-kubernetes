@@ -44,6 +44,12 @@ func tableKubernetesDaemonset(ctx context.Context) *plugin.Table {
 				Transform:   transform.FromField("Spec.Volumes"),
 			},
 			{
+				Name:        "selector_query",
+				Type:        proto.ColumnType_STRING,
+				Description: "A query string representation of the selector.",
+				Transform:   transform.FromField("Spec.Selector").Transform(labelSelectorToString),
+			},
+			{
 				Name:        "template",
 				Type:        proto.ColumnType_JSON,
 				Description: "An object that describes the pod that will be created.",

@@ -38,6 +38,13 @@ func tableKubernetesDeployment(ctx context.Context) *plugin.Table {
 				Transform:   transform.FromField("Spec.Selector"),
 			},
 			{
+				Name:        "selector_query",
+				Type:        proto.ColumnType_STRING,
+				Description: "A query string representation of the selector.",
+				Transform:   transform.FromField("Spec.Selector").Transform(labelSelectorToString),
+			},
+
+			{
 				Name:        "template",
 				Type:        proto.ColumnType_JSON,
 				Description: "Template describes the pods that will be created.",

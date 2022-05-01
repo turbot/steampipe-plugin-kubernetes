@@ -44,6 +44,12 @@ func tableKubernetesReplicaSet(ctx context.Context) *plugin.Table {
 				Transform:   transform.FromField("Spec.Selector"),
 			},
 			{
+				Name:        "selector_query",
+				Type:        proto.ColumnType_STRING,
+				Description: "A query string representation of the selector.",
+				Transform:   transform.FromField("Spec.Selector").Transform(labelSelectorToString),
+			},
+			{
 				Name:        "template",
 				Type:        proto.ColumnType_JSON,
 				Description: "Template is the object that describes the pod that will be created if insufficient replicas are detected.",

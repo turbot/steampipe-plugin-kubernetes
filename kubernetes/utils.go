@@ -8,10 +8,11 @@ import (
 	"strings"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/kubernetes"
+	_ "k8s.io/client-go/plugin/pkg/client/auth/azure"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
-	_ "k8s.io/client-go/plugin/pkg/client/auth/azure"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
@@ -205,6 +206,42 @@ func v1TimeToRFC3339(_ context.Context, d *transform.TransformData) (interface{}
 	default:
 		return nil, fmt.Errorf("invalid time format %T! ", v)
 	}
+}
+
+func labelSelectorToString(_ context.Context, d *transform.TransformData) (interface{}, error) {
+	// if d.Value == "" {
+	// 	return "", nil
+	// }
+	if d.Value == nil {
+		return nil, nil
+	}
+
+	selector := d.Value.(*v1.LabelSelector)
+
+	ss, err := v1.LabelSelectorAsSelector(selector)
+	if err != nil {
+		return nil, err
+	}
+
+	return ss.String(), nil
+}
+
+func selectorMapToString(ctx context.Context, d *transform.TransformData) (interface{}, error) {
+	logger := plugin.Logger(ctx)
+	logger.Trace("selectorMapToString")
+
+	selector_map := d.Value.(map[string]string)
+
+	if len(selector_map) == 0 {
+		logger.Warn("selectorMapToString", "!!! selector is empty")
+		return nil, nil
+	}
+
+	logger.Warn("selectorMapToString", "selector_map", selector_map)
+
+	selector_string := labels.SelectorFromSet(selector_map).String()
+
+	return selector_string, nil
 }
 
 //// Other Utility functions

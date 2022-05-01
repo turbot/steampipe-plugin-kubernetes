@@ -55,6 +55,12 @@ func tableKubernetesJob(ctx context.Context) *plugin.Table {
 				Transform:   transform.FromField("Spec.Selector"),
 			},
 			{
+				Name:        "selector_query",
+				Type:        proto.ColumnType_STRING,
+				Description: "A query string representation of the selector.",
+				Transform:   transform.FromField("Spec.Selector").Transform(labelSelectorToString),
+			},
+			{
 				Name:        "manual_selector",
 				Type:        proto.ColumnType_BOOL,
 				Description: "ManualSelector controls generation of pod labels and pod selectors. When false or unset, the system pick labels unique to this job and appends those labels to the pod template.  When true, the user is responsible for picking unique labels and specifying the selector.",
