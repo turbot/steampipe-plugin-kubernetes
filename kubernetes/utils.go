@@ -230,7 +230,6 @@ func selectorMapToString(ctx context.Context, d *transform.TransformData) (inter
 	selector_map := d.Value.(map[string]string)
 
 	if len(selector_map) == 0 {
-		logger.Warn("selectorMapToString", "!!! selector is empty")
 		return nil, nil
 	}
 

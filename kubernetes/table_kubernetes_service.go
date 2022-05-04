@@ -129,7 +129,7 @@ func tableKubernetesService(ctx context.Context) *plugin.Table {
 			{
 				Name:        "selector_query",
 				Type:        proto.ColumnType_STRING,
-				Description: "Route service traffic to pods with label keys and values matching this selector. String format representation.",
+				Description: "A query string representation of the selector.",
 				Transform:   transform.FromField("Spec.Selector").Transform(selectorMapToString),
 			},
 			{
