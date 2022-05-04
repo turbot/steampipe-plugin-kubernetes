@@ -209,9 +209,6 @@ func v1TimeToRFC3339(_ context.Context, d *transform.TransformData) (interface{}
 }
 
 func labelSelectorToString(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	// if d.Value == "" {
-	// 	return "", nil
-	// }
 	if d.Value == nil {
 		return nil, nil
 	}
@@ -236,8 +233,6 @@ func selectorMapToString(ctx context.Context, d *transform.TransformData) (inter
 		logger.Warn("selectorMapToString", "!!! selector is empty")
 		return nil, nil
 	}
-
-	logger.Warn("selectorMapToString", "selector_map", selector_map)
 
 	selector_string := labels.SelectorFromSet(selector_map).String()
 

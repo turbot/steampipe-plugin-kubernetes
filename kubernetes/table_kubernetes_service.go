@@ -127,18 +127,17 @@ func tableKubernetesService(ctx context.Context) *plugin.Table {
 				Transform:   transform.FromField("Spec.Ports"),
 			},
 			{
-				Name:        "selector",
-				Type:        proto.ColumnType_JSON,
-				Description: "Route service traffic to pods with label keys and values matching this selector.",
-				Transform:   transform.FromField("Spec.Selector"),
-			},
-			{
 				Name:        "selector_query",
 				Type:        proto.ColumnType_STRING,
 				Description: "Route service traffic to pods with label keys and values matching this selector. String format representation.",
 				Transform:   transform.FromField("Spec.Selector").Transform(selectorMapToString),
 			},
-
+			{
+				Name:        "selector",
+				Type:        proto.ColumnType_JSON,
+				Description: "Route service traffic to pods with label keys and values matching this selector.",
+				Transform:   transform.FromField("Spec.Selector"),
+			},
 			{
 				Name:        "topology_keys",
 				Type:        proto.ColumnType_JSON,
