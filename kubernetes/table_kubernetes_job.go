@@ -49,12 +49,6 @@ func tableKubernetesJob(ctx context.Context) *plugin.Table {
 				Transform:   transform.FromField("Spec.BackoffLimit"),
 			},
 			{
-				Name:        "selector",
-				Type:        proto.ColumnType_JSON,
-				Description: "A label query over pods that should match the pod count.",
-				Transform:   transform.FromField("Spec.Selector"),
-			},
-			{
 				Name:        "manual_selector",
 				Type:        proto.ColumnType_BOOL,
 				Description: "ManualSelector controls generation of pod labels and pod selectors. When false or unset, the system pick labels unique to this job and appends those labels to the pod template.  When true, the user is responsible for picking unique labels and specifying the selector.",
@@ -65,6 +59,18 @@ func tableKubernetesJob(ctx context.Context) *plugin.Table {
 				Type:        proto.ColumnType_INT,
 				Description: "limits the lifetime of a Job that has finished execution (either Complete or Failed). If this field is set, ttlSecondsAfterFinished after the Job finishes, it is eligible to be automatically deleted.",
 				Transform:   transform.FromField("Spec.TTLSecondsAfterFinished"),
+			},
+			{
+				Name:        "selector_query",
+				Type:        proto.ColumnType_STRING,
+				Description: "A query string representation of the selector.",
+				Transform:   transform.FromField("Spec.Selector").Transform(labelSelectorToString),
+			},
+			{
+				Name:        "selector",
+				Type:        proto.ColumnType_JSON,
+				Description: "A label query over pods that should match the pod count.",
+				Transform:   transform.FromField("Spec.Selector"),
 			},
 			{
 				Name:        "template",
