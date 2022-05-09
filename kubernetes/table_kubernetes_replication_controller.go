@@ -38,6 +38,12 @@ func tableKubernetesReplicaController(ctx context.Context) *plugin.Table {
 				Transform:   transform.FromField("Spec.MinReadySeconds"),
 			},
 			{
+				Name:        "selector_query",
+				Type:        proto.ColumnType_STRING,
+				Description: "A query string representation of the selector.",
+				Transform:   transform.FromField("Spec.Selector").Transform(labelSelectorToString),
+			},
+			{
 				Name:        "selector",
 				Type:        proto.ColumnType_JSON,
 				Description: "Selector is a label query over pods that should match the replica count. Label keys and values that must match in order to be controlled by this replica set.",

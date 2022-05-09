@@ -38,6 +38,12 @@ func tableKubernetesDaemonset(ctx context.Context) *plugin.Table {
 				Transform:   transform.FromField("Spec.RevisionHistoryLimit"),
 			},
 			{
+				Name:        "selector_query",
+				Type:        proto.ColumnType_STRING,
+				Description: "A query string representation of the selector.",
+				Transform:   transform.FromField("Spec.Selector").Transform(labelSelectorToString),
+			},
+			{
 				Name:        "selector",
 				Type:        proto.ColumnType_JSON,
 				Description: "A label query over pods that are managed by the daemon set.",

@@ -22,16 +22,16 @@ func tableKubernetesPod(ctx context.Context) *plugin.Table {
 		List: &plugin.ListConfig{
 			Hydrate: listK8sPods,
 			KeyColumns: []*plugin.KeyColumn{
-				{Name: "label_selector", Require: plugin.Optional},
+				{Name: "selector_search", Require: plugin.Optional, CacheMatch: "exact"},
 			},
 		},
 		Columns: k8sCommonColumns([]*plugin.Column{
 			//// PodSpec Columns
 			{
-				Name:        "label_selector",
+				Name:        "selector_search",
 				Type:        proto.ColumnType_STRING,
-				Description: "A selector to restrict the list of returned objects by their labels.",
-				Transform:   transform.FromQual("label_selector"),
+				Description: "A label selector string to restrict the list of returned objects by their labels.",
+				Transform:   transform.FromQual("selector_search"),
 			},
 			{
 				Name:        "volumes",
@@ -421,11 +421,8 @@ func listK8sPods(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 	}
 
 	option := metav1.ListOptions{}
-
-	labelSelector := d.KeyColumnQuals["label_selector"].GetStringValue()
-
-	if labelSelector != "" {
-		option.LabelSelector = labelSelector
+	if d.KeyColumnQuals["selector_search"] != nil {
+		option.LabelSelector = d.KeyColumnQuals["selector_search"].GetStringValue()
 	}
 
 	pods, err := clientset.CoreV1().Pods("").List(ctx, option)

@@ -32,6 +32,12 @@ func tableKubernetesDeployment(ctx context.Context) *plugin.Table {
 				Transform:   transform.FromField("Spec.Replicas"),
 			},
 			{
+				Name:        "selector_query",
+				Type:        proto.ColumnType_STRING,
+				Description: "A query string representation of the selector.",
+				Transform:   transform.FromField("Spec.Selector").Transform(labelSelectorToString),
+			},
+			{
 				Name:        "selector",
 				Type:        proto.ColumnType_JSON,
 				Description: " Label selector for pods. A label selector is a label query over a set of resources.",
