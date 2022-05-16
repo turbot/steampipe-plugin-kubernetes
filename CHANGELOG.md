@@ -1,3 +1,15 @@
+## v0.7.0 [2022-05-16]
+
+_Enhancements_
+
+- Added column `selector_query` to the following tables: ([#65](https://github.com/turbot/steampipe-plugin-kubernetes/pull/65))
+  - `kubernetes_daemonset`
+  - `kubernetes_deployment`
+  - `kubernetes_job`
+  - `kubernetes_replicaset`
+  - `kubernetes_replication_controller`
+- Added column `label_selector` to `kubernetes_pod` table ([#64](https://github.com/turbot/steampipe-plugin-kubernetes/pull/64))
+
 ## v0.6.0 [2022-04-28]
 
 _Enhancements_
