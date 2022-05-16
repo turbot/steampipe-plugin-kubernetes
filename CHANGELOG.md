@@ -8,7 +8,7 @@ _Enhancements_
   - `kubernetes_job`
   - `kubernetes_replicaset`
   - `kubernetes_replication_controller`
-- Added column `label_selector` to `kubernetes_pod` table ([#64](https://github.com/turbot/steampipe-plugin-kubernetes/pull/64))
+- Added column `label_selector` to `kubernetes_pod` table. ([#64](https://github.com/turbot/steampipe-plugin-kubernetes/pull/64))
 
 ## v0.6.0 [2022-04-28]
 
