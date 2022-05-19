@@ -6,7 +6,7 @@ Use SQL to query Kubernetes components.
 
 - **[Get started →](https://hub.steampipe.io/plugins/turbot/kubernetes)**
 - Documentation: [Table definitions & examples](https://hub.steampipe.io/plugins/turbot/kubernetes/tables)
-- Community: [Slack Channel](https://join.slack.com/t/steampipe/shared_invite/zt-oij778tv-lYyRTWOTMQYBVAbtPSWs3g)
+- Community: [Slack Channel](https://steampipe.io/community/join)
 - Get involved: [Issues](https://github.com/turbot/steampipe-plugin-kubernetes/issues)
 
 ## Quick start
