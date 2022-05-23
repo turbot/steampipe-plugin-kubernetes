@@ -1,3 +1,9 @@
+## v0.7.1 [2022-05-23]
+
+_Bug fixes_
+
+- Fixed the Slack community links in README and docs/index.md files. ([#68](https://github.com/turbot/steampipe-plugin-kubernetes/pull/68))
+
 ## v0.7.0 [2022-05-16]
 
 _Enhancements_
