@@ -80,7 +80,6 @@ func listK8sSecrets(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateD
 
 	input := metav1.ListOptions{
 		Limit:         500,
-		FieldSelector: "type=kubernetes.io/service-account-token",
 	}
 
 	// Limiting the results

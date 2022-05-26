@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+	"strings"
 
 	v1 "k8s.io/api/batch/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,7 +21,8 @@ func tableKubernetesJob(ctx context.Context) *plugin.Table {
 			Hydrate:    getK8sJob,
 		},
 		List: &plugin.ListConfig{
-			Hydrate: listK8sJobs,
+			Hydrate:    listK8sJobs,
+			KeyColumns: getCommonOptionalKeyQuals(),
 		},
 		Columns: k8sCommonColumns([]*plugin.Column{
 			//// JobSpec columns
@@ -159,6 +161,12 @@ func listK8sJobs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 				input.Limit = *limit
 			}
 		}
+	}
+
+	commonFieldSelectorValue := getCommonOptionalKeyQualsValueForFieldSelector(d)
+
+	if len(commonFieldSelectorValue) > 0 {
+		input.FieldSelector = strings.Join(commonFieldSelectorValue, ",")
 	}
 
 	var response *v1.JobList

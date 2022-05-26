@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+	"strings"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,7 +21,8 @@ func tableKubernetesLimitRange(ctx context.Context) *plugin.Table {
 			Hydrate:    getK8sLimitRange,
 		},
 		List: &plugin.ListConfig{
-			Hydrate: listK8sLimitRanges,
+			Hydrate:    listK8sLimitRanges,
+			KeyColumns: getCommonOptionalKeyQuals(),
 		},
 		Columns: k8sCommonColumns([]*plugin.Column{
 
@@ -73,6 +75,12 @@ func listK8sLimitRanges(ctx context.Context, d *plugin.QueryData, h *plugin.Hydr
 				input.Limit = *limit
 			}
 		}
+	}
+
+	commonFieldSelectorValue := getCommonOptionalKeyQualsValueForFieldSelector(d)
+
+	if len(commonFieldSelectorValue) > 0 {
+		input.FieldSelector = strings.Join(commonFieldSelectorValue, ",")
 	}
 
 	var response *v1.LimitRangeList

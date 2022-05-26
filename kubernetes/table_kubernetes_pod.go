@@ -30,6 +30,8 @@ func tableKubernetesPod(ctx context.Context) *plugin.Table {
 				{Name: "phase", Require: plugin.Optional},                // status.phase
 				{Name: "nominated_node_name", Require: plugin.Optional},  // status.nominatedNodeName
 				{Name: "pod_ip", Require: plugin.Optional},               // status.podIP
+				{Name: "name", Require: plugin.Optional},
+				{Name: "namespace", Require: plugin.Optional},
 			},
 		},
 		Columns: k8sCommonColumns([]*plugin.Column{
@@ -448,6 +450,9 @@ func listK8sPods(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 	}
 
 	fieldSelectors := buildKubernetsPodFieldSelectorFilter(ctx, d)
+	commonFieldSelectorValue := getCommonOptionalKeyQualsValueForFieldSelector(d)
+	fieldSelectors = append(fieldSelectors, commonFieldSelectorValue...)
+
 	if len(fieldSelectors) > 0 {
 		input.FieldSelector = strings.Join(fieldSelectors, ",")
 	}

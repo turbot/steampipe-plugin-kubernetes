@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+	"strings"
 
 	"k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,7 +21,8 @@ func tableKubernetesIngress(ctx context.Context) *plugin.Table {
 			Hydrate:    getK8sIngress,
 		},
 		List: &plugin.ListConfig{
-			Hydrate: listK8sIngresses,
+			Hydrate:    listK8sIngresses,
+			KeyColumns: getCommonOptionalKeyQuals(),
 		},
 		Columns: k8sCommonColumns([]*plugin.Column{
 			//// IngressSpec columns
@@ -87,6 +89,12 @@ func listK8sIngresses(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 
 	input := metav1.ListOptions{
 		Limit: 500,
+	}
+
+	commonFieldSelectorValue := getCommonOptionalKeyQualsValueForFieldSelector(d)
+
+	if len(commonFieldSelectorValue) > 0 {
+		input.FieldSelector = strings.Join(commonFieldSelectorValue, ",")
 	}
 
 	// Limiting the results
