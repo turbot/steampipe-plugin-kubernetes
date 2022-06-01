@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+	"strings"
 
 	v1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,7 +21,8 @@ func tableKubernetesRole(ctx context.Context) *plugin.Table {
 			Hydrate:    getK8sRole,
 		},
 		List: &plugin.ListConfig{
-			Hydrate: listK8sRoles,
+			Hydrate:    listK8sRoles,
+			KeyColumns: getCommonOptionalKeyQuals(),
 		},
 		Columns: k8sCommonColumns([]*plugin.Column{
 			{
@@ -57,13 +59,51 @@ func listK8sRoles(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 		return nil, err
 	}
 
-	response, err := clientset.RbacV1().Roles("").List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, err
+	input := metav1.ListOptions{
+		Limit: 500,
 	}
 
-	for _, role := range response.Items {
-		d.StreamListItem(ctx, role)
+	// Limiting the results
+	limit := d.QueryContext.Limit
+	if d.QueryContext.Limit != nil {
+		if *limit < input.Limit {
+			if *limit < 1 {
+				input.Limit = 1
+			} else {
+				input.Limit = *limit
+			}
+		}
+	}
+
+	commonFieldSelectorValue := getCommonOptionalKeyQualsValueForFieldSelector(d)
+
+	if len(commonFieldSelectorValue) > 0 {
+		input.FieldSelector = strings.Join(commonFieldSelectorValue, ",")
+	}
+
+	var response *v1.RoleList
+	pageLeft := true
+
+	for pageLeft {
+		response, err = clientset.RbacV1().Roles("").List(ctx, input)
+		if err != nil {
+			return nil, err
+		}
+
+		if response.GetContinue() != "" {
+			input.Continue = response.Continue
+		} else {
+			pageLeft = false
+		}
+
+		for _, role := range response.Items {
+			d.StreamListItem(ctx, role)
+
+			// Context can be cancelled due to manual cancellation or the limit has been hit
+			if d.QueryStatus.RowsRemaining(ctx) == 0 {
+				return nil, nil
+			}
+		}
 	}
 
 	return nil, nil

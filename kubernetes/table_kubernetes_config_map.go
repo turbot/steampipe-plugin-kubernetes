@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+	"strings"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,7 +21,8 @@ func tableKubernetesConfigMap(ctx context.Context) *plugin.Table {
 			Hydrate:    getK8sConfigMap,
 		},
 		List: &plugin.ListConfig{
-			Hydrate: listK8sConfigMaps,
+			Hydrate:    listK8sConfigMaps,
+			KeyColumns: getCommonOptionalKeyQuals(),
 		},
 		// ClusterRole, is a non-namespaced resource.
 		Columns: k8sCommonColumns([]*plugin.Column{
@@ -68,13 +70,51 @@ func listK8sConfigMaps(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 		return nil, err
 	}
 
-	response, err := clientset.CoreV1().ConfigMaps("").List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, err
+	input := metav1.ListOptions{
+		Limit: 500,
 	}
 
-	for _, configMap := range response.Items {
-		d.StreamListItem(ctx, configMap)
+	// Limiting the results
+	limit := d.QueryContext.Limit
+	if d.QueryContext.Limit != nil {
+		if *limit < input.Limit {
+			if *limit < 1 {
+				input.Limit = 1
+			} else {
+				input.Limit = *limit
+			}
+		}
+	}
+
+	commonFieldSelectorValue := getCommonOptionalKeyQualsValueForFieldSelector(d)
+
+	if len(commonFieldSelectorValue) > 0 {
+		input.FieldSelector = strings.Join(commonFieldSelectorValue, ",")
+	}
+
+	var response *v1.ConfigMapList
+	pageLeft := true
+
+	for pageLeft {
+		response, err = clientset.CoreV1().ConfigMaps("").List(ctx, input)
+		if err != nil {
+			return nil, err
+		}
+
+		if response.GetContinue() != "" {
+			input.Continue = response.Continue
+		} else {
+			pageLeft = false
+		}
+
+		for _, configMap := range response.Items {
+			d.StreamListItem(ctx, configMap)
+
+			// Context can be cancelled due to manual cancellation or the limit has been hit
+			if d.QueryStatus.RowsRemaining(ctx) == 0 {
+				return nil, nil
+			}
+		}
 	}
 
 	return nil, nil

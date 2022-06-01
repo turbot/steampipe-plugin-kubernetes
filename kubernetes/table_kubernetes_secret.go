@@ -2,6 +2,8 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -21,6 +23,9 @@ func tableKubernetesSecret(ctx context.Context) *plugin.Table {
 		},
 		List: &plugin.ListConfig{
 			Hydrate: listK8sSecrets,
+			KeyColumns: getOptionalKeyQualWithCommonKeyQuals([]*plugin.KeyColumn{
+				{Name: "type", Require: plugin.Optional},
+			}),
 		},
 		// ClusterRole, is a non-namespaced resource.
 		Columns: k8sCommonColumns([]*plugin.Column{
@@ -73,13 +78,55 @@ func listK8sSecrets(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateD
 		return nil, err
 	}
 
-	response, err := clientset.CoreV1().Secrets("").List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, err
+	input := metav1.ListOptions{
+		Limit:         500,
 	}
 
-	for _, secret := range response.Items {
-		d.StreamListItem(ctx, secret)
+	// Limiting the results
+	limit := d.QueryContext.Limit
+	if d.QueryContext.Limit != nil {
+		if *limit < input.Limit {
+			if *limit < 1 {
+				input.Limit = 1
+			} else {
+				input.Limit = *limit
+			}
+		}
+	}
+
+	commonFieldSelectorValue := getCommonOptionalKeyQualsValueForFieldSelector(d)
+
+	if d.KeyColumnQualString("type") != "" {
+		commonFieldSelectorValue = append(commonFieldSelectorValue, fmt.Sprintf("type=%v", d.KeyColumnQualString("type")))
+	}
+
+	if len(commonFieldSelectorValue) > 0 {
+		input.FieldSelector = strings.Join(commonFieldSelectorValue, ",")
+	}
+
+	var response *v1.SecretList
+	pageLeft := true
+
+	for pageLeft {
+		response, err = clientset.CoreV1().Secrets("").List(ctx, input)
+		if err != nil {
+			return nil, err
+		}
+
+		if response.GetContinue() != "" {
+			input.Continue = response.Continue
+		} else {
+			pageLeft = false
+		}
+
+		for _, secret := range response.Items {
+			d.StreamListItem(ctx, secret)
+
+			// Context can be cancelled due to manual cancellation or the limit has been hit
+			if d.QueryStatus.RowsRemaining(ctx) == 0 {
+				return nil, nil
+			}
+		}
 	}
 
 	return nil, nil

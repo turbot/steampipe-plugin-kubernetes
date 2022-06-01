@@ -244,6 +244,31 @@ func isNotFoundError(err error) bool {
 	return strings.HasSuffix(err.Error(), "not found")
 }
 
+func getCommonOptionalKeyQuals() []*plugin.KeyColumn {
+	return []*plugin.KeyColumn{
+		{Name: "name", Require: plugin.Optional},
+		{Name: "namespace", Require: plugin.Optional},
+	}
+}
+
+func getOptionalKeyQualWithCommonKeyQuals(otherOptionalQuals []*plugin.KeyColumn) []*plugin.KeyColumn {
+	return append(otherOptionalQuals, getCommonOptionalKeyQuals()...)
+}
+
+func getCommonOptionalKeyQualsValueForFieldSelector(d *plugin.QueryData) []string {
+	fieldSelectors := []string{}
+
+	if d.KeyColumnQualString("name") != "" {
+		fieldSelectors = append(fieldSelectors, fmt.Sprintf("metadata.name=%v", d.KeyColumnQualString("name")))
+	}
+
+	if d.KeyColumnQualString("namespace") != "" {
+		fieldSelectors = append(fieldSelectors, fmt.Sprintf("metadata.namespace=%v", d.KeyColumnQualString("namespace")))
+	}
+
+	return fieldSelectors
+}
+
 func mergeTags(labels map[string]string, annotations map[string]string) map[string]string {
 	tags := make(map[string]string)
 	for k, v := range annotations {

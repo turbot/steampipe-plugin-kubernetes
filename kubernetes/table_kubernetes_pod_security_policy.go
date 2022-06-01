@@ -196,13 +196,45 @@ func listPodSecurityPolicy(ctx context.Context, d *plugin.QueryData, _ *plugin.H
 		return nil, err
 	}
 
-	response, err := clientset.PolicyV1beta1().PodSecurityPolicies().List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, err
+	input := metav1.ListOptions{
+		Limit: 500,
 	}
 
-	for _, podSecurityPolicy := range response.Items {
-		d.StreamListItem(ctx, podSecurityPolicy)
+	// Limiting the results
+	limit := d.QueryContext.Limit
+	if d.QueryContext.Limit != nil {
+		if *limit < input.Limit {
+			if *limit < 1 {
+				input.Limit = 1
+			} else {
+				input.Limit = *limit
+			}
+		}
+	}
+
+	var response *v1beta1.PodSecurityPolicyList
+	pageLeft := true
+
+	for pageLeft {
+		response, err = clientset.PolicyV1beta1().PodSecurityPolicies().List(ctx, input)
+		if err != nil {
+			return nil, err
+		}
+
+		if response.GetContinue() != "" {
+			input.Continue = response.Continue
+		} else {
+			pageLeft = false
+		}
+
+		for _, podSecurityPolicy := range response.Items {
+			d.StreamListItem(ctx, podSecurityPolicy)
+
+			// Context can be cancelled due to manual cancellation or the limit has been hit
+			if d.QueryStatus.RowsRemaining(ctx) == 0 {
+				return nil, nil
+			}
+		}
 	}
 
 	return nil, nil

@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+	"strings"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,6 +24,14 @@ func tableKubernetesPod(ctx context.Context) *plugin.Table {
 			Hydrate: listK8sPods,
 			KeyColumns: []*plugin.KeyColumn{
 				{Name: "selector_search", Require: plugin.Optional, CacheMatch: "exact"},
+				{Name: "restart_policy", Require: plugin.Optional},       // spec.retryPolicy spec.serviceAccountName
+				{Name: "service_account_name", Require: plugin.Optional}, // spec.serviceAccountName
+				{Name: "scheduler_name", Require: plugin.Optional},       // spec.schedulerName
+				{Name: "phase", Require: plugin.Optional},                // status.phase
+				{Name: "nominated_node_name", Require: plugin.Optional},  // status.nominatedNodeName
+				{Name: "pod_ip", Require: plugin.Optional},               // status.podIP
+				{Name: "name", Require: plugin.Optional},
+				{Name: "namespace", Require: plugin.Optional},
 			},
 		},
 		Columns: k8sCommonColumns([]*plugin.Column{
@@ -420,18 +429,57 @@ func listK8sPods(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 		return nil, err
 	}
 
-	option := metav1.ListOptions{}
+	input := metav1.ListOptions{
+		Limit: 500,
+	}
+
 	if d.KeyColumnQuals["selector_search"] != nil {
-		option.LabelSelector = d.KeyColumnQuals["selector_search"].GetStringValue()
+		input.LabelSelector = d.KeyColumnQuals["selector_search"].GetStringValue()
 	}
 
-	pods, err := clientset.CoreV1().Pods("").List(ctx, option)
-	if err != nil {
-		return nil, err
+	// Limiting the results
+	limit := d.QueryContext.Limit
+	if d.QueryContext.Limit != nil {
+		if *limit < input.Limit {
+			if *limit < 1 {
+				input.Limit = 1
+			} else {
+				input.Limit = *limit
+			}
+		}
 	}
 
-	for _, pod := range pods.Items {
-		d.StreamListItem(ctx, pod)
+	fieldSelectors := buildKubernetsPodFieldSelectorFilter(ctx, d)
+	commonFieldSelectorValue := getCommonOptionalKeyQualsValueForFieldSelector(d)
+	fieldSelectors = append(fieldSelectors, commonFieldSelectorValue...)
+
+	if len(fieldSelectors) > 0 {
+		input.FieldSelector = strings.Join(fieldSelectors, ",")
+	}
+
+	var response *v1.PodList
+	pageLeft := true
+
+	for pageLeft {
+		response, err = clientset.CoreV1().Pods("").List(ctx, input)
+		if err != nil {
+			return nil, err
+		}
+
+		if response.GetContinue() != "" {
+			input.Continue = response.Continue
+		} else {
+			pageLeft = false
+		}
+
+		for _, pod := range response.Items {
+			d.StreamListItem(ctx, pod)
+
+			// Context can be cancelled due to manual cancellation or the limit has been hit
+			if d.QueryStatus.RowsRemaining(ctx) == 0 {
+				return nil, nil
+			}
+		}
 	}
 
 	return nil, nil
@@ -467,4 +515,35 @@ func getK8sPod(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) 
 func transformPodTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(v1.Pod)
 	return mergeTags(obj.Labels, obj.Annotations), nil
+}
+
+//// UTILITY FUNCTION
+// Build kubernetes pod list call input field selector filter
+func buildKubernetsPodFieldSelectorFilter(ctx context.Context, d *plugin.QueryData) []string {
+
+	filterQuals := map[string]string{
+		"restart_policy":       "spec.restartPolicy",
+		"service_account_name": "spec.serviceAccountName",
+		"scheduler_name":       "spec.schedulerName",
+		"phase":                "status.phase",
+		"nominated_node_name":  "status.nominatedNodeName",
+		"pod_ip":               "status.podIP",
+	}
+
+	commonFieldSelectorValue := getCommonOptionalKeyQualsValueForFieldSelector(d)
+
+	for columnName, filterName := range filterQuals {
+		if columnName == "pod_ip" {
+			if d.KeyColumnQuals["pod_ip"] != nil {
+				value := d.KeyColumnQuals["pod_ip"].GetInetValue().GetAddr()
+				commonFieldSelectorValue = append(commonFieldSelectorValue, filterName+"="+value)
+			}
+			continue
+		}
+		if d.KeyColumnQualString(columnName) != "" {
+			commonFieldSelectorValue = append(commonFieldSelectorValue, filterName+"="+d.KeyColumnQualString(columnName))
+		}
+	}
+
+	return commonFieldSelectorValue
 }

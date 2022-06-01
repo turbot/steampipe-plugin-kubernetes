@@ -63,13 +63,44 @@ func listK8sClusterRoles(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 		return nil, err
 	}
 
-	response, err := clientset.RbacV1().ClusterRoles().List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, err
+	input := metav1.ListOptions{
+		Limit: 500,
 	}
 
-	for _, clusterRole := range response.Items {
-		d.StreamListItem(ctx, clusterRole)
+	// Limiting the results
+	limit := d.QueryContext.Limit
+	if d.QueryContext.Limit != nil {
+		if *limit < input.Limit {
+			if *limit < 1 {
+				input.Limit = 1
+			} else {
+				input.Limit = *limit
+			}
+		}
+	}
+	var response *v1.ClusterRoleList
+	pageLeft := true
+	for pageLeft {
+
+		response, err = clientset.RbacV1().ClusterRoles().List(ctx, input)
+		if err != nil {
+			return nil, err
+		}
+
+		if response.GetContinue() != "" {
+			input.Continue = response.Continue
+		} else {
+			pageLeft = false
+		}
+
+		for _, clusterRole := range response.Items {
+			d.StreamListItem(ctx, clusterRole)
+
+			// Context can be cancelled due to manual cancellation or the limit has been hit
+			if d.QueryStatus.RowsRemaining(ctx) == 0 {
+				return nil, nil
+			}
+		}
 	}
 
 	return nil, nil

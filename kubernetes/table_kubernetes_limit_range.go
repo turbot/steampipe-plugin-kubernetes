@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+	"strings"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,7 +21,8 @@ func tableKubernetesLimitRange(ctx context.Context) *plugin.Table {
 			Hydrate:    getK8sLimitRange,
 		},
 		List: &plugin.ListConfig{
-			Hydrate: listK8sLimitRanges,
+			Hydrate:    listK8sLimitRanges,
+			KeyColumns: getCommonOptionalKeyQuals(),
 		},
 		Columns: k8sCommonColumns([]*plugin.Column{
 
@@ -59,13 +61,51 @@ func listK8sLimitRanges(ctx context.Context, d *plugin.QueryData, h *plugin.Hydr
 		return nil, err
 	}
 
-	limitRangeList, err := clientset.CoreV1().LimitRanges("").List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, err
+	input := metav1.ListOptions{
+		Limit: 500,
 	}
 
-	for _, limitRange := range limitRangeList.Items {
-		d.StreamListItem(ctx, limitRange)
+	// Limiting the results
+	limit := d.QueryContext.Limit
+	if d.QueryContext.Limit != nil {
+		if *limit < input.Limit {
+			if *limit < 1 {
+				input.Limit = 1
+			} else {
+				input.Limit = *limit
+			}
+		}
+	}
+
+	commonFieldSelectorValue := getCommonOptionalKeyQualsValueForFieldSelector(d)
+
+	if len(commonFieldSelectorValue) > 0 {
+		input.FieldSelector = strings.Join(commonFieldSelectorValue, ",")
+	}
+
+	var response *v1.LimitRangeList
+	pageLeft := true
+
+	for pageLeft {
+		response, err = clientset.CoreV1().LimitRanges("").List(ctx, input)
+		if err != nil {
+			return nil, err
+		}
+
+		if response.GetContinue() != "" {
+			input.Continue = response.Continue
+		} else {
+			pageLeft = false
+		}
+
+		for _, limitRange := range response.Items {
+			d.StreamListItem(ctx, limitRange)
+
+			// Context can be cancelled due to manual cancellation or the limit has been hit
+			if d.QueryStatus.RowsRemaining(ctx) == 0 {
+				return nil, nil
+			}
+		}
 	}
 
 	return nil, nil
