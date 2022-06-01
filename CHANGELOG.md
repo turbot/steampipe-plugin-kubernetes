@@ -1,3 +1,9 @@
+## v0.8.0 [2022-06-01]
+
+_Enhancements_
+
+- Added additional optional key quals, page limits, filter support, and context cancellation handling across all the tables. ([#53](https://github.com/turbot/steampipe-plugin-kubernetes/pull/53))
+
 ## v0.7.1 [2022-05-23]
 
 _Bug fixes_
