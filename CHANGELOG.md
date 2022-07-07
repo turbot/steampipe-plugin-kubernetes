@@ -1,3 +1,9 @@
+## v0.10.0 [2022-07-07]
+
+_Enhancements_
+
+- Recompiled plugin with [steampipe-plugin-sdk v3.3.1](https://github.com/turbot/steampipe-plugin-sdk/blob/main/CHANGELOG.md#v331--2022-06-30) which includes several caching fixes. ([#74](https://github.com/turbot/steampipe-plugin-kubernetes/pull/74))
+
 ## v0.9.0 [2022-06-27]
 
 _Enhancements_
