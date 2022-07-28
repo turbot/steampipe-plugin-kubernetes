@@ -242,7 +242,7 @@ func listPodSecurityPolicy(ctx context.Context, d *plugin.QueryData, _ *plugin.H
 
 func getPodSecurityPolicy(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
 	logger := plugin.Logger(ctx)
-	logger.Trace("getK8sSecret")
+	logger.Trace("getPodSecurityPolicy")
 
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {

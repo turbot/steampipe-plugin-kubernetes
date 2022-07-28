@@ -45,6 +45,7 @@ func Plugin(ctx context.Context) *plugin.Plugin {
 			"kubernetes_persistent_volume":       tableKubernetesPersistentVolume(ctx),
 			"kubernetes_persistent_volume_claim": tableKubernetesPersistentVolumeClaim(ctx),
 			"kubernetes_pod":                     tableKubernetesPod(ctx),
+			"kubernetes_pod_disruption_budget":   tableKubernetesPDB(ctx),
 			"kubernetes_pod_security_policy":     tableKubernetesPodSecurityPolicy(ctx),
 			"kubernetes_replicaset":              tableKubernetesReplicaSet(ctx),
 			"kubernetes_replication_controller":  tableKubernetesReplicaController(ctx),
