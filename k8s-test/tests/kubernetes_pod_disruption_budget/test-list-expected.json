@@ -1,0 +1,6 @@
+[
+  { 
+    "max_unavailable": "{Type:0 IntVal:1 StrVal:}",
+    "name": "zk-pdb"
+  }
+]
