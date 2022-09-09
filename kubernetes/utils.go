@@ -2,7 +2,6 @@ package kubernetes
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -42,20 +41,19 @@ func GetNewClientset(ctx context.Context, d *plugin.QueryData) (*kubernetes.Clie
 	}
 
 	var restconfig *rest.Config
-	// Get a rest.Config from the kubeconfig file.
-	kConfig, err := kubeconfig.ClientConfig()
-	if err != nil {
-		if strings.Contains(err.Error(), ".kube/config: no such file or directory") {
-
-			// creates the in-cluster config if the steampipe is running inside a cluster
-			clusterConfig, err := rest.InClusterConfig()
-			if err != nil {
-				return nil, errors.New(".kube/config file is not available" + " and " + err.Error())
-			} else {
-				restconfig = clusterConfig
-			}
+	if kubeconfig == nil {
+		// creates the in-cluster config if the steampipe is running inside a cluster
+		clusterConfig, err := rest.InClusterConfig()
+		if err != nil {
+			return nil, err
 		}
+		restconfig = clusterConfig
 	} else {
+		// Get a rest.Config from the kubeconfig file.
+		kConfig, err := kubeconfig.ClientConfig()
+		if err != nil {
+			return nil, err
+		}
 		restconfig = kConfig
 	}
 
@@ -92,6 +90,10 @@ func getK8Config(ctx context.Context, d *plugin.QueryData) (clientcmd.ClientConf
 
 	// get kubernetes config info
 	kubernetesConfig := GetConfig(d.Connection)
+
+	if *kubernetesConfig.InClusterConfig == "Enabled" {
+		return nil, nil
+	}
 
 	// Set default loader and overriding rules
 	loader := &clientcmd.ClientConfigLoadingRules{}
@@ -181,6 +183,9 @@ func getKubectlContext(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 	kubeconfig, err := getK8Config(ctx, d)
 	if err != nil {
 		return nil, err
+	}
+	if kubeconfig == nil {
+		return nil, nil
 	}
 
 	rawConfig, _ := kubeconfig.RawConfig()
