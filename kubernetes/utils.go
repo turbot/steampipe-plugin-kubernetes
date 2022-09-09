@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,6 +14,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/azure"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
@@ -39,10 +41,22 @@ func GetNewClientset(ctx context.Context, d *plugin.QueryData) (*kubernetes.Clie
 		return nil, err
 	}
 
+	var restconfig *rest.Config
 	// Get a rest.Config from the kubeconfig file.
-	restconfig, err := kubeconfig.ClientConfig()
+	kConfig, err := kubeconfig.ClientConfig()
 	if err != nil {
-		return nil, err
+		if strings.Contains(err.Error(), ".kube/config: no such file or directory") {
+
+			// creates the in-cluster config if the steampipe is running inside a cluster
+			clusterConfig, err := rest.InClusterConfig()
+			if err != nil {
+				return nil, errors.New(".kube/config file is not available" + " and " + err.Error())
+			} else {
+				restconfig = clusterConfig
+			}
+		}
+	} else {
+		restconfig = kConfig
 	}
 
 	clientset, err := kubernetes.NewForConfig(restconfig)
