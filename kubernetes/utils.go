@@ -42,7 +42,7 @@ func GetNewClientset(ctx context.Context, d *plugin.QueryData) (*kubernetes.Clie
 
 	var restconfig *rest.Config
 	if kubeconfig == nil {
-		// creates the in-cluster config if the steampipe is running inside a cluster
+		// creates the in-cluster config
 		clusterConfig, err := rest.InClusterConfig()
 		if err != nil {
 			return nil, err
