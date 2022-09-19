@@ -1,6 +1,6 @@
 ## v0.3.0 [2021-12-10]
 
-_What's new?_
+_What's new?
 
 - Added support for querying Kubernetes clusters that use OIDC authentication mechanism ([#34](https://github.com/turbot/steampipe-plugin-kubernetes/pull/34))
 
