@@ -80,6 +80,20 @@ func k8sCommonColumns(columns []*plugin.Column) []*plugin.Column {
 	return allColumns
 }
 
+func k8sCRDResourceCommonColumns(columns []*plugin.Column) []*plugin.Column {
+	allColumns := []*plugin.Column{
+		{Name: "name", Type: proto.ColumnType_STRING, Description: "Nmae of the resource."},
+		{Name: "kind", Type: proto.ColumnType_STRING, Description: "Type of resource."},
+		{Name: "api_version", Type: proto.ColumnType_STRING, Description: "The endpoint of the API.", 	Transform:   transform.FromField("APIVersion")},
+		{Name: "namespace", Type: proto.ColumnType_STRING, Description: "Namespace defines the space within which each name must be unique."},
+		{Name: "annotations", Type: proto.ColumnType_STRING, Description: "Kubernetes annotations to attach arbitrary non-identifying metadata to objects."},
+		{Name: "spec", Type: proto.ColumnType_STRING, Description: "The spectfication of the resource."},
+	}
+	allColumns = append(allColumns, columns...)
+
+	return allColumns
+}
+
 // append the common kubernetes columns for non-namespaced resources onto the column list
 func k8sCommonGlobalColumns(columns []*plugin.Column) []*plugin.Column {
 	allColumns := objectMetadataPrimaryColumnsWithoutNamespace()

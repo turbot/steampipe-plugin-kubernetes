@@ -2,43 +2,34 @@ package kubernetes
 
 import (
 	"context"
+	"strings"
 
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"github.com/turbot/steampipe-plugin-sdk/v3/grpc/proto"
 	"github.com/turbot/steampipe-plugin-sdk/v3/plugin"
-	"github.com/turbot/steampipe-plugin-sdk/v3/plugin/transform"
 )
 
 func tableKubernetesCRDResource(ctx context.Context) *plugin.Table {
 	return &plugin.Table{
 		Name:        "kubernetes_crd_resource",
 		Description: "Cron jobs are useful for creating periodic and recurring tasks, like running backups or sending emails.",
-		// Get: &plugin.GetConfig{
-		// 	KeyColumns: plugin.AllColumns([]string{"name", "namespace"}),
-		// 	Hydrate:    getK8sCronJob,
-		// },
 		List: &plugin.ListConfig{
 			ParentHydrate: listK8sCRDs,
 			Hydrate:       listK8sCRDResources,
-			//KeyColumns: getCommonOptionalKeyQuals(),
 		},
-		Columns: []*plugin.Column{
-			{
-				Name:        "kind",
-				Type:        proto.ColumnType_STRING,
-				Description: "The number of failed finished jobs to retain. Value must be non-negative integer.",
-			},
-			{
-				Name:        "api_resources",
-				Type:        proto.ColumnType_JSON,
-				Description: "The number of failed finished jobs to retain. Value must be non-negative integer.",
-				Transform:   transform.FromField("APIResources"),
-			},
-		},
+		Columns: k8sCRDResourceCommonColumns([]*plugin.Column{}),
 	}
+}
+
+type CRDResourceInfo struct {
+	Kind        string
+	APIVersion  string
+	Name        string
+	Namespace   string
+	Annotations interface{}
+	Spec        interface{}
 }
 
 //// HYDRATE FUNCTIONS
@@ -66,8 +57,20 @@ func listK8sCRDResources(ctx context.Context, d *plugin.QueryData, h *plugin.Hyd
 	if err != nil {
 		return nil, err
 	}
+	// panic(response.Items)
 	for _, crd := range response.Items {
-		d.StreamListItem(ctx, crd)
+		ob := crd.Object
+		var annotation interface{}
+		annotation = strings.TrimLeft(strings.TrimRight(ob["metadata"].(map[string]interface{})["annotations"].(map[string]interface{})["kubectl.kubernetes.io/last-applied-configuration"].(string), "\""), "\"")
+
+		d.StreamListItem(ctx, &CRDResourceInfo{
+			Kind:        ob["kind"].(string),
+			APIVersion:  ob["apiVersion"].(string),
+			Name:        ob["metadata"].(map[string]interface{})["name"].(string),
+			Annotations: annotation,
+			Namespace:   ob["metadata"].(map[string]interface{})["namespace"].(string),
+			Spec:        ob["spec"],
+		})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.QueryStatus.RowsRemaining(ctx) == 0 {
