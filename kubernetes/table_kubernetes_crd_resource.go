@@ -13,17 +13,16 @@ import (
 )
 
 func tableKubernetesCRDResource(ctx context.Context) *plugin.Table {
+	//plugin.Logger(ctx).Error("tableKubernetesCRDResource", "resourceName", resourceName)
+	//resourceName := ctx.Value("custom_resource_name").(string)
+	resourceName := ctx.Value(contextKey("CustomResourceName")).(string)
+	tableName := ctx.Value(contextKey("PluginTableName")).(string)
 	return &plugin.Table{
-		Name:        "kubernetes_crd_resource",
+		Name:        tableName,
 		Description: "Cron jobs are useful for creating periodic and recurring tasks, like running backups or sending emails.",
-		// Get: &plugin.GetConfig{
-		// 	KeyColumns: plugin.AllColumns([]string{"name", "namespace"}),
-		// 	Hydrate:    getK8sCronJob,
-		// },
 		List: &plugin.ListConfig{
 			ParentHydrate: listK8sCRDs,
-			Hydrate:       listK8sCRDResources,
-			//KeyColumns: getCommonOptionalKeyQuals(),
+			Hydrate:       listK8sCRDResources(resourceName),
 		},
 		Columns: []*plugin.Column{
 			{
@@ -43,37 +42,36 @@ func tableKubernetesCRDResource(ctx context.Context) *plugin.Table {
 
 //// HYDRATE FUNCTIONS
 
-func listK8sCRDResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
-	logger := plugin.Logger(ctx)
-	logger.Trace("listK8sCRDResources")
+func listK8sCRDResources(resourceName string) func(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+	return func(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+		version := h.Item.(v1.CustomResourceDefinition).Spec.Versions[0].Name
+		groupName := h.Item.(v1.CustomResourceDefinition).Spec.Group
 
-	version := h.Item.(v1.CustomResourceDefinition).Spec.Versions[0].Name
-	groupName := h.Item.(v1.CustomResourceDefinition).Spec.Group
-	object := h.Item.(v1.CustomResourceDefinition).Spec.Names.Plural
-
-	clientset, err := GetNewClientDynamic(ctx, d)
-	if err != nil {
-		return nil, err
-	}
-
-	resourceId := schema.GroupVersionResource{
-		Group:    groupName,
-		Version:  version,
-		Resource: object,
-	}
-
-	response, err := clientset.Resource(resourceId).List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-	for _, crd := range response.Items {
-		d.StreamListItem(ctx, crd)
-
-		// Context can be cancelled due to manual cancellation or the limit has been hit
-		if d.QueryStatus.RowsRemaining(ctx) == 0 {
-			return nil, nil
+		clientset, err := GetNewClientDynamic(ctx, d)
+		if err != nil {
+			return nil, err
 		}
+
+		resourceId := schema.GroupVersionResource{
+			Group:    groupName,
+			Version:  version,
+			Resource: resourceName,
+		}
+		plugin.Logger(ctx).Error("tableKubernetesCRDResource", "resourceId", resourceId)
+		response, err := clientset.Resource(resourceId).List(ctx, metav1.ListOptions{})
+		if err != nil {
+			return nil, err
+		}
+		for _, crd := range response.Items {
+			d.StreamListItem(ctx, crd)
+
+			// Context can be cancelled due to manual cancellation or the limit has been hit
+			if d.QueryStatus.RowsRemaining(ctx) == 0 {
+				return nil, nil
+			}
+		}
+
+		return nil, nil
 	}
 
-	return nil, nil
 }
