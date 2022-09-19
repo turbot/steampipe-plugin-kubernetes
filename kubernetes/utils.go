@@ -10,6 +10,7 @@ import (
 	apiextension "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/azure"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -90,6 +91,41 @@ func GetNewClientCRD(ctx context.Context, d *plugin.QueryData) (*apiextension.Cl
 	}
 
 	clientset, err := apiextension.NewForConfig(restconfig)
+	if err != nil {
+		return nil, err
+	}
+
+	// save clientset in cache
+	d.ConnectionManager.Cache.Set(serviceCacheKey, clientset)
+
+	return clientset, err
+}
+
+// GetNewClientCRD :: gets client for querying k8s apis for CRD
+func GetNewClientDynamic(ctx context.Context, d *plugin.QueryData) (dynamic.Interface, error) {
+	logger := plugin.Logger(ctx)
+	logger.Trace("GetNewClientDynamic")
+
+	// have we already created and cached the session?
+	serviceCacheKey := "GetNewClientDynamic" //should probably per connection/context keys...
+
+	if cachedData, ok := d.ConnectionManager.Cache.Get(serviceCacheKey); ok {
+		// logger.Warn("!!!! Clientset Found in Cache !!!!")
+		return cachedData.(dynamic.Interface), nil
+	}
+
+	kubeconfig, err := getK8Config(ctx, d)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get a rest.Config from the kubeconfig file.
+	restconfig, err := kubeconfig.ClientConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	clientset, err := dynamic.NewForConfig(restconfig)
 	if err != nil {
 		return nil, err
 	}
