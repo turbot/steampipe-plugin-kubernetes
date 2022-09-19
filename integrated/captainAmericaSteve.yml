@@ -1,0 +1,8 @@
+apiVersion: "avengers.marvel/v3"
+kind: CaptainAmerica
+metadata:
+  name: steve-rogers
+spec:
+  name: "Steve"
+  history: "Army"
+  superpower: "Yes"
