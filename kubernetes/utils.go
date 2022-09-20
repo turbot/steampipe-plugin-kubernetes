@@ -19,6 +19,7 @@ import (
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
 	"github.com/mitchellh/go-homedir"
+	"github.com/turbot/steampipe-plugin-sdk/v3/connection"
 	"github.com/turbot/steampipe-plugin-sdk/v3/plugin"
 	"github.com/turbot/steampipe-plugin-sdk/v3/plugin/transform"
 )
@@ -66,7 +67,7 @@ func GetNewClientset(ctx context.Context, d *plugin.QueryData) (*kubernetes.Clie
 	return clientset, err
 }
 
-// GetNewClientCRD :: gets client for querying k8s apis for CRD
+// GetNewClientCRD :: gets client for querying k8s apis for CustomResourceDefinition
 func GetNewClientCRD(ctx context.Context, d *plugin.QueryData) (*apiextension.Clientset, error) {
 	logger := plugin.Logger(ctx)
 	logger.Trace("GetNewClientCRD")
@@ -101,7 +102,42 @@ func GetNewClientCRD(ctx context.Context, d *plugin.QueryData) (*apiextension.Cl
 	return clientset, err
 }
 
-// GetNewClientCRD :: gets client for querying k8s apis for CRD
+// GetNewClientCRDRaw :: gets client for querying k8s apis for CustomResourceDefinition
+func GetNewClientCRDRaw(ctx context.Context, cm *connection.Manager, c *plugin.Connection) (*apiextension.Clientset, error) {
+	logger := plugin.Logger(ctx)
+	logger.Trace("GetNewClientCRDRaw")
+
+	// have we already created and cached the session?
+	serviceCacheKey := "GetNewClientCRDRaw" //should probably per connection/context keys...
+
+	if cachedData, ok := cm.Cache.Get(serviceCacheKey); ok {
+		// logger.Warn("!!!! Clientset Found in Cache !!!!")
+		return cachedData.(*apiextension.Clientset), nil
+	}
+
+	kubeconfig, err := getK8ConfigRaw(ctx, cm, c)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get a rest.Config from the kubeconfig file.
+	restconfig, err := kubeconfig.ClientConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	clientset, err := apiextension.NewForConfig(restconfig)
+	if err != nil {
+		return nil, err
+	}
+
+	// save clientset in cache
+	cm.Cache.Set(serviceCacheKey, clientset)
+
+	return clientset, err
+}
+
+// GetNewClientDynamic :: gets client for querying k8s apis for Dynamic Interface
 func GetNewClientDynamic(ctx context.Context, d *plugin.QueryData) (dynamic.Interface, error) {
 	logger := plugin.Logger(ctx)
 	logger.Trace("GetNewClientDynamic")
@@ -223,6 +259,97 @@ func getK8Config(ctx context.Context, d *plugin.QueryData) (clientcmd.ClientConf
 
 	// save the config in cache
 	d.ConnectionManager.Cache.Set(cacheKey, kubeconfig)
+
+	return kubeconfig, nil
+}
+
+// Get kubernetes config based on environment variable and plugin config
+func getK8ConfigRaw(ctx context.Context, cm *connection.Manager, c *plugin.Connection) (clientcmd.ClientConfig, error) {
+	logger := plugin.Logger(ctx)
+	logger.Trace("getK8ConfigRaw")
+
+	// have we already created and cached the session?
+	cacheKey := "getK8ConfigRaw" //should probably per connection/context keys...
+
+	if cachedData, ok := cm.Cache.Get(cacheKey); ok {
+		return cachedData.(clientcmd.ClientConfig), nil
+	}
+
+	// get kubernetes config info
+	kubernetesConfig := GetConfig(c)
+
+	// Set default loader and overriding rules
+	loader := &clientcmd.ClientConfigLoadingRules{}
+	overrides := &clientcmd.ConfigOverrides{}
+
+	// variable to store paths for kubernetes config
+	// default kube config path
+	var configPaths = []string{"~/.kube/config"}
+	// Error: invalid configuration: no configuration has been provided, try setting KUBERNETES_MASTER environment variable
+
+	if kubernetesConfig.ConfigPath != nil {
+		configPaths = []string{*kubernetesConfig.ConfigPath}
+	} else if kubernetesConfig.ConfigPaths != nil && len(kubernetesConfig.ConfigPaths) > 0 {
+		configPaths = kubernetesConfig.ConfigPaths
+	} else if v := os.Getenv("KUBE_CONFIG_PATHS"); v != "" {
+		configPaths = filepath.SplitList(v)
+	} else if v := os.Getenv("KUBERNETES_MASTER"); v != "" {
+		configPaths = []string{v}
+	}
+
+	if len(configPaths) > 0 {
+		expandedPaths := []string{}
+		for _, p := range configPaths {
+			path, err := homedir.Expand(p)
+			if err != nil {
+				return nil, err
+			}
+
+			logger.Debug("GetNewClientset", "Using kubeconfig: %s", path)
+			expandedPaths = append(expandedPaths, path)
+		}
+
+		if len(expandedPaths) == 1 {
+			loader.ExplicitPath = expandedPaths[0]
+		} else {
+			loader.Precedence = expandedPaths
+		}
+
+		// TODO -- Add other config options
+		// if kubernetesConfig.ConfigContext != nil {
+		// 	kubectx = *kubernetesConfig.ConfigContext
+		// }
+		// kubectx, ctxOk := d.GetOk("config_context")
+		// authInfo, authInfoOk := d.GetOk("config_context_auth_info")
+		// cluster, clusterOk := d.GetOk("config_context_cluster")
+		// if ctxOk || authInfoOk || clusterOk {
+		if kubernetesConfig.ConfigContext != nil {
+			// ctxSuffix := "; overridden context"
+			// if ctxOk {
+			overrides.CurrentContext = *kubernetesConfig.ConfigContext
+			// ctxSuffix += fmt.Sprintf("; overridden context ; config ctx: %s", overrides.CurrentContext)
+			logger.Debug("GetNewClientset", "Using custom current context: %q", overrides.CurrentContext)
+			// }
+
+			overrides.Context = clientcmdapi.Context{}
+
+			// TODO -- Add other config options
+			// if authInfoOk {
+			// 	overrides.Context.AuthInfo = authInfo.(string)
+			// 	ctxSuffix += fmt.Sprintf("; auth_info: %s", overrides.Context.AuthInfo)
+			// }
+			// if clusterOk {
+			// 	overrides.Context.Cluster = cluster.(string)
+			// 	ctxSuffix += fmt.Sprintf("; cluster: %s", overrides.Context.Cluster)
+			// }
+			logger.Debug("GetNewClientset", "Using overidden context: %#v", overrides.Context)
+		}
+	}
+
+	kubeconfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loader, overrides)
+
+	// save the config in cache
+	cm.Cache.Set(cacheKey, kubeconfig)
 
 	return kubeconfig, nil
 }

@@ -10,20 +10,16 @@ import (
 	"github.com/turbot/steampipe-plugin-sdk/v3/plugin/transform"
 )
 
-func tableKubernetesCRD(ctx context.Context) *plugin.Table {
+func tableKubernetesCustomResourceDefinition(ctx context.Context) *plugin.Table {
 	return &plugin.Table{
-		Name:        "kubernetes_crd",
-		Description: "Cron jobs are useful for creating periodic and recurring tasks, like running backups or sending emails.",
+		Name:        "kubernetes_custom_resource_definition",
+		Description: "Kubernetes Custom Resource Definition.",
 		Get: &plugin.GetConfig{
-			KeyColumns: plugin.KeyColumnSlice{
-				{
-					Name: "name", Require: plugin.Required, Operators: []string{"="},
-				},
-			},
-			Hydrate: getK8sCRD,
+			KeyColumns: plugin.SingleColumn("name"),
+			Hydrate:    getK8sCustomResourceDefinition,
 		},
 		List: &plugin.ListConfig{
-			Hydrate: listK8sCRDs,
+			Hydrate: listK8sCustomResourceDefinitions,
 			//KeyColumns: getCommonOptionalKeyQuals(),
 		},
 		Columns: []*plugin.Column{
@@ -82,12 +78,13 @@ func tableKubernetesCRD(ctx context.Context) *plugin.Table {
 
 //// HYDRATE FUNCTIONS
 
-func listK8sCRDs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
+func listK8sCustomResourceDefinitions(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
 	logger := plugin.Logger(ctx)
+	logger.Trace("listK8sCustomResourceDefinitions")
 
 	clientset, err := GetNewClientCRD(ctx, d)
 	if err != nil {
-		logger.Error("kubernetes_crd.listK8sCRDs", "connection_error", err)
+		logger.Error("kubernetes_crd.listK8sCustomResourceDefinitions", "connection_error", err)
 		return nil, err
 	}
 
@@ -134,73 +131,21 @@ func listK8sCRDs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 	return nil, nil
 }
 
-//// Hydrated Function
-
-func getK8sCRD(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
+func getK8sCustomResourceDefinition(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
 	logger := plugin.Logger(ctx)
+	logger.Trace("getK8sCustomResourceDefinition")
 
 	clientset, err := GetNewClientCRD(ctx, d)
 	if err != nil {
-		logger.Error("kubernetes_crd.getK8sCRD", "connection_error", err)
 		return nil, err
 	}
+	name := d.KeyColumnQuals["name"].GetStringValue()
 
-	//queryCols := d.KeyColumnQuals
-
-	// version := make(map[string]interface{})
-
-	// versionString := queryCols["versions"].GetJsonbValue()
-	// logger.Debug("kubernetes_crd.getK8sCRD", "versions", versionString)
-
-	// if versionString != "" {
-	// 	err := json.Unmarshal([]byte(versionString), &version)
-	// 	if err != nil {
-	// 		plugin.Logger(ctx).Error("kubernetes_crd.getK8sCRD", "unmarshal_error", err)
-	// 		return nil, fmt.Errorf("failed to unmarshal versions: %v", err)
-	// 	}
-	// }
-
-	// if version["version"] == nil {
-	// 	panic("Version must to be pass")
-	// }
-
-	resourceName := d.KeyColumnQualString("name")
-	//resourceVersion := version["version"].(string)
-
-	//plugin.Logger(ctx).Debug("Resource name ======>>>", resourceName)
-	//plugin.Logger(ctx).Debug("Version ======>>>>", resourceVersion)
-
-	if resourceName == "" {
-		return nil, nil
-	}
-
-	input := metav1.GetOptions{
-		// ResourceVersion: resourceVersion,
-	}
-
-	response, err := clientset.ApiextensionsV1().CustomResourceDefinitions().Get(ctx, resourceName, input)
-	plugin.Logger(ctx).Debug("Response Object=====>> ", response.ObjectMeta)
-
-	// plugin.Logger(ctx).Debug("================================================================================================================================================================================================")
-
-	// plugin.Logger(ctx).Debug("response.TypeMeta=====>> ", response.TypeMeta)
-
-	// plugin.Logger(ctx).Debug("================================================================================================================================================================================================")
-
-	// plugin.Logger(ctx).Debug("response.Spec=====>> ", response.Spec)
-
-	// plugin.Logger(ctx).Debug("================================================================================================================================================================================================")
-
+	response, err := clientset.ApiextensionsV1().CustomResourceDefinitions().Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		logger.Error("kubernetes_crd.getK8sCRD", "api_error", err)
+		logger.Error("listK8sCustomResourceDefinitions", "list_err", err)
 		return nil, err
 	}
-	plugin.Logger(ctx).Debug("HERE ======>>>>>")
+
 	return response, nil
-	// return v1.CustomResourceDefinition{
-	// 	ObjectMeta: response.ObjectMeta,
-	// 	TypeMeta:   response.TypeMeta,
-	// 	Spec:       response.Spec,
-	// 	Status:     response.Status,
-	// }, nil
 }

@@ -14,15 +14,15 @@ import (
 	"github.com/turbot/steampipe-plugin-sdk/v3/plugin"
 )
 
-func tableKubernetesCRDResource(ctx context.Context) *plugin.Table {
+func tableKubernetesCustomResource(ctx context.Context) *plugin.Table {
 	resourceName := ctx.Value(contextKey("CustomResourceName")).(string)
 	tableName := ctx.Value(contextKey("PluginTableName")).(string)
 	return &plugin.Table{
 		Name:        tableName,
 		Description: fmt.Sprintf("Represents CRD object %s.", resourceName),
 		List: &plugin.ListConfig{
-			ParentHydrate: listK8sCRDs,
-			Hydrate:       listK8sCRDResources(resourceName),
+			ParentHydrate: listK8sCustomResourceDefinitions,
+			Hydrate:       listK8sCustomResources(resourceName),
 		},
 		Columns: k8sCRDResourceCommonColumns([]*plugin.Column{}),
 	}
@@ -39,12 +39,13 @@ type CRDResourceInfo struct {
 
 //// HYDRATE FUNCTIONS
 
-func listK8sCRDResources(resourceName string) func(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+func listK8sCustomResources(resourceName string) func(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 	return func(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 		version := h.Item.(v1.CustomResourceDefinition).Spec.Versions
 		groupName := h.Item.(v1.CustomResourceDefinition).Spec.Group
 		names := h.Item.(v1.CustomResourceDefinition).Spec.Names.Plural
-		plugin.Logger(ctx).Error("tableKubernetesCRDResource", "resourceName", resourceName, "names", names)
+
+		// check if the resourceNames is matching with the definition
 		if names != resourceName {
 			return nil, nil
 		}
@@ -58,7 +59,7 @@ func listK8sCRDResources(resourceName string) func(ctx context.Context, d *plugi
 		errorCh := make(chan error, len(version))
 		for _, v := range version {
 			wg.Add(1)
-			go getCRDResourceAsync(ctx, d, groupName, resourceName, v.Name, clientset, &wg, errorCh)
+			go getCustomResourceAsync(ctx, d, groupName, resourceName, v.Name, clientset, &wg, errorCh)
 		}
 		// wait for all inline policies to be processed
 		wg.Wait()
@@ -68,7 +69,7 @@ func listK8sCRDResources(resourceName string) func(ctx context.Context, d *plugi
 
 		for err := range errorCh {
 			// return the first error
-			plugin.Logger(ctx).Error("getCRDResourceAsync", "channel_error", err)
+			plugin.Logger(ctx).Error("getCustomResourceAsync", "channel_error", err)
 			return nil, err
 		}
 		return nil, nil
@@ -76,22 +77,22 @@ func listK8sCRDResources(resourceName string) func(ctx context.Context, d *plugi
 
 }
 
-func getCRDResourceAsync(ctx context.Context, d *plugin.QueryData, groupName string, resourceName string, version string, clientset dynamic.Interface, wg *sync.WaitGroup, errorCh chan error) {
+func getCustomResourceAsync(ctx context.Context, d *plugin.QueryData, groupName string, resourceName string, version string, clientset dynamic.Interface, wg *sync.WaitGroup, errorCh chan error) {
 	defer wg.Done()
 
-	err := getCRDResource(ctx, d, groupName, resourceName, version, clientset)
+	err := getCustomResources(ctx, d, groupName, resourceName, version, clientset)
 	if err != nil {
 		errorCh <- err
 	}
 }
 
-func getCRDResource(ctx context.Context, d *plugin.QueryData, groupName string, resourceName string, version string, clientset dynamic.Interface) error {
+func getCustomResources(ctx context.Context, d *plugin.QueryData, groupName string, resourceName string, version string, clientset dynamic.Interface) error {
 	resourceId := schema.GroupVersionResource{
 		Group:    groupName,
 		Version:  version,
 		Resource: resourceName,
 	}
-	plugin.Logger(ctx).Error("tableKubernetesCRDResource", "resourceId", resourceId)
+
 	response, err := clientset.Resource(resourceId).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		if strings.Contains(err.Error(), "could not find the requested resource") {
@@ -103,7 +104,7 @@ func getCRDResource(ctx context.Context, d *plugin.QueryData, groupName string, 
 	var annotations interface{}
 
 	for _, crd := range response.Items {
-		plugin.Logger(ctx).Error("tableKubernetesCRDResource", "crd", crd)
+		plugin.Logger(ctx).Error("getCustomResources", "crd", crd)
 		ob := crd.Object
 		for _, v := range ob["metadata"].(map[string]interface{})["annotations"].(map[string]interface{}) {
 			annotations = strings.TrimLeft(strings.TrimRight(v.(string), "\""), "\"")
