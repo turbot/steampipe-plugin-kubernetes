@@ -67,7 +67,7 @@ func GetNewClientset(ctx context.Context, d *plugin.QueryData) (*kubernetes.Clie
 	return clientset, err
 }
 
-// GetNewClientCRD :: gets client for querying k8s apis for CRD
+// GetNewClientCRD :: gets client for querying k8s apis for CustomResourceDefinition
 func GetNewClientCRD(ctx context.Context, d *plugin.QueryData) (*apiextension.Clientset, error) {
 	logger := plugin.Logger(ctx)
 	logger.Trace("GetNewClientCRD")
@@ -102,7 +102,7 @@ func GetNewClientCRD(ctx context.Context, d *plugin.QueryData) (*apiextension.Cl
 	return clientset, err
 }
 
-// GetNewClientCRD :: gets client for querying k8s apis for CRD
+// GetNewClientCRDRaw :: gets client for querying k8s apis for CustomResourceDefinition
 func GetNewClientCRDRaw(ctx context.Context, cm *connection.Manager, c *plugin.Connection) (*apiextension.Clientset, error) {
 	logger := plugin.Logger(ctx)
 	logger.Trace("GetNewClientCRDRaw")
@@ -137,7 +137,7 @@ func GetNewClientCRDRaw(ctx context.Context, cm *connection.Manager, c *plugin.C
 	return clientset, err
 }
 
-// GetNewClientCRD :: gets client for querying k8s apis for CRD
+// GetNewClientDynamic :: gets client for querying k8s apis for Dynamic Interface
 func GetNewClientDynamic(ctx context.Context, d *plugin.QueryData) (dynamic.Interface, error) {
 	logger := plugin.Logger(ctx)
 	logger.Trace("GetNewClientDynamic")

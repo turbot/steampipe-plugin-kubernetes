@@ -8,7 +8,7 @@ import (
 	"github.com/turbot/steampipe-plugin-sdk/v3/plugin"
 )
 
-func tableKubernetesCRD(ctx context.Context) *plugin.Table {
+func tableKubernetesCustomResourceDefinition(ctx context.Context) *plugin.Table {
 	return &plugin.Table{
 		Name:        "kubernetes_custom_resource_definition",
 		Description: "Kubernetes Custom Resource Definition.",
@@ -17,7 +17,7 @@ func tableKubernetesCRD(ctx context.Context) *plugin.Table {
 		// 	Hydrate:    getK8sCronJob,
 		// },
 		List: &plugin.ListConfig{
-			Hydrate: listK8sCRDs,
+			Hydrate: listK8sCustomResourceDefinitions,
 			//KeyColumns: getCommonOptionalKeyQuals(),
 		},
 		Columns: k8sCommonColumns([]*plugin.Column{
@@ -28,9 +28,9 @@ func tableKubernetesCRD(ctx context.Context) *plugin.Table {
 
 //// HYDRATE FUNCTIONS
 
-func listK8sCRDs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
+func listK8sCustomResourceDefinitions(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
 	logger := plugin.Logger(ctx)
-	logger.Trace("listK8sCRDs")
+	logger.Trace("listK8sCustomResourceDefinitions")
 
 	clientset, err := GetNewClientCRD(ctx, d)
 	if err != nil {
@@ -57,7 +57,7 @@ func listK8sCRDs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 	for pageLeft {
 		response, err := clientset.ApiextensionsV1().CustomResourceDefinitions().List(ctx, input)
 		if err != nil {
-			logger.Error("listK8sCronJobs", "list_err", err)
+			logger.Error("listK8sCustomResourceDefinitions", "list_err", err)
 			return nil, err
 		}
 
