@@ -22,16 +22,10 @@ func tableKubernetesCustomResourceDefinition(ctx context.Context) *plugin.Table 
 			Hydrate: listK8sCustomResourceDefinitions,
 			//KeyColumns: getCommonOptionalKeyQuals(),
 		},
-		Columns: []*plugin.Column{
+		Columns: k8sCommonColumns([]*plugin.Column{
 			//// Resource definition specification
 			{
-				Name:        "name",
-				Description: "Group is the API group of the defined custom resource.",
-				Type:        proto.ColumnType_STRING,
-				// Transform:   transform.FromField("Spec.Group"),
-			},
-			{
-				Name:        "plural",
+				Name:        "spec_names_plural",
 				Description: "Plural is the plural name of the resource to serve.",
 				Type:        proto.ColumnType_STRING,
 				Transform:   transform.FromField("Spec.Names.Plural"),
@@ -43,13 +37,13 @@ func tableKubernetesCustomResourceDefinition(ctx context.Context) *plugin.Table 
 				Transform:   transform.FromField("Spec.Conversion.Strategy"),
 			},
 			{
-				Name:        "preserve_unknown_fields",
+				Name:        "spec_preserve_unknown_fields",
 				Description: "PreserveUnknownFields indicates that object fields which are not specified in the OpenAPI schema should be preserved when persisting to storage.",
 				Type:        proto.ColumnType_BOOL,
 				Transform:   transform.FromField("Spec.PreserveUnknownFields"),
 			},
 			{
-				Name:        "scope",
+				Name:        "spec_scope",
 				Description: "Group is the API group of the defined custom resource.",
 				Type:        proto.ColumnType_STRING,
 				Transform:   transform.FromField("Spec.Scope"),
@@ -67,12 +61,30 @@ func tableKubernetesCustomResourceDefinition(ctx context.Context) *plugin.Table 
 				Transform:   transform.FromField("Spec.Names"),
 			},
 			{
+				Name:        "status_accepted_names",
+				Description: "AcceptedNames are the names that are actually being used to serve discovery.",
+				Type:        proto.ColumnType_JSON,
+				Transform:   transform.FromField("Status.AcceptedNames"),
+			},
+			{
+				Name:        "status_conditions",
+				Description: "Conditions indicate state for particular aspects of a CustomResourceDefinition.",
+				Type:        proto.ColumnType_JSON,
+				Transform:   transform.FromField("Status.Conditions"),
+			},
+				{
+				Name:        "status_stored_versions",
+				Description: "StoredVersions lists all versions of CustomResources that were ever persisted.",
+				Type:        proto.ColumnType_JSON,
+				Transform:   transform.FromField("Status.StoredVersions"),
+			},
+			{
 				Name:        "versions",
 				Description: "Versions is the list of all API versions of the defined custom resource.",
 				Type:        proto.ColumnType_JSON,
 				Transform:   transform.FromField("Spec.Versions"),
 			},
-		},
+		}),
 	}
 }
 
