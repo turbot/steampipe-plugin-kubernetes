@@ -129,9 +129,7 @@ func listK8sDynamicCRDs(ctx context.Context, cm *connection.Manager, c *plugin.C
 			pageLeft = false
 		}
 
-		for _, crd := range response.Items {
-			crds = append(crds, crd)
-		}
+		crds = append(crds, response.Items...)
 	}
 
 	return crds, nil
