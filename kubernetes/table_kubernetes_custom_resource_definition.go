@@ -31,10 +31,16 @@ func tableKubernetesCustomResourceDefinition(ctx context.Context) *plugin.Table 
 				Transform:   transform.FromField("Spec.Names.Plural"),
 			},
 			{
-				Name:        "custom_resource_conversion_strategy",
+				Name:        "spec_conversion_strategy",
 				Description: "Strategy specifies how custom resources are converted between versions.",
 				Type:        proto.ColumnType_STRING,
 				Transform:   transform.FromField("Spec.Conversion.Strategy"),
+			},
+			{
+				Name:        "spec_group",
+				Description: "Strategy specifies how custom resources are converted between versions.",
+				Type:        proto.ColumnType_STRING,
+				Transform:   transform.FromField("Spec.Group"),
 			},
 			{
 				Name:        "spec_preserve_unknown_fields",
@@ -49,7 +55,7 @@ func tableKubernetesCustomResourceDefinition(ctx context.Context) *plugin.Table 
 				Transform:   transform.FromField("Spec.Scope"),
 			},
 			{
-				Name:        "custom_resource_conversion_webhook",
+				Name:        "spec_conversion_webhook",
 				Description: "webhook describes how to call the conversion webhook. Required when `strategy` is set to `Webhook`.",
 				Type:        proto.ColumnType_JSON,
 				Transform:   transform.FromField("Spec.Conversion.Webhook"),
