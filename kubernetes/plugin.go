@@ -8,6 +8,7 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/turbot/steampipe-plugin-sdk/v3/connection"
 	"github.com/turbot/steampipe-plugin-sdk/v3/plugin"
@@ -71,28 +72,20 @@ func pluginTableDefinitions(ctx context.Context, p *plugin.Plugin) (map[string]*
 	}
 
 	// Search for CRs to create as tables
-	kubernetesTables := []string{}
 	crds, err := listK8sDynamicCRDs(ctx, p.ConnectionManager, p.Connection)
 	if err != nil {
 		return nil, err
 	}
 	for _, crd := range crds {
-		pluginTableName := "kubernetes_" + crd.Spec.Names.Plural
-		if _, ok := tables[pluginTableName]; !ok {
-			kubernetesTables = append(kubernetesTables, crd.Spec.Names.Plural)
+		ctx = context.WithValue(ctx, contextKey("CustomResourceName"), crd.Name)
+		for _, version := range crd.Spec.Versions {
+			if version.Served {
+				ctx = context.WithValue(ctx, contextKey("ActiveVersion"), version.Name)
+			}
 		}
-	}
-
-	for _, kTable := range kubernetesTables {
-		tableName := "kubernetes_" + kTable
-		ctx = context.WithValue(ctx, contextKey("CustomResourceName"), kTable)
-		ctx = context.WithValue(ctx, contextKey("PluginTableName"), tableName)
-		plugin.Logger(ctx).Error("tableKubernetesCRDResource", "tableName", tableName)
-		// Add the table if it does not already exist, ensuring standard tables win
-		if tables[tableName] == nil {
-			tables[tableName] = tableKubernetesCustomResource(ctx)
-		} else {
-			plugin.Logger(ctx).Error("tableKubernetesCustomResource", "table_already_exists", tableName)
+		if tables[fmt.Sprintf("\""+crd.Name+"\"")] == nil {
+			tables[fmt.Sprintf("\""+crd.Name+"\"")] = tableKubernetesCustomResource(ctx, p)
+			plugin.Logger(ctx).Error("ActiveVersion", ctx.Value(contextKey("ActiveVersion")).(string))
 		}
 	}
 

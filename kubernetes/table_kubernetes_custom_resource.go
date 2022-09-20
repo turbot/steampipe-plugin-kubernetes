@@ -14,11 +14,29 @@ import (
 	"github.com/turbot/steampipe-plugin-sdk/v3/plugin"
 )
 
-func tableKubernetesCustomResource(ctx context.Context) *plugin.Table {
+func tableKubernetesCustomResource(ctx context.Context, p *plugin.Plugin) *plugin.Table {
 	resourceName := ctx.Value(contextKey("CustomResourceName")).(string)
-	tableName := ctx.Value(contextKey("PluginTableName")).(string)
+	version := ctx.Value(contextKey("ActiveVersion")).(string)
+	resourceId := schema.GroupVersionResource{
+		Group:    strings.Replace(resourceName, strings.Split(resourceName, ".")[0]+".", "", 1),
+		Version:  version,
+		Resource: strings.Split(resourceName, ".")[0],
+	}
+
+	clientset, err := GetNewClientDynamic(ctx, p.ConnectionManager, p.Connection)
+	if err != nil {
+		plugin.Logger(ctx).Error("GetNewClientDynamic", "connection_error", err)
+		return nil
+	}
+
+	response, err := clientset.Resource(resourceId).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		plugin.Logger(ctx).Error("GetNewClientDynamic", "connection_error", err)
+		return nil
+	}
+	
 	return &plugin.Table{
-		Name:        tableName,
+		Name:        fmt.Sprintf("\"" + resourceName + "\""),
 		Description: fmt.Sprintf("Represents CRD object %s.", resourceName),
 		List: &plugin.ListConfig{
 			ParentHydrate: listK8sCustomResourceDefinitions,
@@ -48,11 +66,6 @@ func listK8sCustomResources(resourceName string) func(ctx context.Context, d *pl
 		// check if the resourceNames is matching with the definition
 		if names != resourceName {
 			return nil, nil
-		}
-
-		clientset, err := GetNewClientDynamic(ctx, d)
-		if err != nil {
-			return nil, err
 		}
 
 		var wg sync.WaitGroup
@@ -91,14 +104,6 @@ func getCustomResources(ctx context.Context, d *plugin.QueryData, groupName stri
 		Group:    groupName,
 		Version:  version,
 		Resource: resourceName,
-	}
-
-	response, err := clientset.Resource(resourceId).List(ctx, metav1.ListOptions{})
-	if err != nil {
-		if strings.Contains(err.Error(), "could not find the requested resource") {
-			return nil
-		}
-		return err
 	}
 
 	for _, crd := range response.Items {
