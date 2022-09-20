@@ -8,9 +8,7 @@ package kubernetes
 
 import (
 	"context"
-	"regexp"
 
-	"github.com/iancoleman/strcase"
 	"github.com/turbot/steampipe-plugin-sdk/v3/plugin"
 	"github.com/turbot/steampipe-plugin-sdk/v3/plugin/transform"
 )
@@ -71,23 +69,20 @@ func pluginTableDefinitions(ctx context.Context, p *plugin.Plugin) (map[string]*
 	}
 
 	// Search for metrics to create as tables
-	var re = regexp.MustCompile(`\d+`)
-	var substitution = ``
 	kubernetesTables := []string{}
 	config := GetConfig(p.Connection)
 	if config.CustomResources != nil && len(*config.CustomResources) > 0 {
 		for _, tableName := range *config.CustomResources {
-			pluginTableName := "kubernetes_crd_" + strcase.ToSnake(re.ReplaceAllString(tableName, substitution))
+			pluginTableName := "kubernetes_crd_" + tableName
 			if _, ok := tables[pluginTableName]; !ok {
 				kubernetesTables = append(kubernetesTables, tableName)
 			}
 		}
 	}
 
-	plugin.Logger(ctx).Error("tableKubernetesCRDResource", "kubernetesTables", kubernetesTables[0])
-	for _, i := range kubernetesTables {
-		tableName := "kubernetes_crd_" + strcase.ToSnake(re.ReplaceAllString(i, substitution))
-		ctx = context.WithValue(ctx, contextKey("CustomResourceName"), i)
+	for _, kTable := range kubernetesTables {
+		tableName := "kubernetes_crd_" + kTable
+		ctx = context.WithValue(ctx, contextKey("CustomResourceName"), kTable)
 		ctx = context.WithValue(ctx, contextKey("PluginTableName"), tableName)
 		plugin.Logger(ctx).Error("tableKubernetesCRDResource", "tableName", tableName)
 		// Add the table if it does not already exist, ensuring standard tables win

@@ -3,10 +3,12 @@ package kubernetes
 import (
 	"context"
 	"strings"
+	"sync"
 
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
 
 	"github.com/turbot/steampipe-plugin-sdk/v3/plugin"
 )
@@ -40,45 +42,84 @@ type CRDResourceInfo struct {
 
 func listK8sCRDResources(resourceName string) func(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 	return func(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
-		version := h.Item.(v1.CustomResourceDefinition).Spec.Versions[0].Name
+		version := h.Item.(v1.CustomResourceDefinition).Spec.Versions
 		groupName := h.Item.(v1.CustomResourceDefinition).Spec.Group
+		names := h.Item.(v1.CustomResourceDefinition).Spec.Names.Plural
+		plugin.Logger(ctx).Error("tableKubernetesCRDResource", "resourceName", resourceName, "names", names)
+		if names != resourceName {
+			return nil, nil
+		}
 
 		clientset, err := GetNewClientDynamic(ctx, d)
 		if err != nil {
 			return nil, err
 		}
-		resourceId := schema.GroupVersionResource{
-			Group:    groupName,
-			Version:  version,
-			Resource: resourceName,
-		}
 
-		response, err := clientset.Resource(resourceId).List(ctx, metav1.ListOptions{})
-		if err != nil {
+		var wg sync.WaitGroup
+		errorCh := make(chan error, len(version))
+		for _, v := range version {
+			wg.Add(1)
+			go getCRDResourceAsync(ctx, d, groupName, resourceName, v.Name, clientset, &wg, errorCh)
+		}
+		// wait for all inline policies to be processed
+		wg.Wait()
+
+		// NOTE: close channel before ranging over results
+		close(errorCh)
+
+		for err := range errorCh {
+			// return the first error
+			plugin.Logger(ctx).Error("getCRDResourceAsync", "channel_error", err)
 			return nil, err
 		}
-		// panic(response.Items)
-		for _, crd := range response.Items {
-			ob := crd.Object
-			var annotation interface{}
-			annotation = strings.TrimLeft(strings.TrimRight(ob["metadata"].(map[string]interface{})["annotations"].(map[string]interface{})["kubectl.kubernetes.io/last-applied-configuration"].(string), "\""), "\"")
-
-			d.StreamListItem(ctx, &CRDResourceInfo{
-				Kind:        ob["kind"].(string),
-				APIVersion:  ob["apiVersion"].(string),
-				Name:        ob["metadata"].(map[string]interface{})["name"].(string),
-				Annotations: annotation,
-				Namespace:   ob["metadata"].(map[string]interface{})["namespace"].(string),
-				Spec:        ob["spec"],
-			})
-
-			// Context can be cancelled due to manual cancellation or the limit has been hit
-			if d.QueryStatus.RowsRemaining(ctx) == 0 {
-				return nil, nil
-			}
-		}
-
 		return nil, nil
 	}
 
+}
+
+func getCRDResourceAsync(ctx context.Context, d *plugin.QueryData, groupName string, resourceName string, version string, clientset dynamic.Interface, wg *sync.WaitGroup, errorCh chan error) {
+	defer wg.Done()
+
+	err := getCRDResource(ctx, d, groupName, resourceName, version, clientset)
+	if err != nil {
+		errorCh <- err
+	}
+}
+
+func getCRDResource(ctx context.Context, d *plugin.QueryData, groupName string, resourceName string, version string, clientset dynamic.Interface) error {
+	resourceId := schema.GroupVersionResource{
+		Group:    groupName,
+		Version:  version,
+		Resource: resourceName,
+	}
+	plugin.Logger(ctx).Error("tableKubernetesCRDResource", "resourceId", resourceId)
+	response, err := clientset.Resource(resourceId).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		if strings.Contains(err.Error(), "could not find the requested resource") {
+			return nil
+		}
+		return err
+	}
+
+	for _, crd := range response.Items {
+		plugin.Logger(ctx).Error("tableKubernetesCRDResource", "crd", crd)
+		ob := crd.Object
+		var annotation interface{}
+		annotation = strings.TrimLeft(strings.TrimRight(ob["metadata"].(map[string]interface{})["annotations"].(map[string]interface{})["kubectl.kubernetes.io/last-applied-configuration"].(string), "\""), "\"")
+
+		d.StreamListItem(ctx, &CRDResourceInfo{
+			Kind:        ob["kind"].(string),
+			APIVersion:  ob["apiVersion"].(string),
+			Name:        ob["metadata"].(map[string]interface{})["name"].(string),
+			Annotations: annotation,
+			Namespace:   ob["metadata"].(map[string]interface{})["namespace"].(string),
+			Spec:        ob["spec"],
+		})
+
+		// Context can be cancelled due to manual cancellation or the limit has been hit
+		if d.QueryStatus.RowsRemaining(ctx) == 0 {
+			return nil
+		}
+	}
+	return nil
 }
