@@ -5,7 +5,9 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/turbot/steampipe-plugin-sdk/v3/grpc/proto"
 	"github.com/turbot/steampipe-plugin-sdk/v3/plugin"
+	"github.com/turbot/steampipe-plugin-sdk/v3/plugin/transform"
 )
 
 func tableKubernetesCustomResourceDefinition(ctx context.Context) *plugin.Table {
@@ -21,7 +23,73 @@ func tableKubernetesCustomResourceDefinition(ctx context.Context) *plugin.Table 
 			//KeyColumns: getCommonOptionalKeyQuals(),
 		},
 		Columns: k8sCommonColumns([]*plugin.Column{
-			//// CronJobSpec columns
+			//// Resource definition specification
+			{
+				Name:        "spec_names_plural",
+				Description: "Plural is the plural name of the resource to serve.",
+				Type:        proto.ColumnType_STRING,
+				Transform:   transform.FromField("Spec.Names.Plural"),
+			},
+			{
+				Name:        "spec_conversion_strategy",
+				Description: "Strategy specifies how custom resources are converted between versions.",
+				Type:        proto.ColumnType_STRING,
+				Transform:   transform.FromField("Spec.Conversion.Strategy"),
+			},
+			{
+				Name:        "spec_group",
+				Description: "Strategy specifies how custom resources are converted between versions.",
+				Type:        proto.ColumnType_STRING,
+				Transform:   transform.FromField("Spec.Group"),
+			},
+			{
+				Name:        "spec_preserve_unknown_fields",
+				Description: "PreserveUnknownFields indicates that object fields which are not specified in the OpenAPI schema should be preserved when persisting to storage.",
+				Type:        proto.ColumnType_BOOL,
+				Transform:   transform.FromField("Spec.PreserveUnknownFields"),
+			},
+			{
+				Name:        "spec_scope",
+				Description: "Group is the API group of the defined custom resource.",
+				Type:        proto.ColumnType_STRING,
+				Transform:   transform.FromField("Spec.Scope"),
+			},
+			{
+				Name:        "spec_conversion_webhook",
+				Description: "webhook describes how to call the conversion webhook. Required when `strategy` is set to `Webhook`.",
+				Type:        proto.ColumnType_JSON,
+				Transform:   transform.FromField("Spec.Conversion.Webhook"),
+			},
+			{
+				Name:        "names",
+				Description: "Names specify the resource and kind names for the custom resource.",
+				Type:        proto.ColumnType_JSON,
+				Transform:   transform.FromField("Spec.Names"),
+			},
+			{
+				Name:        "status_accepted_names",
+				Description: "AcceptedNames are the names that are actually being used to serve discovery.",
+				Type:        proto.ColumnType_JSON,
+				Transform:   transform.FromField("Status.AcceptedNames"),
+			},
+			{
+				Name:        "status_conditions",
+				Description: "Conditions indicate state for particular aspects of a CustomResourceDefinition.",
+				Type:        proto.ColumnType_JSON,
+				Transform:   transform.FromField("Status.Conditions"),
+			},
+				{
+				Name:        "status_stored_versions",
+				Description: "StoredVersions lists all versions of CustomResources that were ever persisted.",
+				Type:        proto.ColumnType_JSON,
+				Transform:   transform.FromField("Status.StoredVersions"),
+			},
+			{
+				Name:        "versions",
+				Description: "Versions is the list of all API versions of the defined custom resource.",
+				Type:        proto.ColumnType_JSON,
+				Transform:   transform.FromField("Spec.Versions"),
+			},
 		}),
 	}
 }
@@ -34,6 +102,7 @@ func listK8sCustomResourceDefinitions(ctx context.Context, d *plugin.QueryData, 
 
 	clientset, err := GetNewClientCRD(ctx, d)
 	if err != nil {
+		logger.Error("kubernetes_crd.listK8sCustomResourceDefinitions", "connection_error", err)
 		return nil, err
 	}
 
@@ -57,7 +126,7 @@ func listK8sCustomResourceDefinitions(ctx context.Context, d *plugin.QueryData, 
 	for pageLeft {
 		response, err := clientset.ApiextensionsV1().CustomResourceDefinitions().List(ctx, input)
 		if err != nil {
-			logger.Error("listK8sCustomResourceDefinitions", "list_err", err)
+			logger.Error("kubernetes_crd.listK8sCRDs", "api_error", err)
 			return nil, err
 		}
 

@@ -34,7 +34,6 @@ func tableKubernetesCustomResource(ctx context.Context, p *plugin.Plugin) *plugi
 		plugin.Logger(ctx).Error("GetNewClientDynamic", "connection_error", err)
 		return nil
 	}
-	
 	return &plugin.Table{
 		Name:        fmt.Sprintf("\"" + resourceName + "\""),
 		Description: fmt.Sprintf("Represents CRD object %s.", resourceName),
