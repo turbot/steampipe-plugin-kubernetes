@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"sync"
 
@@ -14,13 +15,11 @@ import (
 )
 
 func tableKubernetesCRDResource(ctx context.Context) *plugin.Table {
-	//plugin.Logger(ctx).Error("tableKubernetesCRDResource", "resourceName", resourceName)
-	//resourceName := ctx.Value("custom_resource_name").(string)
 	resourceName := ctx.Value(contextKey("CustomResourceName")).(string)
 	tableName := ctx.Value(contextKey("PluginTableName")).(string)
 	return &plugin.Table{
 		Name:        tableName,
-		Description: "Cron jobs are useful for creating periodic and recurring tasks, like running backups or sending emails.",
+		Description: fmt.Sprintf("Represents CRD object %s.", resourceName),
 		List: &plugin.ListConfig{
 			ParentHydrate: listK8sCRDs,
 			Hydrate:       listK8sCRDResources(resourceName),
