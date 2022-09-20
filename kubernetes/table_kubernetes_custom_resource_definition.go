@@ -12,10 +12,10 @@ func tableKubernetesCustomResourceDefinition(ctx context.Context) *plugin.Table 
 	return &plugin.Table{
 		Name:        "kubernetes_custom_resource_definition",
 		Description: "Kubernetes Custom Resource Definition.",
-		// Get: &plugin.GetConfig{
-		// 	KeyColumns: plugin.AllColumns([]string{"name", "namespace"}),
-		// 	Hydrate:    getK8sCronJob,
-		// },
+		Get: &plugin.GetConfig{
+			KeyColumns: plugin.SingleColumn("name"),
+			Hydrate:    getK8sCustomResourceDefinition,
+		},
 		List: &plugin.ListConfig{
 			Hydrate: listK8sCustomResourceDefinitions,
 			//KeyColumns: getCommonOptionalKeyQuals(),
@@ -78,4 +78,23 @@ func listK8sCustomResourceDefinitions(ctx context.Context, d *plugin.QueryData, 
 	}
 
 	return nil, nil
+}
+
+func getK8sCustomResourceDefinition(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
+	logger := plugin.Logger(ctx)
+	logger.Trace("getK8sCustomResourceDefinition")
+
+	clientset, err := GetNewClientCRD(ctx, d)
+	if err != nil {
+		return nil, err
+	}
+	name := d.KeyColumnQuals["name"].GetStringValue()
+
+	response, err := clientset.ApiextensionsV1().CustomResourceDefinitions().Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		logger.Error("listK8sCustomResourceDefinitions", "list_err", err)
+		return nil, err
+	}
+
+	return response, nil
 }
