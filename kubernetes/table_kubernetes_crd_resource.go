@@ -100,14 +100,19 @@ func getCRDResource(ctx context.Context, d *plugin.QueryData, groupName string, 
 		return err
 	}
 
+	var annotations interface{}
+
 	for _, crd := range response.Items {
 		plugin.Logger(ctx).Error("tableKubernetesCRDResource", "crd", crd)
 		ob := crd.Object
+		for _, v := range ob["metadata"].(map[string]interface{})["annotations"].(map[string]interface{}) {
+			annotations = strings.TrimLeft(strings.TrimRight(v.(string), "\""), "\"")
+		}
 		d.StreamListItem(ctx, &CRDResourceInfo{
 			Kind:        ob["kind"].(string),
 			APIVersion:  ob["apiVersion"].(string),
 			Name:        ob["metadata"].(map[string]interface{})["name"].(string),
-			Annotations: ob["metadata"].(map[string]interface{})["annotations"],
+			Annotations: annotations,
 			Namespace:   ob["metadata"].(map[string]interface{})["namespace"].(string),
 			Spec:        ob["spec"],
 		})
