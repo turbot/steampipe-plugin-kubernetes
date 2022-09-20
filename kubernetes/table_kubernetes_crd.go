@@ -10,8 +10,8 @@ import (
 
 func tableKubernetesCRD(ctx context.Context) *plugin.Table {
 	return &plugin.Table{
-		Name:        "kubernetes_crd",
-		Description: "Cron jobs are useful for creating periodic and recurring tasks, like running backups or sending emails.",
+		Name:        "kubernetes_custom_resource_definition",
+		Description: "Kubernetes Custom Resource Definition.",
 		// Get: &plugin.GetConfig{
 		// 	KeyColumns: plugin.AllColumns([]string{"name", "namespace"}),
 		// 	Hydrate:    getK8sCronJob,

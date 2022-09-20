@@ -78,14 +78,14 @@ func pluginTableDefinitions(ctx context.Context, p *plugin.Plugin) (map[string]*
 		return nil, err
 	}
 	for _, crd := range crds {
-		pluginTableName := "kubernetes_crd_" + crd.Spec.Names.Plural
+		pluginTableName := "kubernetes_" + crd.Spec.Names.Plural
 		if _, ok := tables[pluginTableName]; !ok {
 			kubernetesTables = append(kubernetesTables, crd.Spec.Names.Plural)
 		}
 	}
 
 	for _, kTable := range kubernetesTables {
-		tableName := "kubernetes_crd_" + kTable
+		tableName := "kubernetes_" + kTable
 		ctx = context.WithValue(ctx, contextKey("CustomResourceName"), kTable)
 		ctx = context.WithValue(ctx, contextKey("PluginTableName"), tableName)
 		plugin.Logger(ctx).Error("tableKubernetesCRDResource", "tableName", tableName)
