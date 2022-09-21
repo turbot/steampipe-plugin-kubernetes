@@ -25,8 +25,7 @@ func tableKubernetesCustomResource(ctx context.Context, p *plugin.Plugin) *plugi
 		Name:        crdName,
 		Description: fmt.Sprintf("Represents Custom resource %s.", crdName),
 		List: &plugin.ListConfig{
-			ParentHydrate: listK8sCustomResourceDefinitions,
-			Hydrate:       listK8sCustomResources(resourceName, groupName, activeVersion),
+			Hydrate: listK8sCustomResources(ctx, crdName, resourceName, groupName, activeVersion),
 		},
 		Columns: k8sCRDResourceCommonColumns(getCustomResourcesDynamincColumns(ctx, p.ConnectionManager, p.Connection, versionSchema)),
 	}
@@ -38,7 +37,7 @@ func getCustomResourcesDynamincColumns(ctx context.Context, cm *connection.Manag
 	schema := versionSchema.(v1.JSONSchemaProps)
 	for k, v := range schema.Properties {
 		column := &plugin.Column{
-			Name:        k,
+			Name:        "spec_" + k,
 			Description: v.Description,
 			Transform:   transform.FromP(extractSpecProperty, k),
 		}
@@ -64,6 +63,7 @@ func getCustomResourcesDynamincColumns(ctx context.Context, cm *connection.Manag
 }
 
 type CRDResourceInfo struct {
+	Name        interface{}
 	Kind        interface{}
 	APIVersion  interface{}
 	Namespace   interface{}
@@ -73,7 +73,7 @@ type CRDResourceInfo struct {
 
 //// HYDRATE FUNCTIONS
 
-func listK8sCustomResources(resourceName string, groupName string, activeVersion string) func(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+func listK8sCustomResources(ctx context.Context, crdName string, resourceName string, groupName string, activeVersion string) func(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 	return func(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 		clientset, err := GetNewClientDynamic(ctx, d)
 		if err != nil {
@@ -93,17 +93,22 @@ func listK8sCustomResources(resourceName string, groupName string, activeVersion
 			}
 			return nil, err
 		}
-
 		for _, crd := range response.Items {
 			data := crd.Object
-
 			d.StreamListItem(ctx, &CRDResourceInfo{
-				APIVersion:  data["apiVersion"],
-				Kind:        data["kind"],
-				Namespace:   data["namespace"],
-				Annotations: data["annotations"],
+				Name:        crd.GetName(),
+				APIVersion:  crd.GetAPIVersion(),
+				Kind:        crd.GetKind(),
+				Namespace:   crd.GetNamespace(),
+				Annotations: crd.GetAnnotations(),
 				Spec:        data["spec"],
 			})
+
+			// Check if context has been cancelled or if the limit has been hit (if specified)
+			// if there is a limit, it will return the number of rows required to reach this limit
+			if d.QueryStatus.RowsRemaining(ctx) == 0 {
+				return nil, nil
+			}
 		}
 
 		return nil, nil

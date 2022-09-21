@@ -75,6 +75,7 @@ func pluginTableDefinitions(ctx context.Context, p *plugin.Plugin) (map[string]*
 	if err != nil {
 		return nil, err
 	}
+
 	for _, crd := range crds {
 		ctx = context.WithValue(ctx, contextKey("CRDName"), crd.Name)
 		ctx = context.WithValue(ctx, contextKey("CustomResourceName"), crd.Spec.Names.Plural)
@@ -86,7 +87,7 @@ func pluginTableDefinitions(ctx context.Context, p *plugin.Plugin) (map[string]*
 			}
 		}
 		if tables[crd.Name] == nil {
-			tables[crd.Name] = tableKubernetesCustomResource(ctx,p)
+			tables[crd.Name] = tableKubernetesCustomResource(ctx, p)
 		}
 	}
 
