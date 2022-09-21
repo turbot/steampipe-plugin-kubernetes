@@ -83,10 +83,6 @@ func pluginTableDefinitions(ctx context.Context, p *plugin.Plugin) (map[string]*
 			if version.Served {
 				ctx = context.WithValue(ctx, contextKey("ActiveVersion"), version.Name)
 				ctx = context.WithValue(ctx, contextKey("VersionSchema"), version.Schema.OpenAPIV3Schema.Properties["spec"])
-				// plugin.Logger(ctx).Debug("Schema =====>>>>> ", version.Schema)
-				// plugin.Logger(ctx).Debug("Schema -> OpenAPIV3Schema  =====>>>>> ", version.Schema.OpenAPIV3Schema)
-				// plugin.Logger(ctx).Debug("Schema -> OpenAPIV3Schema -> Properties =====>>>>> ", version.Schema.OpenAPIV3Schema.Properties["spec"].Properties)
-
 			}
 		}
 		if tables[crd.Name] == nil {

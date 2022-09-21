@@ -40,7 +40,7 @@ func getCustomResourcesDynamincColumns(ctx context.Context, cm *connection.Manag
 		column := &plugin.Column{
 			Name:        k,
 			Description: v.Description,
-			Transform:   transform.FromField(k),
+			Transform:   transform.FromP(extractSpecProperty, k),
 		}
 		switch v.Type {
 		case "string":
@@ -58,8 +58,6 @@ func getCustomResourcesDynamincColumns(ctx context.Context, cm *connection.Manag
 		}
 
 		columns = append(columns, column)
-		// plugin.Logger(ctx).Debug("key ==>>", k, "Value ===>>", v.Type)
-
 	}
 
 	return columns
@@ -68,7 +66,6 @@ func getCustomResourcesDynamincColumns(ctx context.Context, cm *connection.Manag
 type CRDResourceInfo struct {
 	Kind        interface{}
 	APIVersion  interface{}
-	Name        interface{}
 	Namespace   interface{}
 	Annotations interface{}
 	Spec        interface{}
@@ -96,22 +93,31 @@ func listK8sCustomResources(resourceName string, groupName string, activeVersion
 			}
 			return nil, err
 		}
-		// structBuilder := dynamicstruct.ExtendStruct(CRDResourceInfo{})
+
 		for _, crd := range response.Items {
 			data := crd.Object
 
-			objectMap := new(map[string]interface{})
-			err = decodeQueryResult(ctx, data["spec"], objectMap)
 			d.StreamListItem(ctx, &CRDResourceInfo{
 				APIVersion:  data["apiVersion"],
 				Kind:        data["kind"],
 				Namespace:   data["namespace"],
 				Annotations: data["annotations"],
-				Spec:        objectMap,
+				Spec:        data["spec"],
 			})
-			d.StreamListItem(ctx, objectMap)
 		}
+
 		return nil, nil
 	}
 
+}
+
+func extractSpecProperty(_ context.Context, d *transform.TransformData) (interface{}, error) {
+	ob := d.HydrateItem.(*CRDResourceInfo).Spec
+	param := d.Param.(string)
+	spec := ob.(map[string]interface{})
+	if spec[param] != nil {
+		return spec[param], nil
+	}
+
+	return nil, nil
 }
