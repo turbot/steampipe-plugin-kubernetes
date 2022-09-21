@@ -75,7 +75,6 @@ type CRDResourceInfo struct {
 
 func listK8sCustomResources(resourceName string, groupName string, activeVersion string) func(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 	return func(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
-		plugin.Logger(ctx).Debug("Count ++++++++")
 		clientset, err := GetNewClientDynamic(ctx, d)
 		if err != nil {
 			return nil, err
