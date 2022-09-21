@@ -12,6 +12,7 @@ import (
 	"github.com/turbot/steampipe-plugin-sdk/v3/connection"
 	"github.com/turbot/steampipe-plugin-sdk/v3/grpc/proto"
 	"github.com/turbot/steampipe-plugin-sdk/v3/plugin"
+	"github.com/turbot/steampipe-plugin-sdk/v3/plugin/transform"
 )
 
 func tableKubernetesCustomResource(ctx context.Context, p *plugin.Plugin) *plugin.Table {
@@ -39,6 +40,7 @@ func getCustomResourcesDynamincColumns(ctx context.Context, cm *connection.Manag
 		column := &plugin.Column{
 			Name:        k,
 			Description: v.Description,
+			Transform:   transform.FromField(k),
 		}
 		switch v.Type {
 		case "string":
@@ -56,7 +58,7 @@ func getCustomResourcesDynamincColumns(ctx context.Context, cm *connection.Manag
 		}
 
 		columns = append(columns, column)
-		plugin.Logger(ctx).Debug("key ==>>", k, "Value ===>>", v.Type)
+		// plugin.Logger(ctx).Debug("key ==>>", k, "Value ===>>", v.Type)
 
 	}
 
@@ -64,10 +66,10 @@ func getCustomResourcesDynamincColumns(ctx context.Context, cm *connection.Manag
 }
 
 type CRDResourceInfo struct {
-	Kind        string
-	APIVersion  string
-	Name        string
-	Namespace   string
+	Kind        interface{}
+	APIVersion  interface{}
+	Name        interface{}
+	Namespace   interface{}
 	Annotations interface{}
 	Spec        interface{}
 }
@@ -94,9 +96,20 @@ func listK8sCustomResources(resourceName string, groupName string, activeVersion
 			}
 			return nil, err
 		}
-
+		// structBuilder := dynamicstruct.ExtendStruct(CRDResourceInfo{})
 		for _, crd := range response.Items {
-			d.StreamListItem(ctx, crd)
+			data := crd.Object
+
+			objectMap := new(map[string]interface{})
+			err = decodeQueryResult(ctx, data["spec"], objectMap)
+			d.StreamListItem(ctx, &CRDResourceInfo{
+				APIVersion:  data["apiVersion"],
+				Kind:        data["kind"],
+				Namespace:   data["namespace"],
+				Annotations: data["annotations"],
+				Spec:        objectMap,
+			})
+			d.StreamListItem(ctx, objectMap)
 		}
 		return nil, nil
 	}

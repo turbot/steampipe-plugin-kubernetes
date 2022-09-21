@@ -82,7 +82,6 @@ func k8sCommonColumns(columns []*plugin.Column) []*plugin.Column {
 
 func k8sCRDResourceCommonColumns(columns []*plugin.Column) []*plugin.Column {
 	allColumns := []*plugin.Column{
-		{Name: "name", Type: proto.ColumnType_STRING, Description: "Name of the resource."},
 		{Name: "kind", Type: proto.ColumnType_STRING, Description: "Type of resource."},
 		{Name: "api_version", Type: proto.ColumnType_STRING, Description: "The endpoint of the API.", 	Transform:   transform.FromField("APIVersion")},
 		{Name: "namespace", Type: proto.ColumnType_STRING, Description: "Namespace defines the space within which each name must be unique."},
