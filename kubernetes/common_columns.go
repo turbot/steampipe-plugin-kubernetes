@@ -83,10 +83,11 @@ func k8sCommonColumns(columns []*plugin.Column) []*plugin.Column {
 func k8sCRDResourceCommonColumns(columns []*plugin.Column) []*plugin.Column {
 	allColumns := []*plugin.Column{
 		{Name: "name", Type: proto.ColumnType_STRING, Description: "Name of resource."},
+		{Name: "uid", Type: proto.ColumnType_STRING, Description: "UID is the unique in time and space value for this object.", Transform: transform.FromField("UID")},
 		{Name: "kind", Type: proto.ColumnType_STRING, Description: "Type of resource."},
 		{Name: "api_version", Type: proto.ColumnType_STRING, Description: "The endpoint of the API.", Transform: transform.FromField("APIVersion")},
 		{Name: "namespace", Type: proto.ColumnType_STRING, Description: "Namespace defines the space within which each name must be unique."},
-		{Name: "annotations", Type: proto.ColumnType_STRING, Description: "Kubernetes annotations to attach arbitrary non-identifying metadata to objects."},
+		{Name: "creation_timestamp", Type: proto.ColumnType_TIMESTAMP, Transform: transform.FromGo().Transform(v1TimeToRFC3339), Description: "CreationTimestamp is a timestamp representing the server time when this object was created."},
 	}
 	allColumns = append(allColumns, columns...)
 

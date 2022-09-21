@@ -64,6 +64,8 @@ func getCustomResourcesDynamincColumns(ctx context.Context, cm *connection.Manag
 
 type CRDResourceInfo struct {
 	Name        interface{}
+	UID         interface{}
+	CreationTimestamp interface{}
 	Kind        interface{}
 	APIVersion  interface{}
 	Namespace   interface{}
@@ -95,16 +97,13 @@ func listK8sCustomResources(ctx context.Context, crdName string, resourceName st
 		}
 		for _, crd := range response.Items {
 			data := crd.Object
-			var annotations interface{}
-			for _, v := range crd.GetAnnotations(){
-			annotations = strings.TrimLeft(strings.TrimRight(v, "\""), "\"")
-		}
 			d.StreamListItem(ctx, &CRDResourceInfo{
 				Name:        crd.GetName(),
+				UID: crd.GetUID(),
 				APIVersion:  crd.GetAPIVersion(),
 				Kind:        crd.GetKind(),
 				Namespace:   crd.GetNamespace(),
-				Annotations: annotations,
+				CreationTimestamp: crd.GetCreationTimestamp(),
 				Spec:        data["spec"],
 			})
 
