@@ -95,12 +95,16 @@ func listK8sCustomResources(ctx context.Context, crdName string, resourceName st
 		}
 		for _, crd := range response.Items {
 			data := crd.Object
+			var annotations interface{}
+			for _, v := range crd.GetAnnotations(){
+			annotations = strings.TrimLeft(strings.TrimRight(v, "\""), "\"")
+		}
 			d.StreamListItem(ctx, &CRDResourceInfo{
 				Name:        crd.GetName(),
 				APIVersion:  crd.GetAPIVersion(),
 				Kind:        crd.GetKind(),
 				Namespace:   crd.GetNamespace(),
-				Annotations: crd.GetAnnotations(),
+				Annotations: annotations,
 				Spec:        data["spec"],
 			})
 
