@@ -18,7 +18,7 @@ func tableKubernetesCustomResource(ctx context.Context) *plugin.Table {
 	activeVersion := ctx.Value(contextKey("ActiveVersion")).(string)
 	return &plugin.Table{
 		Name:        crdName,
-		Description: fmt.Sprintf("Represents CRD object %s.", crdName),
+		Description: fmt.Sprintf("Represents Custom resource %s.", crdName),
 		List: &plugin.ListConfig{
 			ParentHydrate: listK8sCustomResourceDefinitions,
 			Hydrate:       listK8sCustomResources(resourceName, groupName, activeVersion),
