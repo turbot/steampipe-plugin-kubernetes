@@ -82,10 +82,15 @@ func pluginTableDefinitions(ctx context.Context, p *plugin.Plugin) (map[string]*
 		for _, version := range crd.Spec.Versions {
 			if version.Served {
 				ctx = context.WithValue(ctx, contextKey("ActiveVersion"), version.Name)
+				ctx = context.WithValue(ctx, contextKey("VersionSchema"), version.Schema.OpenAPIV3Schema.Properties["spec"])
+				// plugin.Logger(ctx).Debug("Schema =====>>>>> ", version.Schema)
+				// plugin.Logger(ctx).Debug("Schema -> OpenAPIV3Schema  =====>>>>> ", version.Schema.OpenAPIV3Schema)
+				// plugin.Logger(ctx).Debug("Schema -> OpenAPIV3Schema -> Properties =====>>>>> ", version.Schema.OpenAPIV3Schema.Properties["spec"].Properties)
+
 			}
 		}
 		if tables[crd.Name] == nil {
-			tables[crd.Name] = tableKubernetesCustomResource(ctx)
+			tables[crd.Name] = tableKubernetesCustomResource(ctx,p)
 		}
 	}
 
@@ -94,7 +99,7 @@ func pluginTableDefinitions(ctx context.Context, p *plugin.Plugin) (map[string]*
 
 func listK8sDynamicCRDs(ctx context.Context, cm *connection.Manager, c *plugin.Connection) ([]v1.CustomResourceDefinition, error) {
 	logger := plugin.Logger(ctx)
-	logger.Trace("listK8sDynamicCRDs")
+	logger.Debug("listK8sDynamicCRDs")
 
 	clientset, err := GetNewClientCRDRaw(ctx, cm, c)
 	if err != nil {
