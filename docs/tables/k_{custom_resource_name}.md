@@ -1,6 +1,6 @@
 # Table: {custom_resource_name}
 
-Query data from the custom resource called `{custom_resource_name}`, e.g., `certificates.cert-manager.io`, `salesforce_custom_app__c`. A table is automatically created to represent each object in the `objects` argument.
+Query data from the custom resource called `{custom_resource_name.group_name}`, e.g., `certificates.cert-manager.io`, `salesforce_custom_app__c`. A table is automatically created to represent each object in the `objects` argument.
 
 ## Examples
 
