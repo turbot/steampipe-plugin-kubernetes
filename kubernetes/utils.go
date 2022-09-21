@@ -138,19 +138,19 @@ func GetNewClientCRDRaw(ctx context.Context, cm *connection.Manager, c *plugin.C
 }
 
 // GetNewClientDynamic :: gets client for querying k8s apis for Dynamic Interface
-func GetNewClientDynamic(ctx context.Context, cm *connection.Manager, c *plugin.Connection) (dynamic.Interface, error) {
+func GetNewClientDynamic(ctx context.Context, d *plugin.QueryData) (dynamic.Interface, error) {
 	logger := plugin.Logger(ctx)
 	logger.Trace("GetNewClientDynamic")
 
 	// have we already created and cached the session?
 	serviceCacheKey := "GetNewClientDynamic" //should probably per connection/context keys...
 
-	if cachedData, ok := cm.Cache.Get(serviceCacheKey); ok {
+	if cachedData, ok := d.ConnectionManager.Cache.Get(serviceCacheKey); ok {
 		// logger.Warn("!!!! Clientset Found in Cache !!!!")
 		return cachedData.(dynamic.Interface), nil
 	}
 
-	kubeconfig, err := getK8ConfigRaw(ctx, cm, c)
+	kubeconfig, err := getK8Config(ctx, d)
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +167,7 @@ func GetNewClientDynamic(ctx context.Context, cm *connection.Manager, c *plugin.
 	}
 
 	// save clientset in cache
-	cm.Cache.Set(serviceCacheKey, clientset)
+	d.ConnectionManager.Cache.Set(serviceCacheKey, clientset)
 
 	return clientset, err
 }

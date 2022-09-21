@@ -8,7 +8,6 @@ package kubernetes
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/turbot/steampipe-plugin-sdk/v3/connection"
 	"github.com/turbot/steampipe-plugin-sdk/v3/plugin"
@@ -77,15 +76,16 @@ func pluginTableDefinitions(ctx context.Context, p *plugin.Plugin) (map[string]*
 		return nil, err
 	}
 	for _, crd := range crds {
-		ctx = context.WithValue(ctx, contextKey("CustomResourceName"), crd.Name)
+		ctx = context.WithValue(ctx, contextKey("CRDName"), crd.Name)
+		ctx = context.WithValue(ctx, contextKey("CustomResourceName"), crd.Spec.Names.Plural)
+		ctx = context.WithValue(ctx, contextKey("GroupName"), crd.Spec.Group)
 		for _, version := range crd.Spec.Versions {
 			if version.Served {
 				ctx = context.WithValue(ctx, contextKey("ActiveVersion"), version.Name)
 			}
 		}
-		if tables[fmt.Sprintf("\""+crd.Name+"\"")] == nil {
-			tables[fmt.Sprintf("\""+crd.Name+"\"")] = tableKubernetesCustomResource(ctx, p)
-			plugin.Logger(ctx).Error("ActiveVersion", ctx.Value(contextKey("ActiveVersion")).(string))
+		if tables[crd.Name] == nil {
+			tables[crd.Name] = tableKubernetesCustomResource(ctx)
 		}
 	}
 
