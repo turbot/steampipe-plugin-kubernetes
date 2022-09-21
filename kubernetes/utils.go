@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -477,4 +478,19 @@ func mergeTags(labels map[string]string, annotations map[string]string) map[stri
 		tags[k] = v
 	}
 	return tags
+}
+
+// decodeQueryResult(ctx, apiResponse, responseStruct):: converts raw apiResponse to required output struct
+func decodeQueryResult(ctx context.Context, response interface{}, respObject interface{}) error {
+	resp, err := json.Marshal(response)
+	if err != nil {
+		return err
+	}
+	// For debugging purpose - commenting out to avoid unnecessary logs
+	// plugin.Logger(ctx).Info(“decodeQueryResult”, “Items”, string(resp))
+	err = json.Unmarshal(resp, respObject)
+	if err != nil {
+		return err
+	}
+	return nil
 }
