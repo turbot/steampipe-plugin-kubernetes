@@ -86,7 +86,6 @@ func k8sCRDResourceCommonColumns(columns []*plugin.Column) []*plugin.Column {
 		{Name: "api_version", Type: proto.ColumnType_STRING, Description: "The endpoint of the API.", 	Transform:   transform.FromField("APIVersion")},
 		{Name: "namespace", Type: proto.ColumnType_STRING, Description: "Namespace defines the space within which each name must be unique."},
 		{Name: "annotations", Type: proto.ColumnType_STRING, Description: "Kubernetes annotations to attach arbitrary non-identifying metadata to objects."},
-		{Name: "spec", Type: proto.ColumnType_STRING, Description: "The specification of the resource."},
 	}
 	allColumns = append(allColumns, columns...)
 
