@@ -34,12 +34,19 @@ spec:
             spec:
               type: object
               properties:
-                originalName:
-                  type: string
-                fathersName:
-                  type: string
+                name:
+                  type: object
+                  properties:
+                    originalName:
+                      type: string
+                    fathersName:
+                      type: string
+                  required:
+                  - originalName
                 gender:
                   type: string
+              required:
+              - gender
   # either Namespaced or Cluster
   scope: Namespaced
   names:

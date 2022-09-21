@@ -3,6 +3,7 @@ kind: Ironman
 metadata:
   name: morgan-stark
 spec:
-  originalName: "Morgan"
-  fathersName: "Tony Stark"
+  name:
+    originalName: "Morgan"
+  # fathersName: "Tony Stark"
   gender: "Female"
