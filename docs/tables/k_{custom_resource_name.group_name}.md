@@ -1,4 +1,4 @@
-# Table: {custom_resource_name}
+# Table: {custom_resource_name..group_name}
 
 Query data from the custom resource called `{custom_resource_name.group_name}`, e.g., `certificates.cert-manager.io`, `storeconfigs.crossplane.io`. A table is automatically created to represent each object in the `objects` argument.
 
