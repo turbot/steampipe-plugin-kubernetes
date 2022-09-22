@@ -16,7 +16,7 @@ metadata:
 spec:
   secretName: temporal-w-spcloudt6t6sk7toegg-tls
   duration: 87600h # 10 years
-  renewBefore: 360h # 15d
+  renewBefore: 10h # 15d
   usages:
     - server auth
     - client auth
