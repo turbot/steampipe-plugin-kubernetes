@@ -1,9 +1,0 @@
-apiVersion: "avengers.marvel/v2"
-kind: Ironman
-metadata:
-  name: morgan-stark
-spec:
-  name:
-    originalName: "Morgan"
-  # fathersName: "Tony Stark"
-  gender: "Female"

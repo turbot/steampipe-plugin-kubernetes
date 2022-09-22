@@ -1,7 +1,0 @@
-apiVersion: "stable.example.com/v1"
-kind: CronTab2
-metadata:
-  name: my-new-cron-object
-spec:
-  cronSpec2: "* * * * */5"
-  image: my-awesome-cron-image-2
