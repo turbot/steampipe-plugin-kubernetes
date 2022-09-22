@@ -71,6 +71,7 @@ type CRDResourceInfo struct {
 	Namespace         interface{}
 	Annotations       interface{}
 	Spec              interface{}
+	Labels            interface{}
 }
 
 //// HYDRATE FUNCTIONS
@@ -105,6 +106,7 @@ func listK8sCustomResources(ctx context.Context, crdName string, resourceName st
 				Kind:              crd.GetKind(),
 				Namespace:         crd.GetNamespace(),
 				CreationTimestamp: crd.GetCreationTimestamp(),
+				Labels:            crd.GetLabels(),
 				Spec:              data["spec"],
 			})
 
