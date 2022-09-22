@@ -124,7 +124,7 @@ where
 
 ```sql
 select
-  *
+  count(*)
 from
   custom_resource_name.group_name
 where
