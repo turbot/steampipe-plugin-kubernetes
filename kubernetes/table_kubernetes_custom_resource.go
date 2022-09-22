@@ -95,9 +95,6 @@ func listK8sCustomResources(ctx context.Context, crdName string, resourceName st
 			}
 			return nil, err
 		}
-		if response == nil {
-			return nil, nil
-		}
 
 		for _, crd := range response.Items {
 			data := crd.Object
