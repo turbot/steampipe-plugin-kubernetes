@@ -63,14 +63,14 @@ func getCustomResourcesDynamincColumns(ctx context.Context, cm *connection.Manag
 }
 
 type CRDResourceInfo struct {
-	Name        interface{}
-	UID         interface{}
+	Name              interface{}
+	UID               interface{}
 	CreationTimestamp interface{}
-	Kind        interface{}
-	APIVersion  interface{}
-	Namespace   interface{}
-	Annotations interface{}
-	Spec        interface{}
+	Kind              interface{}
+	APIVersion        interface{}
+	Namespace         interface{}
+	Annotations       interface{}
+	Spec              interface{}
 }
 
 //// HYDRATE FUNCTIONS
@@ -95,16 +95,20 @@ func listK8sCustomResources(ctx context.Context, crdName string, resourceName st
 			}
 			return nil, err
 		}
+		if response == nil {
+			return nil, nil
+		}
+
 		for _, crd := range response.Items {
 			data := crd.Object
 			d.StreamListItem(ctx, &CRDResourceInfo{
-				Name:        crd.GetName(),
-				UID: crd.GetUID(),
-				APIVersion:  crd.GetAPIVersion(),
-				Kind:        crd.GetKind(),
-				Namespace:   crd.GetNamespace(),
+				Name:              crd.GetName(),
+				UID:               crd.GetUID(),
+				APIVersion:        crd.GetAPIVersion(),
+				Kind:              crd.GetKind(),
+				Namespace:         crd.GetNamespace(),
 				CreationTimestamp: crd.GetCreationTimestamp(),
-				Spec:        data["spec"],
+				Spec:              data["spec"],
 			})
 
 			// Check if context has been cancelled or if the limit has been hit (if specified)
