@@ -1,8 +1,0 @@
-apiVersion: "avengers.marvel/v2"
-kind: Ironman
-metadata:
-  name: tony-stark
-spec:
-  # name:
-  #   fathersName: "Howard Stark"
-  gender: "Male"

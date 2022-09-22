@@ -9,7 +9,7 @@ metadata:
     heritage: root-ca-heritage
 spec:
   secretName: root-ca-secret
-  # duration: 43800h # 5y
+  duration: 10h # 5y
   issuerRef:
     name: root-ca-example-webhook.selfSignedIssuer
   commonName: "ca.example-webhook.cert-manager"
