@@ -17,7 +17,7 @@ from
   kubernetes_custom_resource_definition;
 ```
 
-### List CustomResourceDefinitions for a particular group
+### List CRDs for a particular group
 
 ```sql
 select
@@ -32,7 +32,7 @@ where
   spec ->> 'group' = 'stable.example.com';
 ```
 
-### List Certificate type CustomResourceDefinitions
+### List Certificate type CRDs
 
 ```sql
 select
@@ -47,7 +47,7 @@ where
   status -> 'acceptedNames' ->> 'kind' = 'Certificate';
 ```
 
-### List namespaced CustomResourceDefinitions
+### List namespaced CRDs
 
 ```sql
 select
@@ -62,7 +62,7 @@ where
   spec ->> 'scope' = 'Namespaced';
 ```
 
-### Get active version detail of each CustomResourceDefinition
+### Get active version detail of each CRD
 
 ```sql
 select
@@ -77,7 +77,7 @@ where
   v ->> 'served' = 'true';
 ```
 
-### List CustomResourceDefinitions created within the last 90 days
+### List CRDs created within the last 90 days
 
 ```sql
 select
@@ -94,7 +94,7 @@ order by
   creation_timestamp;
 ```
 
-### Get spec detail of each CustomResourceDefinition
+### Get spec detail of each CRD
 
 ```sql
 select
