@@ -1,4 +1,4 @@
-# Table: {custom_resource_name..group_name}
+# Table: {custom_resource_name.group_name}
 
 Query data from the custom resource called `{custom_resource_name.group_name}`, e.g., `certificates.cert-manager.io`, `storeconfigs.crossplane.io`. A table is automatically created to represent each object in the `objects` argument.
 
@@ -89,7 +89,7 @@ select column_name, data_type from INFORMATION_SCHEMA.COLUMNS where table_name l
 +------------------------------+--------------------------+
 ```
 
-### Get all custom resources\_\_c
+### Get all custom resources:
 
 ```sql
 select
@@ -98,7 +98,7 @@ from
   "custom_resource_name.group_name";
 ```
 
-### List custom resources added in the last 24 hours\_\_c
+### List custom resources added in the last 24 hours:
 
 ```sql
 select
@@ -109,7 +109,7 @@ where
   created_date = now() - interval '24 hrs';
 ```
 
-### Get details for a custom resource\_\_c
+### Get details for a custom resource:
 
 ```sql
 select
@@ -120,7 +120,7 @@ where
   name = 'blah';
 ```
 
-### Count of all the custom resources\_\_c
+### Count of all the custom resources:
 
 ```sql
 select
