@@ -17,7 +17,7 @@ from
   kubernetes_custom_resource_definition;
 ```
 
-### Get CustomResourceDefinitions for a particular group
+### List CustomResourceDefinitions for a particular group
 
 ```sql
 select
@@ -32,7 +32,69 @@ where
   spec ->> 'group' = 'stable.example.com';
 ```
 
-### Get spec detail for CustomResourceDefinitions
+### List Certificate type CustomResourceDefinitions
+
+```sql
+select
+  name,
+  namespace,
+  uid,
+  resource_version,
+  creation_timestamp
+from
+  kubernetes_custom_resource_definition
+where
+  status -> 'acceptedNames' ->> 'kind' = 'Certificate';
+```
+
+### List namespaced CustomResourceDefinitions
+
+```sql
+select
+  name,
+  namespace,
+  uid,
+  resource_version,
+  creation_timestamp
+from
+  kubernetes_custom_resource_definition
+where
+  spec ->> 'scope' = 'Namespaced';
+```
+
+### Get active version detail of each CustomResourceDefinition
+
+```sql
+select
+  name,
+  namespace,
+  creation_timestamp,
+  jsonb_pretty(v) as active_version
+from
+  kubernetes_custom_resource_definition,
+  jsonb_array_elements(spec -> 'versions') as v
+where
+  v ->> 'served' = 'true';
+```
+
+### List CustomResourceDefinitions created within the last 90 days
+
+```sql
+select
+  name,
+  namespace,
+  uid,
+  resource_version,
+  creation_timestamp
+from
+  kubernetes_custom_resource_definition
+where
+  creation_timestamp >= (now() - interval '90' day)
+order by
+  creation_timestamp;
+```
+
+### Get spec detail of each CustomResourceDefinition
 
 ```sql
 select
