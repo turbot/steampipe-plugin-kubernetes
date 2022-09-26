@@ -1,3 +1,15 @@
+## v0.11.0 [2022-09-26]
+
+_What's new?_
+
+- New tables added
+  - [kubernetes_pod_disruption_budget](https://hub.steampipe.io/plugins/turbot/kubernetes/tables/kubernetes_pod_disruption_budget) ([#76](https://github.com/turbot/steampipe-plugin-kubernetes/pull/76)) (Thanks to [@mafrosis](https://github.com/mafrosis) for the contribution!)
+
+_Dependencies_
+
+- Recompiled plugin with [steampipe-plugin-sdk v4.1.7](https://github.com/turbot/steampipe-plugin-sdk/blob/main/CHANGELOG.md#v417-2022-09-08) which includes several caching and memory management improvements. ([#80](https://github.com/turbot/steampipe-plugin-kubernetes/pull/80))
+- Recompiled plugin with Go version `1.19`. ([#80](https://github.com/turbot/steampipe-plugin-kubernetes/pull/80))
+
 ## v0.10.0 [2022-07-07]
 
 _Enhancements_
