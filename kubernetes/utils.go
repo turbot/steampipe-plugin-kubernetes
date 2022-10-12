@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	apiextension "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/kubernetes"
@@ -20,6 +21,40 @@ import (
 	"github.com/turbot/steampipe-plugin-sdk/v4/plugin"
 	"github.com/turbot/steampipe-plugin-sdk/v4/plugin/transform"
 )
+
+// GetNewClientCRD :: gets client for querying k8s apis for CustomResourceDefinition
+func GetNewClientCRD(ctx context.Context, d *plugin.QueryData) (*apiextension.Clientset, error) {
+	// have we already created and cached the session?
+	serviceCacheKey := "GetNewClientCRD"
+
+	if cachedData, ok := d.ConnectionManager.Cache.Get(serviceCacheKey); ok {
+		return cachedData.(*apiextension.Clientset), nil
+	}
+
+	kubeconfig, err := getK8Config(ctx, d)
+	if err != nil {
+		plugin.Logger(ctx).Error("GetNewClientCRD", "getK8Config", err)
+		return nil, err
+	}
+
+	// Get a rest.Config from the kubeconfig file.
+	restconfig, err := kubeconfig.ClientConfig()
+	if err != nil {
+		plugin.Logger(ctx).Error("GetNewClientCRD", "ClientConfig", err)
+		return nil, err
+	}
+
+	clientset, err := apiextension.NewForConfig(restconfig)
+	if err != nil {
+		plugin.Logger(ctx).Error("GetNewClientCRD", "NewForConfig", err)
+		return nil, err
+	}
+
+	// save clientset in cache
+	d.ConnectionManager.Cache.Set(serviceCacheKey, clientset)
+
+	return clientset, err
+}
 
 // GetNewClientset :: gets client for querying k8s apis for the provided context
 func GetNewClientset(ctx context.Context, d *plugin.QueryData) (*kubernetes.Clientset, error) {
