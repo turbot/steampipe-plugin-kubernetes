@@ -36,7 +36,7 @@ func getCustomResourcesDynamicColumns(ctx context.Context, versionSchema interfa
 	schema := versionSchema.(v1.JSONSchemaProps)
 	for k, v := range schema.Properties {
 		column := &plugin.Column{
-			Name:        "spec_" + k,
+			Name:        k,
 			Description: v.Description,
 			Transform:   transform.FromP(extractSpecProperty, k),
 		}
