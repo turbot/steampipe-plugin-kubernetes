@@ -24,30 +24,29 @@ import (
 
 // GetNewClientCRD :: gets client for querying k8s apis for CustomResourceDefinition
 func GetNewClientCRD(ctx context.Context, d *plugin.QueryData) (*apiextension.Clientset, error) {
-	logger := plugin.Logger(ctx)
-	logger.Trace("GetNewClientCRD")
-
 	// have we already created and cached the session?
-	serviceCacheKey := "GetNewClientCRD" //should probably per connection/context keys...
+	serviceCacheKey := "GetNewClientCRD"
 
 	if cachedData, ok := d.ConnectionManager.Cache.Get(serviceCacheKey); ok {
-		// logger.Warn("!!!! Clientset Found in Cache !!!!")
 		return cachedData.(*apiextension.Clientset), nil
 	}
 
 	kubeconfig, err := getK8Config(ctx, d)
 	if err != nil {
+		plugin.Logger(ctx).Error("GetNewClientCRD", "getK8Config", err)
 		return nil, err
 	}
 
 	// Get a rest.Config from the kubeconfig file.
 	restconfig, err := kubeconfig.ClientConfig()
 	if err != nil {
+		plugin.Logger(ctx).Error("GetNewClientCRD", "ClientConfig", err)
 		return nil, err
 	}
 
 	clientset, err := apiextension.NewForConfig(restconfig)
 	if err != nil {
+		plugin.Logger(ctx).Error("GetNewClientCRD", "NewForConfig", err)
 		return nil, err
 	}
 
