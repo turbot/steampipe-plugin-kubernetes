@@ -9,11 +9,8 @@ package kubernetes
 import (
 	"context"
 
-	"github.com/turbot/steampipe-plugin-sdk/v3/connection"
-	"github.com/turbot/steampipe-plugin-sdk/v3/plugin"
-	"github.com/turbot/steampipe-plugin-sdk/v3/plugin/transform"
-	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/turbot/steampipe-plugin-sdk/v4/plugin"
+	"github.com/turbot/steampipe-plugin-sdk/v4/plugin/transform"
 )
 
 const pluginName = "steampipe-plugin-kubernetes"

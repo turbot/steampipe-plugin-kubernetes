@@ -5,8 +5,8 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/turbot/steampipe-plugin-sdk/v3/grpc/proto"
-	"github.com/turbot/steampipe-plugin-sdk/v3/plugin"
+	"github.com/turbot/steampipe-plugin-sdk/v4/grpc/proto"
+	"github.com/turbot/steampipe-plugin-sdk/v4/plugin"
 )
 
 func tableKubernetesCustomResourceDefinition(ctx context.Context) *plugin.Table {
@@ -39,12 +39,9 @@ func tableKubernetesCustomResourceDefinition(ctx context.Context) *plugin.Table 
 //// HYDRATE FUNCTIONS
 
 func listK8sCustomResourceDefinitions(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
-	logger := plugin.Logger(ctx)
-	logger.Trace("listK8sCustomResourceDefinitions")
-
 	clientset, err := GetNewClientCRD(ctx, d)
 	if err != nil {
-		logger.Error("kubernetes_crd.listK8sCustomResourceDefinitions", "connection_error", err)
+		plugin.Logger(ctx).Error("listK8sCustomResourceDefinitions", "connection_error", err)
 		return nil, err
 	}
 
@@ -68,7 +65,7 @@ func listK8sCustomResourceDefinitions(ctx context.Context, d *plugin.QueryData, 
 	for pageLeft {
 		response, err := clientset.ApiextensionsV1().CustomResourceDefinitions().List(ctx, input)
 		if err != nil {
-			logger.Error("kubernetes_crd.listK8sCRDs", "api_error", err)
+			plugin.Logger(ctx).Error("listK8sCustomResourceDefinitions", "api_error", err)
 			return nil, err
 		}
 
@@ -92,18 +89,22 @@ func listK8sCustomResourceDefinitions(ctx context.Context, d *plugin.QueryData, 
 }
 
 func getK8sCustomResourceDefinition(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
-	logger := plugin.Logger(ctx)
-	logger.Trace("getK8sCustomResourceDefinition")
+	name := d.KeyColumnQuals["name"].GetStringValue()
+
+	// check if name is empty
+	if name == "" {
+		return nil, nil
+	}
 
 	clientset, err := GetNewClientCRD(ctx, d)
 	if err != nil {
+		plugin.Logger(ctx).Error("getK8sCustomResourceDefinition", "connection_err", err)
 		return nil, err
 	}
-	name := d.KeyColumnQuals["name"].GetStringValue()
 
 	response, err := clientset.ApiextensionsV1().CustomResourceDefinitions().Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		logger.Error("listK8sCustomResourceDefinitions", "list_err", err)
+		plugin.Logger(ctx).Error("getK8sCustomResourceDefinition", "api_err", err)
 		return nil, err
 	}
 
