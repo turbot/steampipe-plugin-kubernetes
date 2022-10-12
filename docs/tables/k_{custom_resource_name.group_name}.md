@@ -57,39 +57,40 @@ To get details of a specific custom resource table, inspect it by name:
 
 ```sql
 select column_name, data_type from INFORMATION_SCHEMA.COLUMNS where table_name like 'certificates.cert-manager.io';
-+------------------------------+--------------------------+
-| column_name                  | data_type                |
-+------------------------------+--------------------------+
-| _ctx                         | jsonb                    |
-| spec_ipAddresses             | jsonb                    |
-| spec_usages                  | jsonb                    |
-| spec_privateKey              | jsonb                    |
-| spec_keystores               | jsonb                    |
-| spec_secretTemplate          | jsonb                    |
-| spec_uris                    | jsonb                    |
-| spec_subject                 | jsonb                    |
-| spec_revisionHistoryLimit    | bigint                   |
-| spec_isCA                    | boolean                  |
-| spec_encodeUsagesInRequest   | boolean                  |
-| spec_emailAddresses          | jsonb                    |
-| spec_additionalOutputFormats | jsonb                    |
-| spec_issuerRef               | jsonb                    |
-| spec_dnsNames                | jsonb                    |
-| creation_timestamp           | timestamp with time zone |
-| spec_secretName              | text                     |
-| spec_duration                | text                     |
-| kind                         | text                     |
-| uid                          | text                     |
-| spec_renewBefore             | text                     |
-| spec_literalSubject          | text                     |
-| spec_commonName              | text                     |
-| name                         | text                     |
-| namespace                    | text                     |
-| api_version                  | text                     |
-+------------------------------+--------------------------+
++-------------------------+--------------------------+
+| column_name             | data_type                |
++-------------------------+--------------------------+
+| _ctx                    | jsonb                    |
+| additionalOutputFormats | jsonb                    |
+| emailAddresses          | jsonb                    |
+| ipAddresses             | jsonb                    |
+| subject                 | jsonb                    |
+| isCA                    | boolean                  |
+| issuerRef               | jsonb                    |
+| revisionHistoryLimit    | bigint                   |
+| dnsNames                | jsonb                    |
+| encodeUsagesInRequest   | boolean                  |
+| secretTemplate          | jsonb                    |
+| creation_timestamp      | timestamp with time zone |
+| labels                  | jsonb                    |
+| keystores               | jsonb                    |
+| privateKey              | jsonb                    |
+| uris                    | jsonb                    |
+| usages                  | jsonb                    |
+| uid                     | text                     |
+| kind                    | text                     |
+| api_version             | text                     |
+| namespace               | text                     |
+| secretName              | text                     |
+| commonName              | text                     |
+| duration                | text                     |
+| name                    | text                     |
+| renewBefore             | text                     |
+| literalSubject          | text                     |
++-------------------------+--------------------------+
 ```
 
-### Get all custom resources:
+### Get all custom resources
 
 ```sql
 select
@@ -98,7 +99,7 @@ from
   "custom_resource_name.group_name";
 ```
 
-### List custom resources added in the last 24 hours:
+### List custom resources added in the last 24 hours
 
 ```sql
 select
@@ -109,7 +110,7 @@ where
   created_date = now() - interval '24 hrs';
 ```
 
-### Get details for a custom resource:
+### Get details for a custom resource
 
 ```sql
 select
@@ -120,7 +121,7 @@ where
   name = 'blah';
 ```
 
-### Count of all the custom resources:
+### Count of all the custom resources
 
 ```sql
 select
