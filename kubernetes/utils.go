@@ -19,7 +19,7 @@ import (
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
 	"github.com/mitchellh/go-homedir"
-	"github.com/turbot/steampipe-plugin-sdk/v3/connection"
+	"github.com/turbot/steampipe-plugin-sdk/v4/connection"
 	"github.com/turbot/steampipe-plugin-sdk/v4/plugin"
 	"github.com/turbot/steampipe-plugin-sdk/v4/plugin/transform"
 )
@@ -109,12 +109,14 @@ func GetNewClientCRDRaw(ctx context.Context, cm *connection.Manager, c *plugin.C
 	// have we already created and cached the session?
 	serviceCacheKey := "GetNewClientCRDRaw" //should probably per connection/context keys...
 
-	if cachedData, ok := cm.Cache.Get(serviceCacheKey); ok {
-		// logger.Warn("!!!! Clientset Found in Cache !!!!")
-		return cachedData.(*apiextension.Clientset), nil
+	if cm != nil {
+		if cachedData, ok := cm.Cache.Get(serviceCacheKey); ok {
+			// logger.Warn("!!!! Clientset Found in Cache !!!!")
+			return cachedData.(*apiextension.Clientset), nil
+		}
 	}
 
-	kubeconfig, err := getK8ConfigRaw(ctx, cm, c)
+	kubeconfig, err := getK8ConfigRaw(ctx, c)
 	if err != nil {
 		return nil, err
 	}
@@ -131,21 +133,18 @@ func GetNewClientCRDRaw(ctx context.Context, cm *connection.Manager, c *plugin.C
 	}
 
 	// save clientset in cache
-	cm.Cache.Set(serviceCacheKey, clientset)
-
+	if cm != nil {
+		cm.Cache.Set(serviceCacheKey, clientset)
+	}
 	return clientset, err
 }
 
 // GetNewClientDynamic :: gets client for querying k8s apis for Dynamic Interface
 func GetNewClientDynamic(ctx context.Context, d *plugin.QueryData) (dynamic.Interface, error) {
-	logger := plugin.Logger(ctx)
-	logger.Trace("GetNewClientDynamic")
-
 	// have we already created and cached the session?
-	serviceCacheKey := "GetNewClientDynamic" //should probably per connection/context keys...
+	serviceCacheKey := "GetNewClientDynamic"
 
 	if cachedData, ok := d.ConnectionManager.Cache.Get(serviceCacheKey); ok {
-		// logger.Warn("!!!! Clientset Found in Cache !!!!")
 		return cachedData.(dynamic.Interface), nil
 	}
 
@@ -263,16 +262,16 @@ func getK8Config(ctx context.Context, d *plugin.QueryData) (clientcmd.ClientConf
 }
 
 // Get kubernetes config based on environment variable and plugin config
-func getK8ConfigRaw(ctx context.Context, cm *connection.Manager, c *plugin.Connection) (clientcmd.ClientConfig, error) {
+func getK8ConfigRaw(ctx context.Context, c *plugin.Connection) (clientcmd.ClientConfig, error) {
 	logger := plugin.Logger(ctx)
 	logger.Trace("getK8ConfigRaw")
 
 	// have we already created and cached the session?
-	cacheKey := "getK8ConfigRaw" //should probably per connection/context keys...
+	// cacheKey := "getK8ConfigRaw" //should probably per connection/context keys...
 
-	if cachedData, ok := cm.Cache.Get(cacheKey); ok {
-		return cachedData.(clientcmd.ClientConfig), nil
-	}
+	// if cachedData, ok := cm.Cache.Get(cacheKey); ok {
+	// 	return cachedData.(clientcmd.ClientConfig), nil
+	// }
 
 	// get kubernetes config info
 	kubernetesConfig := GetConfig(c)
@@ -348,7 +347,7 @@ func getK8ConfigRaw(ctx context.Context, cm *connection.Manager, c *plugin.Conne
 	kubeconfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loader, overrides)
 
 	// save the config in cache
-	cm.Cache.Set(cacheKey, kubeconfig)
+	//	cm.Cache.Set(cacheKey, kubeconfig)
 
 	return kubeconfig, nil
 }

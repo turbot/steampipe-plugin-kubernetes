@@ -9,13 +9,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"github.com/turbot/steampipe-plugin-sdk/v3/connection"
-	"github.com/turbot/steampipe-plugin-sdk/v3/grpc/proto"
-	"github.com/turbot/steampipe-plugin-sdk/v3/plugin"
-	"github.com/turbot/steampipe-plugin-sdk/v3/plugin/transform"
+	"github.com/turbot/steampipe-plugin-sdk/v4/grpc/proto"
+	"github.com/turbot/steampipe-plugin-sdk/v4/plugin"
+	"github.com/turbot/steampipe-plugin-sdk/v4/plugin/transform"
 )
 
-func tableKubernetesCustomResource(ctx context.Context, p *plugin.Plugin) *plugin.Table {
+func tableKubernetesCustomResource(ctx context.Context) *plugin.Table {
 	crdName := ctx.Value(contextKey("CRDName")).(string)
 	resourceName := ctx.Value(contextKey("CustomResourceName")).(string)
 	groupName := ctx.Value(contextKey("GroupName")).(string)
@@ -27,11 +26,11 @@ func tableKubernetesCustomResource(ctx context.Context, p *plugin.Plugin) *plugi
 		List: &plugin.ListConfig{
 			Hydrate: listK8sCustomResources(ctx, crdName, resourceName, groupName, activeVersion),
 		},
-		Columns: k8sCRDResourceCommonColumns(getCustomResourcesDynamincColumns(ctx, p.ConnectionManager, p.Connection, versionSchema)),
+		Columns: k8sCRDResourceCommonColumns(getCustomResourcesDynamicColumns(ctx, versionSchema)),
 	}
 }
 
-func getCustomResourcesDynamincColumns(ctx context.Context, cm *connection.Manager, c *plugin.Connection, versionSchema interface{}) []*plugin.Column {
+func getCustomResourcesDynamicColumns(ctx context.Context, versionSchema interface{}) []*plugin.Column {
 	var columns []*plugin.Column
 
 	schema := versionSchema.(v1.JSONSchemaProps)

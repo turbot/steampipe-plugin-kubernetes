@@ -4,7 +4,6 @@ go 1.19
 
 require (
 	github.com/mitchellh/go-homedir v1.1.0
-	github.com/turbot/steampipe-plugin-sdk/v3 v3.3.2
 	github.com/turbot/steampipe-plugin-sdk/v4 v4.1.7
 	k8s.io/api v0.25.2
 	k8s.io/apiextensions-apiserver v0.25.2

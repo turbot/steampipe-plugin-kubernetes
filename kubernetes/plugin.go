@@ -11,6 +11,8 @@ import (
 
 	"github.com/turbot/steampipe-plugin-sdk/v4/plugin"
 	"github.com/turbot/steampipe-plugin-sdk/v4/plugin/transform"
+	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const pluginName = "steampipe-plugin-kubernetes"
@@ -33,13 +35,14 @@ func Plugin(ctx context.Context) *plugin.Plugin {
 	return p
 }
 
-func pluginTableDefinitions(ctx context.Context, p *plugin.Plugin) (map[string]*plugin.Table, error) {
+func pluginTableDefinitions(ctx context.Context, c *plugin.Connection) (map[string]*plugin.Table, error) {
 	// Initialize tables
 	tables := map[string]*plugin.Table{
 		"kubernetes_cluster_role":               tableKubernetesClusterRole(ctx),
 		"kubernetes_cluster_role_binding":       tableKubernetesClusterRoleBinding(ctx),
 		"kubernetes_config_map":                 tableKubernetesConfigMap(ctx),
 		"kubernetes_cronjob":                    tableKubernetesCronJob(ctx),
+		"kubernetes_custom_resource_definition": tableKubernetesCustomResourceDefinition(ctx),
 		"kubernetes_daemonset":                  tableKubernetesDaemonset(ctx),
 		"kubernetes_deployment":                 tableKubernetesDeployment(ctx),
 		"kubernetes_endpoint":                   tableKubernetesEndpoints(ctx),
@@ -64,11 +67,10 @@ func pluginTableDefinitions(ctx context.Context, p *plugin.Plugin) (map[string]*
 		"kubernetes_service":                    tableKubernetesService(ctx),
 		"kubernetes_service_account":            tableKubernetesServiceAccount(ctx),
 		"kubernetes_stateful_set":               tableKubernetesStatefulSet(ctx),
-		"kubernetes_custom_resource_definition": tableKubernetesCustomResourceDefinition(ctx),
 	}
 
-	// Search for CRs to create as tables
-	crds, err := listK8sDynamicCRDs(ctx, p.ConnectionManager, p.Connection)
+	// Fetch available CRDs
+	crds, err := listK8sDynamicCRDs(ctx, c)
 	if err != nil {
 		return nil, err
 	}
@@ -84,19 +86,17 @@ func pluginTableDefinitions(ctx context.Context, p *plugin.Plugin) (map[string]*
 			}
 		}
 		if tables[crd.Name] == nil {
-			tables[crd.Name] = tableKubernetesCustomResource(ctx, p)
+			tables[crd.Name] = tableKubernetesCustomResource(ctx)
 		}
 	}
 
 	return tables, nil
 }
 
-func listK8sDynamicCRDs(ctx context.Context, cm *connection.Manager, c *plugin.Connection) ([]v1.CustomResourceDefinition, error) {
-	logger := plugin.Logger(ctx)
-	logger.Debug("listK8sDynamicCRDs")
-
-	clientset, err := GetNewClientCRDRaw(ctx, cm, c)
+func listK8sDynamicCRDs(ctx context.Context, c *plugin.Connection) ([]v1.CustomResourceDefinition, error) {
+	clientset, err := GetNewClientCRDRaw(ctx, nil, c)
 	if err != nil {
+		plugin.Logger(ctx).Error("listK8sDynamicCRDs", "GetNewClientCRDRaw", err)
 		return nil, err
 	}
 
@@ -110,7 +110,7 @@ func listK8sDynamicCRDs(ctx context.Context, cm *connection.Manager, c *plugin.C
 	for pageLeft {
 		response, err := clientset.ApiextensionsV1().CustomResourceDefinitions().List(ctx, input)
 		if err != nil {
-			logger.Error("listK8sDynamicCRDs", "list_err", err)
+			plugin.Logger(ctx).Error("listK8sDynamicCRDs", "list_err", err)
 			return nil, err
 		}
 
