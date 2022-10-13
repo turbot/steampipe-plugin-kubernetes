@@ -6,10 +6,9 @@ import (
 )
 
 type kubernetesConfig struct {
-	ConfigPaths     []string `cty:"config_paths"`
-	ConfigPath      *string  `cty:"config_path"`
-	ConfigContext   *string  `cty:"config_context"`
-	InClusterConfig *bool    `cty:"in_cluster_config"`
+	ConfigPaths   []string `cty:"config_paths"`
+	ConfigPath    *string  `cty:"config_path"`
+	ConfigContext *string  `cty:"config_context"`
 }
 
 var ConfigSchema = map[string]*schema.Attribute{
@@ -22,9 +21,6 @@ var ConfigSchema = map[string]*schema.Attribute{
 	},
 	"config_context": {
 		Type: schema.TypeString,
-	},
-	"in_cluster_config": {
-		Type: schema.TypeBool,
 	},
 }
 

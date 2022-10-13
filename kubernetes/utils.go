@@ -42,7 +42,20 @@ func GetNewClientCRD(ctx context.Context, d *plugin.QueryData) (*apiextension.Cl
 	// Get a rest.Config from the kubeconfig file.
 	restconfig, err := kubeconfig.ClientConfig()
 	if err != nil {
-		plugin.Logger(ctx).Error("GetNewClientCRD", "ClientConfig", err)
+		// if .kube/config file is not available check for inClusterConfig
+		configErr := err
+		if strings.Contains(err.Error(), ".kube/config: no such file or directory") {
+			clientset, err := inClusterConfigCRD(ctx)
+			if err != nil {
+				return nil, errors.New(configErr.Error() + ", " + err.Error())
+			}
+
+			// save clientset in cache
+			d.ConnectionManager.Cache.Set(serviceCacheKey, clientset)
+
+			return clientset, nil
+		}
+
 		return nil, err
 	}
 
@@ -58,30 +71,37 @@ func GetNewClientCRD(ctx context.Context, d *plugin.QueryData) (*apiextension.Cl
 	return clientset, err
 }
 
+func inClusterConfigCRD(ctx context.Context) (*apiextension.Clientset, error) {
+	clusterConfig, err := rest.InClusterConfig()
+	if err != nil {
+		plugin.Logger(ctx).Error("inClusterConfigCRD", "err", err)
+		return nil, err
+	}
+
+	clientset, err := apiextension.NewForConfig(clusterConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return clientset, nil
+}
+
 // GetNewClientset :: gets client for querying k8s apis for the provided context
 func GetNewClientset(ctx context.Context, d *plugin.QueryData) (*kubernetes.Clientset, error) {
+	logger := plugin.Logger(ctx)
+	logger.Trace("GetNewClientset")
+
 	// have we already created and cached the session?
-	serviceCacheKey := "k8sClient"
+	serviceCacheKey := "k8sClient" //should probably per connection/context keys...
 
 	if cachedData, ok := d.ConnectionManager.Cache.Get(serviceCacheKey); ok {
+		// logger.Warn("!!!! Clientset Found in Cache !!!!")
 		return cachedData.(*kubernetes.Clientset), nil
 	}
 
 	kubeconfig, err := getK8Config(ctx, d)
 	if err != nil {
 		return nil, err
-	}
-
-	if kubeconfig == nil {
-		clientset, err := inClusterConfig(ctx)
-		if err != nil {
-			return nil, err
-		}
-
-		// save clientset in cache
-		d.ConnectionManager.Cache.Set(serviceCacheKey, clientset)
-
-		return clientset, nil
 	}
 
 	// Get a rest.Config from the kubeconfig file.
@@ -112,6 +132,14 @@ func GetNewClientset(ctx context.Context, d *plugin.QueryData) (*kubernetes.Clie
 	// save clientset in cache
 	d.ConnectionManager.Cache.Set(serviceCacheKey, clientset)
 
+	// logger.Warn("@@@@@@@  GetNewClientset SET cache status ", "success", success)
+	// time.Sleep(5000 * time.Millisecond)
+	// if value, ok := d.ConnectionManager.Cache.Get(serviceCacheKey); ok {
+	// 	logger.Warn("!!!! Clientset added to cache !!!!")
+	// } else {
+	// 	logger.Warn("!!!! Clientset NOT Found in Cache after adding !!!!", "serviceCacheKey", serviceCacheKey, "Value", value)
+	// }
+
 	return clientset, err
 }
 
@@ -121,10 +149,12 @@ func inClusterConfig(ctx context.Context) (*kubernetes.Clientset, error) {
 		plugin.Logger(ctx).Error("InClusterConfig", "err", err)
 		return nil, err
 	}
+
 	clientset, err := kubernetes.NewForConfig(clusterConfig)
 	if err != nil {
 		return nil, err
 	}
+
 	return clientset, nil
 }
 
@@ -142,11 +172,6 @@ func getK8Config(ctx context.Context, d *plugin.QueryData) (clientcmd.ClientConf
 
 	// get kubernetes config info
 	kubernetesConfig := GetConfig(d.Connection)
-
-	// check if InClusterConfig is set to true in config file
-	if kubernetesConfig.InClusterConfig != nil && *kubernetesConfig.InClusterConfig {
-		return nil, nil
-	}
 
 	// Set default loader and overriding rules
 	loader := &clientcmd.ClientConfigLoadingRules{}
@@ -172,7 +197,6 @@ func getK8Config(ctx context.Context, d *plugin.QueryData) (clientcmd.ClientConf
 		for _, p := range configPaths {
 			path, err := homedir.Expand(p)
 			if err != nil {
-				logger.Error("expandedPaths", "err", err)
 				return nil, err
 			}
 
@@ -237,9 +261,6 @@ func getKubectlContext(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 	kubeconfig, err := getK8Config(ctx, d)
 	if err != nil {
 		return nil, err
-	}
-	if kubeconfig == nil {
-		return nil, nil
 	}
 
 	rawConfig, _ := kubeconfig.RawConfig()
