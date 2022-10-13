@@ -18,20 +18,17 @@ import (
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
 	"github.com/mitchellh/go-homedir"
+	"github.com/pkg/errors"
 	"github.com/turbot/steampipe-plugin-sdk/v3/plugin"
 	"github.com/turbot/steampipe-plugin-sdk/v3/plugin/transform"
 )
 
 // GetNewClientset :: gets client for querying k8s apis for the provided context
 func GetNewClientset(ctx context.Context, d *plugin.QueryData) (*kubernetes.Clientset, error) {
-	logger := plugin.Logger(ctx)
-	logger.Trace("GetNewClientset")
-
 	// have we already created and cached the session?
-	serviceCacheKey := "k8sClient" //should probably per connection/context keys...
+	serviceCacheKey := "k8sClient"
 
 	if cachedData, ok := d.ConnectionManager.Cache.Get(serviceCacheKey); ok {
-		// logger.Warn("!!!! Clientset Found in Cache !!!!")
 		return cachedData.(*kubernetes.Clientset), nil
 	}
 
@@ -40,21 +37,36 @@ func GetNewClientset(ctx context.Context, d *plugin.QueryData) (*kubernetes.Clie
 		return nil, err
 	}
 
-	var restconfig *rest.Config
 	if kubeconfig == nil {
-		// creates the in-cluster config
-		clusterConfig, err := rest.InClusterConfig()
+		clientset, err := inClusterConfig(ctx)
 		if err != nil {
 			return nil, err
 		}
-		restconfig = clusterConfig
-	} else {
-		// Get a rest.Config from the kubeconfig file.
-		kConfig, err := kubeconfig.ClientConfig()
-		if err != nil {
-			return nil, err
+
+		// save clientset in cache
+		d.ConnectionManager.Cache.Set(serviceCacheKey, clientset)
+
+		return clientset, nil
+	}
+
+	// Get a rest.Config from the kubeconfig file.
+	restconfig, err := kubeconfig.ClientConfig()
+	if err != nil {
+		// if .kube/config file is not available check for inClusterConfig
+		configErr := err
+		if strings.Contains(err.Error(), ".kube/config: no such file or directory") {
+			clientset, err := inClusterConfig(ctx)
+			if err != nil {
+				return nil, errors.New(configErr.Error() + ", " + err.Error())
+			}
+
+			// save clientset in cache
+			d.ConnectionManager.Cache.Set(serviceCacheKey, clientset)
+
+			return clientset, nil
 		}
-		restconfig = kConfig
+
+		return nil, err
 	}
 
 	clientset, err := kubernetes.NewForConfig(restconfig)
@@ -65,15 +77,20 @@ func GetNewClientset(ctx context.Context, d *plugin.QueryData) (*kubernetes.Clie
 	// save clientset in cache
 	d.ConnectionManager.Cache.Set(serviceCacheKey, clientset)
 
-	// logger.Warn("@@@@@@@  GetNewClientset SET cache status ", "success", success)
-	// time.Sleep(5000 * time.Millisecond)
-	// if value, ok := d.ConnectionManager.Cache.Get(serviceCacheKey); ok {
-	// 	logger.Warn("!!!! Clientset added to cache !!!!")
-	// } else {
-	// 	logger.Warn("!!!! Clientset NOT Found in Cache after adding !!!!", "serviceCacheKey", serviceCacheKey, "Value", value)
-	// }
-
 	return clientset, err
+}
+
+func inClusterConfig(ctx context.Context) (*kubernetes.Clientset, error) {
+	clusterConfig, err := rest.InClusterConfig()
+	if err != nil {
+		plugin.Logger(ctx).Error("InClusterConfig", "err", err)
+		return nil, err
+	}
+	clientset, err := kubernetes.NewForConfig(clusterConfig)
+	if err != nil {
+		return nil, err
+	}
+	return clientset, nil
 }
 
 // Get kubernetes config based on environment variable and plugin config
@@ -91,7 +108,8 @@ func getK8Config(ctx context.Context, d *plugin.QueryData) (clientcmd.ClientConf
 	// get kubernetes config info
 	kubernetesConfig := GetConfig(d.Connection)
 
-	if *kubernetesConfig.InClusterConfig == "Enabled" {
+	// check if InClusterConfig is set to true in config file
+	if kubernetesConfig.InClusterConfig != nil && *kubernetesConfig.InClusterConfig {
 		return nil, nil
 	}
 
@@ -119,6 +137,7 @@ func getK8Config(ctx context.Context, d *plugin.QueryData) (clientcmd.ClientConf
 		for _, p := range configPaths {
 			path, err := homedir.Expand(p)
 			if err != nil {
+				logger.Error("expandedPaths", "err", err)
 				return nil, err
 			}
 
