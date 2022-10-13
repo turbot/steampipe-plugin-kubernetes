@@ -74,12 +74,13 @@ func GetNewClientCRD(ctx context.Context, d *plugin.QueryData) (*apiextension.Cl
 func inClusterConfigCRD(ctx context.Context) (*apiextension.Clientset, error) {
 	clusterConfig, err := rest.InClusterConfig()
 	if err != nil {
-		plugin.Logger(ctx).Error("inClusterConfigCRD", "err", err)
+		plugin.Logger(ctx).Error("inClusterConfigCRD", "InClusterConfig", err)
 		return nil, err
 	}
 
 	clientset, err := apiextension.NewForConfig(clusterConfig)
 	if err != nil {
+		plugin.Logger(ctx).Error("inClusterConfigCRD", "NewForConfig", err)
 		return nil, err
 	}
 
@@ -146,12 +147,13 @@ func GetNewClientset(ctx context.Context, d *plugin.QueryData) (*kubernetes.Clie
 func inClusterConfig(ctx context.Context) (*kubernetes.Clientset, error) {
 	clusterConfig, err := rest.InClusterConfig()
 	if err != nil {
-		plugin.Logger(ctx).Error("InClusterConfig", "err", err)
+		plugin.Logger(ctx).Error("InClusterConfig", "InClusterConfig", err)
 		return nil, err
 	}
 
 	clientset, err := kubernetes.NewForConfig(clusterConfig)
 	if err != nil {
+		plugin.Logger(ctx).Error("InClusterConfig", "NewForConfig", err)
 		return nil, err
 	}
 
