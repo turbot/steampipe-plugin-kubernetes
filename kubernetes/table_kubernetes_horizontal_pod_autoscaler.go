@@ -2,9 +2,10 @@ package kubernetes
 
 import (
 	"context"
+	"strings"
+
 	"k8s.io/api/autoscaling/v2beta2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"strings"
 
 	"github.com/turbot/steampipe-plugin-sdk/v4/grpc/proto"
 	"github.com/turbot/steampipe-plugin-sdk/v4/plugin"
@@ -14,15 +15,14 @@ import (
 func tableKubernetesHorizontalPodAutoscaler(ctx context.Context) *plugin.Table {
 	return &plugin.Table{
 		Name: "kubernetes_horizontal_pod_autoscaler",
-		Description: "Kubernetes  HorizontalPodAutoscaler is the configuration for a horizontal pod autoscaler, which " +
-			"automatically manages the replica count of any resource implementing the scale subresource based on the metrics specified. " +
-			"This resource is created by clients",
+		Description: "Kubernetes HorizontalPodAutoscaler is the configuration for a horizontal pod autoscaler, which " +
+			"automatically manages the replica count of any resource implementing the scale subresource based on the metrics specified.",
 		Get: &plugin.GetConfig{
 			KeyColumns: plugin.AllColumns([]string{"name", "namespace"}),
-			Hydrate:    getK8sHpa,
+			Hydrate:    getK8sHPA,
 		},
 		List: &plugin.ListConfig{
-			Hydrate:    listK8sHpa,
+			Hydrate:    listK8sHPAs,
 			KeyColumns: getCommonOptionalKeyQuals(),
 		},
 		Columns: k8sCommonColumns([]*plugin.Column{
@@ -143,12 +143,10 @@ func tableKubernetesHorizontalPodAutoscaler(ctx context.Context) *plugin.Table {
 
 //// HYDRATE FUNCTIONS
 
-func listK8sHpa(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
-	logger := plugin.Logger(ctx)
-	logger.Trace("listK8sHpa")
-
+func listK8sHPAs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
+		plugin.Logger(ctx).Error("listK8sHPAs", "clientset_err", err)
 		return nil, err
 	}
 
@@ -180,6 +178,7 @@ func listK8sHpa(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData)
 	for pageLeft {
 		response, err = clientset.AutoscalingV2beta2().HorizontalPodAutoscalers("").List(ctx, input)
 		if err != nil {
+			plugin.Logger(ctx).Error("listK8sHPAs", "api_err", err)
 			return nil, err
 		}
 
@@ -202,12 +201,10 @@ func listK8sHpa(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData)
 	return nil, nil
 }
 
-func getK8sHpa(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
-	logger := plugin.Logger(ctx)
-	logger.Trace("getK8sHpa")
-
+func getK8sHPA(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
+		plugin.Logger(ctx).Error("getK8sHPA", "clientset_err", err)
 		return nil, err
 	}
 
@@ -221,6 +218,7 @@ func getK8sHpa(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) 
 
 	hpa, err := clientset.AutoscalingV2beta2().HorizontalPodAutoscalers(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
+		plugin.Logger(ctx).Error("getK8sHPA", "api_err", err)
 		return nil, err
 	}
 
