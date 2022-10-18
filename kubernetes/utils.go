@@ -155,7 +155,6 @@ func GetNewClientCRDRaw(ctx context.Context, cn *connection.ConnectionCache, c *
 	serviceCacheKey := "GetNewClientCRDRaw" //should probably per connection/context keys...
 
 	if cachedData, ok := cn.Get(ctx, serviceCacheKey); ok {
-		plugin.Logger(ctx).Error("GetNewClientCRDRaw**************", "inside cache")
 		// logger.Warn("!!!! Clientset Found in Cache !!!!")
 		return cachedData.(*apiextension.Clientset), nil
 	}
@@ -164,7 +163,7 @@ func GetNewClientCRDRaw(ctx context.Context, cn *connection.ConnectionCache, c *
 	if err != nil {
 		return nil, err
 	}
-	plugin.Logger(ctx).Error("GetNewClientCRDRaw**************", "after conneciton")
+
 	// Get a rest.Config from the kubeconfig file.
 	restconfig, err := kubeconfig.ClientConfig()
 	if err != nil {

@@ -508,8 +508,8 @@ github.com/tkrajina/go-reflector v0.5.4 h1:dS9aJEa/eYNQU/fwsb5CSiATOxcNyA/gG/A7a
 github.com/tkrajina/go-reflector v0.5.4/go.mod h1:9PyLgEOzc78ey/JmQQHbW8cQJ1oucLlNQsg8yFvkVk8=
 github.com/turbot/go-kit v0.5.0-rc.1 h1:E3Mn9uazBPOpXbZoo+rzF811t5AKrYDOtz+0bvkeHJA=
 github.com/turbot/go-kit v0.5.0-rc.1/go.mod h1:wbYT3zaI9Jb6+V99IgnW9Yx69995WDeoiLxVVZPh3/Y=
-github.com/turbot/steampipe-plugin-sdk/v5 v5.0.0-alpha.0 h1:2kGmqs8Zahfdpwh+ziGqJRPw8U3Jxtrsdjm4S01T9OM=
-github.com/turbot/steampipe-plugin-sdk/v5 v5.0.0-alpha.0/go.mod h1:epUOB2cG8D+/eh1vn3pRts4l4S8MExXilsr8A452aM0=
+github.com/turbot/steampipe-plugin-sdk/v5 v5.0.0-alpha.1 h1:i3gB6yfXUnMI+AcmHctPHPgLYZJBhzclTIeitvEgI0o=
+github.com/turbot/steampipe-plugin-sdk/v5 v5.0.0-alpha.1/go.mod h1:epUOB2cG8D+/eh1vn3pRts4l4S8MExXilsr8A452aM0=
 github.com/ulikunitz/xz v0.5.8 h1:ERv8V6GKqVi23rgu5cj9pVfVzJbOqAY2Ntl88O6c2nQ=
 github.com/ulikunitz/xz v0.5.8/go.mod h1:nbz6k7qbPmH4IRqmfOplQw/tblSgqTqBwxkY0oWt/14=
 github.com/vmihailenco/msgpack v3.3.3+incompatible/go.mod h1:fy3FlTQTDXWkZ7Bh6AcGMlsjHatGryHQYUTf1ShIgkk=
