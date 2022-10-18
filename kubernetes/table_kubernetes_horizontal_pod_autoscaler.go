@@ -14,9 +14,8 @@ import (
 
 func tableKubernetesHorizontalPodAutoscaler(ctx context.Context) *plugin.Table {
 	return &plugin.Table{
-		Name: "kubernetes_horizontal_pod_autoscaler",
-		Description: "Kubernetes HorizontalPodAutoscaler is the configuration for a horizontal pod autoscaler, which " +
-			"automatically manages the replica count of any resource implementing the scale subresource based on the metrics specified.",
+		Name:        "kubernetes_horizontal_pod_autoscaler",
+		Description: "Kubernetes HorizontalPodAutoscaler is the configuration for a horizontal pod autoscaler, which automatically manages the replica count of any resource implementing the scale subresource based on the metrics specified.",
 		Get: &plugin.GetConfig{
 			KeyColumns: plugin.AllColumns([]string{"name", "namespace"}),
 			Hydrate:    getK8sHPA,
@@ -28,60 +27,40 @@ func tableKubernetesHorizontalPodAutoscaler(ctx context.Context) *plugin.Table {
 		Columns: k8sCommonColumns([]*plugin.Column{
 			//// HpaSpec Columns
 			{
-				Name: "scale_target_ref",
-				Type: proto.ColumnType_JSON,
-				Description: "horizontal pod autoscaler will learn the current resource consumption " +
-					"and will set the desired number of pods by using its Scale subresource.",
-				Transform: transform.FromField("Spec.ScaleTargetRef"),
+				Name:        "scale_target_ref",
+				Type:        proto.ColumnType_JSON,
+				Description: "ScaleTargetRef points to the target resource to scale, and is used to the pods for which metrics should be collected, as well as to actually change the replica count.",
+				Transform:   transform.FromField("Spec.ScaleTargetRef"),
 			},
 			{
-				Name: "min_replicas",
-				Type: proto.ColumnType_INT,
-				Description: "MinReplicas is the lower limit for the number of replicas to which the autoscaler " +
-					" can scale down.  It defaults to 1 pod.  minReplicas is allowed to be 0 if the " +
-					" alpha feature gate HPAScaleToZero is enabled and at least one Object or External " +
-					" metric is configured.  Scaling is active as long as at least one metric value is " +
-					" available.",
-				Transform: transform.FromField("Spec.MinReplicas"),
+				Name:        "min_replicas",
+				Type:        proto.ColumnType_INT,
+				Description: "MinReplicas is the lower limit for the number of replicas to which the autoscaler can scale down. It defaults to 1 pod. MinReplicas is allowed to be 0 if the alpha feature gate HPAScaleToZero is enabled and at least one Object or External metric is configured.",
+				Transform:   transform.FromField("Spec.MinReplicas"),
 			},
 			{
-				Name: "max_replicas",
-				Type: proto.ColumnType_INT,
-				Description: "The Upper limit for the number of pods that can be set by the autoscaler. " +
-					"It cannot be smaller than MinReplicas.",
-				Transform: transform.FromField("Spec.MaxReplicas"),
+				Name:        "max_replicas",
+				Type:        proto.ColumnType_INT,
+				Description: "The Upper limit for the number of pods that can be set by the autoscaler. It cannot be smaller than MinReplicas.",
+				Transform:   transform.FromField("Spec.MaxReplicas"),
 			},
 			{
-				Name: "metrics",
-				Type: proto.ColumnType_JSON,
-				Description: "Metrics contains the specifications for which to use to calculate the " +
-					" desired replica count (the maximum replica count across all metrics will " +
-					" be used).  The desired replica count is calculated multiplying the " +
-					" ratio between the target value and the current value by the current " +
-					" number of pods.  Ergo, metrics used must decrease as the pod count is " +
-					" increased, and vice-versa.  See the individual metric source types for " +
-					" more information about how each type of metric must respond. " +
-					" If not set, the default metric will be set to 80% average CPU utilization.",
-				Transform: transform.FromField("Spec.Metrics"),
+				Name:        "metrics",
+				Type:        proto.ColumnType_JSON,
+				Description: "Metrics contains the specifications for which to use to calculate the desired replica count (the maximum replica count across all metrics will be used). The desired replica count is calculated multiplying the ratio between the target value and the current value by the current number of pods.",
+				Transform:   transform.FromField("Spec.Metrics"),
 			},
 			{
-				Name: "scale_up_behavior",
-				Type: proto.ColumnType_JSON,
-				Description: "Behavior configures the scaling behavior of the target " +
-					"in both Up and Down directions (scaleUp and scaleDown fields respectively)." +
-					"If not set, the default value is the higher of: " +
-					"  * increase no more than 4 pods per 60 seconds " +
-					"  * double the number of pods per 60 seconds ",
-				Transform: transform.FromField("Spec.Behavior.ScaleUp"),
+				Name:        "scale_up_behavior",
+				Type:        proto.ColumnType_JSON,
+				Description: "Behavior configures the scaling behavior of the target in both Up and Down directions (scaleUp and scaleDown fields respectively). If not set, the default value is the higher of: * increase no more than 4 pods per 60 seconds * double the number of pods per 60 seconds.",
+				Transform:   transform.FromField("Spec.Behavior.ScaleUp"),
 			},
 			{
-				Name: "scale_down_behavior",
-				Type: proto.ColumnType_JSON,
-				Description: "Behavior configures the scaling behavior of the target " +
-					"in both Up and Down directions (scaleUp and scaleDown fields respectively)." +
-					"If not set, the default value is to allow to scale down to minReplicas pods, with a " +
-					"300 second stabilization window (i.e., the highest recommendation for the last 300sec is used).",
-				Transform: transform.FromField("Spec.Behavior.ScaleDown"),
+				Name:        "scale_down_behavior",
+				Type:        proto.ColumnType_JSON,
+				Description: "Behavior configures the scaling behavior of the target in both Up and Down directions (scaleUp and scaleDown fields respectively). If not set, the default value is to allow to scale down to minReplicas pods, with a 300 second stabilization window (i.e., the highest recommendation for the last 300sec is used).",
+				Transform:   transform.FromField("Spec.Behavior.ScaleDown"),
 			},
 
 			//// HpaStatus Columns
@@ -92,11 +71,10 @@ func tableKubernetesHorizontalPodAutoscaler(ctx context.Context) *plugin.Table {
 				Transform:   transform.FromField("Status.ObservedGeneration"),
 			},
 			{
-				Name: "last_scale_time",
-				Type: proto.ColumnType_TIMESTAMP,
-				Description: "The last time the HorizontalPodAutoscaler scaled the number of pods; " +
-					"used by the autoscaler to control how often the number of pods is changed.",
-				Transform: transform.FromField("Status.LastScaleTime").Transform(v1TimeToRFC3339),
+				Name:        "last_scale_time",
+				Type:        proto.ColumnType_TIMESTAMP,
+				Description: "The last time the HorizontalPodAutoscaler scaled the number of pods used by the autoscaler to control how often the number of pods is changed.",
+				Transform:   transform.FromField("Status.LastScaleTime").Transform(v1TimeToRFC3339),
 			},
 			{
 				Name:        "current_replicas",
@@ -117,11 +95,10 @@ func tableKubernetesHorizontalPodAutoscaler(ctx context.Context) *plugin.Table {
 				Transform:   transform.FromField("Status.CurrentMetrics"),
 			},
 			{
-				Name: "conditions",
-				Type: proto.ColumnType_JSON,
-				Description: "Conditions is the set of conditions required for this autoscaler to scale its target, " +
-					"and indicates whether or not those conditions are met.",
-				Transform: transform.FromField("Status.Conditions"),
+				Name:        "conditions",
+				Type:        proto.ColumnType_JSON,
+				Description: "Conditions is the set of conditions required for this autoscaler to scale its target and indicates whether or not those conditions are met.",
+				Transform:   transform.FromField("Status.Conditions"),
 			},
 
 			//// Steampipe Standard Columns
