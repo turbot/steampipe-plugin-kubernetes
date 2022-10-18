@@ -79,6 +79,8 @@ The Kubernetes plugin allows you set the name of kube kubectl context with the `
 
 This plugin also supports querying Kubernetes clusters using [OpenID Connect](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#openid-connect-tokens) (OIDC) authentication. No extra configuration is required in a connection profile to query clusters using OIDC.
 
+This plugin also supports querying Kubernetes clusters using [InClusterConfig](https://kubernetes.io/docs/tasks/run-application/access-api-from-pod/#accessing-the-api-from-within-a-pod) configuration. No extra configuration is required in a connection profile to query clusters using InClusterConfig. If the `~/.kube/config` file is not available, plugin will automatically look for InClusterConfig configuration.
+
 ### Credentials via kube config
 
 ```hcl
