@@ -176,7 +176,11 @@ func GetNewClientCRDRaw(ctx context.Context, cn *connection.ConnectionCache, c *
 			}
 
 			// save clientset in cache
-			cn.Set(ctx, serviceCacheKey, clientset)
+			cacheErr := cn.Set(ctx, serviceCacheKey, clientset)
+			if cacheErr != nil {
+				plugin.Logger(ctx).Error("inClusterConfigCRD", "cache-set", cacheErr)
+				return nil, err
+			}
 
 			return clientset, nil
 		}
@@ -190,9 +194,13 @@ func GetNewClientCRDRaw(ctx context.Context, cn *connection.ConnectionCache, c *
 	}
 
 	// save clientset in cache
-	cn.Set(ctx, serviceCacheKey, clientset)
+	cacheErr := cn.Set(ctx, serviceCacheKey, clientset)
+	if cacheErr != nil {
+		plugin.Logger(ctx).Error("GetNewClientCRDRaw", "cache-set", cacheErr)
+		return nil, err
+	}
 
-	return clientset, err
+	return clientset, nil
 }
 
 func inClusterConfigCRD(ctx context.Context) (*apiextension.Clientset, error) {
