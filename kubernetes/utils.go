@@ -155,15 +155,16 @@ func GetNewClientCRDRaw(ctx context.Context, cn *connection.ConnectionCache, c *
 	serviceCacheKey := "GetNewClientCRDRaw" //should probably per connection/context keys...
 
 	if cachedData, ok := cn.Get(ctx, serviceCacheKey); ok {
+		plugin.Logger(ctx).Error("GetNewClientCRDRaw**************", "inside cache")
 		// logger.Warn("!!!! Clientset Found in Cache !!!!")
 		return cachedData.(*apiextension.Clientset), nil
 	}
 
-	kubeconfig, err := getK8ConfigRaw(ctx, c)
+	kubeconfig, err := getK8ConfigRaw(ctx, cn, c)
 	if err != nil {
 		return nil, err
 	}
-
+	plugin.Logger(ctx).Error("GetNewClientCRDRaw**************", "after conneciton")
 	// Get a rest.Config from the kubeconfig file.
 	restconfig, err := kubeconfig.ClientConfig()
 	if err != nil {
@@ -323,7 +324,6 @@ func getK8Config(ctx context.Context, d *plugin.QueryData) (clientcmd.ClientConf
 				return nil, err
 			}
 
-			logger.Debug("GetNewClientset", "Using kubeconfig: %s", path)
 			expandedPaths = append(expandedPaths, path)
 		}
 
@@ -345,10 +345,6 @@ func getK8Config(ctx context.Context, d *plugin.QueryData) (clientcmd.ClientConf
 			// ctxSuffix := "; overridden context"
 			// if ctxOk {
 			overrides.CurrentContext = *kubernetesConfig.ConfigContext
-			// ctxSuffix += fmt.Sprintf("; overridden context ; config ctx: %s", overrides.CurrentContext)
-			logger.Debug("GetNewClientset", "Using custom current context: %q", overrides.CurrentContext)
-			// }
-
 			overrides.Context = clientcmdapi.Context{}
 
 			// TODO -- Add other config options
@@ -360,7 +356,6 @@ func getK8Config(ctx context.Context, d *plugin.QueryData) (clientcmd.ClientConf
 			// 	overrides.Context.Cluster = cluster.(string)
 			// 	ctxSuffix += fmt.Sprintf("; cluster: %s", overrides.Context.Cluster)
 			// }
-			logger.Debug("GetNewClientset", "Using overidden context: %#v", overrides.Context)
 		}
 	}
 
@@ -373,16 +368,16 @@ func getK8Config(ctx context.Context, d *plugin.QueryData) (clientcmd.ClientConf
 }
 
 // Get kubernetes config based on environment variable and plugin config
-func getK8ConfigRaw(ctx context.Context, c *plugin.Connection) (clientcmd.ClientConfig, error) {
+func getK8ConfigRaw(ctx context.Context, cn *connection.ConnectionCache, c *plugin.Connection) (clientcmd.ClientConfig, error) {
 	logger := plugin.Logger(ctx)
 	logger.Trace("getK8ConfigRaw")
 
 	// have we already created and cached the session?
-	// cacheKey := "getK8ConfigRaw" //should probably per connection/context keys...
+	cacheKey := "getK8ConfigRaw" //should probably per connection/context keys...
 
-	// if cachedData, ok := cm.Cache.Get(cacheKey); ok {
-	// 	return cachedData.(clientcmd.ClientConfig), nil
-	// }
+	if cachedData, ok := cn.Get(ctx, cacheKey); ok {
+		return cachedData.(clientcmd.ClientConfig), nil
+	}
 
 	// get kubernetes config info
 	kubernetesConfig := GetConfig(c)
@@ -414,7 +409,6 @@ func getK8ConfigRaw(ctx context.Context, c *plugin.Connection) (clientcmd.Client
 				return nil, err
 			}
 
-			logger.Debug("GetNewClientset", "Using kubeconfig: %s", path)
 			expandedPaths = append(expandedPaths, path)
 		}
 
@@ -436,10 +430,6 @@ func getK8ConfigRaw(ctx context.Context, c *plugin.Connection) (clientcmd.Client
 			// ctxSuffix := "; overridden context"
 			// if ctxOk {
 			overrides.CurrentContext = *kubernetesConfig.ConfigContext
-			// ctxSuffix += fmt.Sprintf("; overridden context ; config ctx: %s", overrides.CurrentContext)
-			logger.Debug("GetNewClientset", "Using custom current context: %q", overrides.CurrentContext)
-			// }
-
 			overrides.Context = clientcmdapi.Context{}
 
 			// TODO -- Add other config options
@@ -451,14 +441,16 @@ func getK8ConfigRaw(ctx context.Context, c *plugin.Connection) (clientcmd.Client
 			// 	overrides.Context.Cluster = cluster.(string)
 			// 	ctxSuffix += fmt.Sprintf("; cluster: %s", overrides.Context.Cluster)
 			// }
-			logger.Debug("GetNewClientset", "Using overidden context: %#v", overrides.Context)
 		}
 	}
 
 	kubeconfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loader, overrides)
 
 	// save the config in cache
-	//	cm.Cache.Set(cacheKey, kubeconfig)
+	err := cn.Set(ctx, cacheKey, kubeconfig)
+	if err != nil {
+		logger.Error("getK8ConfigRaw", "cache-set", err)
+	}
 
 	return kubeconfig, nil
 }
