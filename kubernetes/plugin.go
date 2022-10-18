@@ -9,8 +9,9 @@ package kubernetes
 import (
 	"context"
 
-	"github.com/turbot/steampipe-plugin-sdk/v4/plugin"
-	"github.com/turbot/steampipe-plugin-sdk/v4/plugin/transform"
+	"github.com/turbot/steampipe-plugin-sdk/v5/connection"
+	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
+	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -35,7 +36,7 @@ func Plugin(ctx context.Context) *plugin.Plugin {
 	return p
 }
 
-func pluginTableDefinitions(ctx context.Context, c *plugin.Connection) (map[string]*plugin.Table, error) {
+func pluginTableDefinitions(ctx context.Context, d *plugin.TableMapData) (map[string]*plugin.Table, error) {
 	// Initialize tables
 	tables := map[string]*plugin.Table{
 		"kubernetes_cluster_role":               tableKubernetesClusterRole(ctx),
@@ -71,7 +72,7 @@ func pluginTableDefinitions(ctx context.Context, c *plugin.Connection) (map[stri
 	}
 
 	// Fetch available CRDs
-	crds, err := listK8sDynamicCRDs(ctx, c)
+	crds, err := listK8sDynamicCRDs(ctx, d.ConectionCache, d.Connection)
 	if err != nil {
 		return nil, err
 	}
@@ -94,8 +95,8 @@ func pluginTableDefinitions(ctx context.Context, c *plugin.Connection) (map[stri
 	return tables, nil
 }
 
-func listK8sDynamicCRDs(ctx context.Context, c *plugin.Connection) ([]v1.CustomResourceDefinition, error) {
-	clientset, err := GetNewClientCRDRaw(ctx, nil, c)
+func listK8sDynamicCRDs(ctx context.Context, cn *connection.ConnectionCache, c *plugin.Connection) ([]v1.CustomResourceDefinition, error) {
+	clientset, err := GetNewClientCRDRaw(ctx, cn, c)
 	if err != nil {
 		plugin.Logger(ctx).Error("listK8sDynamicCRDs", "GetNewClientCRDRaw", err)
 		return nil, err
