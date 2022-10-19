@@ -4,7 +4,7 @@ _What's new?_
 
 - New tables added
   - [kubernetes_custom_resource_definition](https://hub.steampipe.io/plugins/turbot/kubernetes/tables/kubernetes_custom_resource_definition) ([#84](https://github.com/turbot/steampipe-plugin-kubernetes/pull/84))
-  - [kubernetes_horizontal_pod_autoscaler](https://hub.steampipe.io/plugins/turbot/kubernetes/tables/kubernetes_horizontal_pod_autoscaler) ([#86](https://github.com/turbot/steampipe-plugin-kubernetes/pull/86))(Thanks[@aminvielledebatAtBedrock](https://github.com/aminvielledebatAtBedrock) for the contribution!)
+  - [kubernetes_horizontal_pod_autoscaler](https://hub.steampipe.io/plugins/turbot/kubernetes/tables/kubernetes_horizontal_pod_autoscaler) ([#86](https://github.com/turbot/steampipe-plugin-kubernetes/pull/86))(Thanks [@aminvielledebatAtBedrock](https://github.com/aminvielledebatAtBedrock) for the contribution!)
 - Added support for accessing the Kubernetes APIs from within a pod using [InClusterConfig](https://kubernetes.io/docs/tasks/run-application/access-api-from-pod/#accessing-the-api-from-within-a-pod). This is an alternative method of configuring Kubernetes credentials for the plugin when no kubeconfig file is found. ([#82](https://github.com/turbot/steampipe-plugin-kubernetes/pull/82))
 
 ## v0.11.0 [2022-09-26]
