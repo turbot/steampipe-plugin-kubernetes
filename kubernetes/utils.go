@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -14,6 +15,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/azure"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
@@ -40,7 +42,20 @@ func GetNewClientCRD(ctx context.Context, d *plugin.QueryData) (*apiextension.Cl
 	// Get a rest.Config from the kubeconfig file.
 	restconfig, err := kubeconfig.ClientConfig()
 	if err != nil {
-		plugin.Logger(ctx).Error("GetNewClientCRD", "ClientConfig", err)
+		// if .kube/config file is not available check for inClusterConfig
+		configErr := err
+		if strings.Contains(err.Error(), ".kube/config: no such file or directory") {
+			clientset, err := inClusterConfigCRD(ctx)
+			if err != nil {
+				return nil, errors.New(configErr.Error() + ", " + err.Error())
+			}
+
+			// save clientset in cache
+			d.ConnectionManager.Cache.Set(serviceCacheKey, clientset)
+
+			return clientset, nil
+		}
+
 		return nil, err
 	}
 
@@ -54,6 +69,22 @@ func GetNewClientCRD(ctx context.Context, d *plugin.QueryData) (*apiextension.Cl
 	d.ConnectionManager.Cache.Set(serviceCacheKey, clientset)
 
 	return clientset, err
+}
+
+func inClusterConfigCRD(ctx context.Context) (*apiextension.Clientset, error) {
+	clusterConfig, err := rest.InClusterConfig()
+	if err != nil {
+		plugin.Logger(ctx).Error("inClusterConfigCRD", "InClusterConfig", err)
+		return nil, err
+	}
+
+	clientset, err := apiextension.NewForConfig(clusterConfig)
+	if err != nil {
+		plugin.Logger(ctx).Error("inClusterConfigCRD", "NewForConfig", err)
+		return nil, err
+	}
+
+	return clientset, nil
 }
 
 // GetNewClientset :: gets client for querying k8s apis for the provided context
@@ -77,6 +108,20 @@ func GetNewClientset(ctx context.Context, d *plugin.QueryData) (*kubernetes.Clie
 	// Get a rest.Config from the kubeconfig file.
 	restconfig, err := kubeconfig.ClientConfig()
 	if err != nil {
+		// if .kube/config file is not available check for inClusterConfig
+		configErr := err
+		if strings.Contains(err.Error(), ".kube/config: no such file or directory") {
+			clientset, err := inClusterConfig(ctx)
+			if err != nil {
+				return nil, errors.New(configErr.Error() + ", " + err.Error())
+			}
+
+			// save clientset in cache
+			d.ConnectionManager.Cache.Set(serviceCacheKey, clientset)
+
+			return clientset, nil
+		}
+
 		return nil, err
 	}
 
@@ -97,6 +142,22 @@ func GetNewClientset(ctx context.Context, d *plugin.QueryData) (*kubernetes.Clie
 	// }
 
 	return clientset, err
+}
+
+func inClusterConfig(ctx context.Context) (*kubernetes.Clientset, error) {
+	clusterConfig, err := rest.InClusterConfig()
+	if err != nil {
+		plugin.Logger(ctx).Error("InClusterConfig", "InClusterConfig", err)
+		return nil, err
+	}
+
+	clientset, err := kubernetes.NewForConfig(clusterConfig)
+	if err != nil {
+		plugin.Logger(ctx).Error("InClusterConfig", "NewForConfig", err)
+		return nil, err
+	}
+
+	return clientset, nil
 }
 
 // Get kubernetes config based on environment variable and plugin config
