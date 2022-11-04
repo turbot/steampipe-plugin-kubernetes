@@ -176,12 +176,11 @@ func getK8Config(ctx context.Context, d *plugin.QueryData) (clientcmd.ClientConf
 	kubernetesConfig := GetConfig(d.Connection)
 
 	// Set default loader and overriding rules
-	loader := &clientcmd.ClientConfigLoadingRules{}
+	loader := clientcmd.NewDefaultClientConfigLoadingRules()
 	overrides := &clientcmd.ConfigOverrides{}
 
 	// variable to store paths for kubernetes config
-	// default kube config path
-	var configPaths = []string{"~/.kube/config"}
+	var configPaths []string
 	// Error: invalid configuration: no configuration has been provided, try setting KUBERNETES_MASTER environment variable
 
 	if kubernetesConfig.ConfigPath != nil {
