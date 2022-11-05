@@ -304,6 +304,24 @@ func v1TimeToRFC3339(_ context.Context, d *transform.TransformData) (interface{}
 	}
 }
 
+func v1MicroTimeToRFC3339(_ context.Context, d *transform.TransformData) (interface{}, error) {
+	if d.Value == nil {
+		return nil, nil
+	}
+
+	switch v := d.Value.(type) {
+	case v1.MicroTime:
+		return v1.NewTime(v.Time).ToUnstructured(), nil
+	case *v1.MicroTime:
+		if v == nil {
+			return nil, nil
+		}
+		return v1.NewTime(v.Time).ToUnstructured(), nil
+	default:
+		return nil, fmt.Errorf("invalid time format %T! ", v)
+	}
+}
+
 func labelSelectorToString(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	if d.Value == nil {
 		return nil, nil
