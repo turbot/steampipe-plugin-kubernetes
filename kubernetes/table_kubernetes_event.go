@@ -180,6 +180,7 @@ func getK8sEvent(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
+plugin.Logger(ctx).Error("getK8sEvent", "client_err", err)
 		return nil, err
 	}
 
