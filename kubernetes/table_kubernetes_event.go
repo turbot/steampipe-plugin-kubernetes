@@ -29,13 +29,11 @@ func tableKubernetesEvent(ctx context.Context) *plugin.Table {
 				Name:        "action",
 				Type:        proto.ColumnType_STRING,
 				Description: "What action was taken/failed with the regarding object.",
-				Transform:   transform.FromField("Action"),
 			},
 			{
 				Name:        "count",
 				Type:        proto.ColumnType_INT,
 				Description: "The number of times this event has occurred.",
-				Transform:   transform.FromField("Count"),
 			},
 			{
 				Name:        "event_time",
@@ -65,19 +63,16 @@ func tableKubernetesEvent(ctx context.Context) *plugin.Table {
 				Name:        "message",
 				Type:        proto.ColumnType_STRING,
 				Description: "A description of the status of this operation.",
-				Transform:   transform.FromField("Message"),
 			},
 			{
 				Name:        "reason",
 				Type:        proto.ColumnType_STRING,
 				Description: "The reason the transition into the object's current status.",
-				Transform:   transform.FromField("Reason"),
 			},
 			{
 				Name:        "related",
 				Type:        proto.ColumnType_JSON,
 				Description: "Optional secondary object for more complex actions.",
-				Transform:   transform.FromField("Related"),
 			},
 			{
 				Name:        "reporting_component",
@@ -95,19 +90,16 @@ func tableKubernetesEvent(ctx context.Context) *plugin.Table {
 				Name:        "series",
 				Type:        proto.ColumnType_JSON,
 				Description: "Data about the event series this event represents.",
-				Transform:   transform.FromField("Series"),
 			},
 			{
 				Name:        "source",
 				Type:        proto.ColumnType_JSON,
 				Description: "The component reporting this event.",
-				Transform:   transform.FromField("Source"),
 			},
 			{
 				Name:        "type",
 				Type:        proto.ColumnType_STRING,
 				Description: "Type of this event (Normal, Warning), new types could be added in the future.",
-				Transform:   transform.FromField("Type"),
 			},
 		}),
 	}
