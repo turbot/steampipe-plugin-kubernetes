@@ -193,6 +193,7 @@ func getK8sEvent(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 
 	event, err := clientset.CoreV1().Events(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
+plugin.Logger(ctx).Error("getK8sEvent", "api_err", err)
 		return nil, err
 	}
 
