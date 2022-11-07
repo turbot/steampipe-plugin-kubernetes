@@ -116,7 +116,6 @@ func tableKubernetesEvent(ctx context.Context) *plugin.Table {
 //// HYDRATE FUNCTIONS
 
 func listK8sEvents(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
-	logger := plugin.Logger(ctx)
 	logger.Trace("listK8sEvents")
 
 	clientset, err := GetNewClientset(ctx, d)
