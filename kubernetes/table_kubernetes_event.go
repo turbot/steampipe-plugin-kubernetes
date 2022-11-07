@@ -175,7 +175,6 @@ func listK8sEvents(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDa
 }
 
 func getK8sEvent(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
-	logger := plugin.Logger(ctx)
 	logger.Trace("getK8sEvent")
 
 	clientset, err := GetNewClientset(ctx, d)
