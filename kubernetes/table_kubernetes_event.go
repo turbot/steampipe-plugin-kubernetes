@@ -111,7 +111,7 @@ func listK8sEvents(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDa
 
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
-plugin.Logger(ctx).Error("listK8sEvents", "client_err", err)
+		plugin.Logger(ctx).Error("listK8sEvents", "client_err", err)
 		return nil, err
 	}
 
@@ -143,7 +143,7 @@ plugin.Logger(ctx).Error("listK8sEvents", "client_err", err)
 	for pageLeft {
 		response, err = clientset.CoreV1().Events("").List(ctx, input)
 		if err != nil {
-plugin.Logger(ctx).Error("listK8sEvents", "api_err", err)
+			plugin.Logger(ctx).Error("listK8sEvents", "api_err", err)
 			return nil, err
 		}
 
@@ -170,7 +170,7 @@ func getK8sEvent(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
-plugin.Logger(ctx).Error("getK8sEvent", "client_err", err)
+		plugin.Logger(ctx).Error("getK8sEvent", "client_err", err)
 		return nil, err
 	}
 
@@ -184,7 +184,7 @@ plugin.Logger(ctx).Error("getK8sEvent", "client_err", err)
 
 	event, err := clientset.CoreV1().Events(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
-plugin.Logger(ctx).Error("getK8sEvent", "api_err", err)
+		plugin.Logger(ctx).Error("getK8sEvent", "api_err", err)
 		return nil, err
 	}
 
