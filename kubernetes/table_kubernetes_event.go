@@ -152,6 +152,7 @@ func listK8sEvents(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDa
 	for pageLeft {
 		response, err = clientset.CoreV1().Events("").List(ctx, input)
 		if err != nil {
+plugin.Logger(ctx).Error("listK8sEvents", "api_err", err)
 			return nil, err
 		}
 
