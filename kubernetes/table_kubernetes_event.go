@@ -26,6 +26,27 @@ func tableKubernetesEvent(ctx context.Context) *plugin.Table {
 		},
 		Columns: k8sCommonColumns([]*plugin.Column{
 			{
+				Name:        "last_timestamp",
+				Type:        proto.ColumnType_TIMESTAMP,
+				Description: "Time when this event was last observed.",
+				Transform:   transform.FromField("LastTimestamp").Transform(v1TimeToRFC3339),
+			},
+			{
+				Name:        "type",
+				Type:        proto.ColumnType_STRING,
+				Description: "Type of this event (Normal, Warning), new types could be added in the future.",
+			},
+			{
+				Name:        "reason",
+				Type:        proto.ColumnType_STRING,
+				Description: "The reason the transition into the object's current status.",
+			},
+			{
+				Name:        "message",
+				Type:        proto.ColumnType_STRING,
+				Description: "A description of the status of this operation.",
+			},
+			{
 				Name:        "action",
 				Type:        proto.ColumnType_STRING,
 				Description: "What action was taken/failed with the regarding object.",
@@ -48,33 +69,6 @@ func tableKubernetesEvent(ctx context.Context) *plugin.Table {
 				Transform:   transform.FromField("FirstTimestamp").Transform(v1TimeToRFC3339),
 			},
 			{
-				Name:        "involved_object",
-				Type:        proto.ColumnType_JSON,
-				Description: "The object that this event is about.",
-				Transform:   transform.FromField("InvolvedObject"),
-			},
-			{
-				Name:        "last_timestamp",
-				Type:        proto.ColumnType_TIMESTAMP,
-				Description: "Time when this event was last observed.",
-				Transform:   transform.FromField("LastTimestamp").Transform(v1TimeToRFC3339),
-			},
-			{
-				Name:        "message",
-				Type:        proto.ColumnType_STRING,
-				Description: "A description of the status of this operation.",
-			},
-			{
-				Name:        "reason",
-				Type:        proto.ColumnType_STRING,
-				Description: "The reason the transition into the object's current status.",
-			},
-			{
-				Name:        "related",
-				Type:        proto.ColumnType_JSON,
-				Description: "Optional secondary object for more complex actions.",
-			},
-			{
 				Name:        "reporting_component",
 				Type:        proto.ColumnType_STRING,
 				Description: "Name of the controller that emitted this event.",
@@ -87,6 +81,17 @@ func tableKubernetesEvent(ctx context.Context) *plugin.Table {
 				Transform:   transform.FromField("ReportingInstance"),
 			},
 			{
+				Name:        "involved_object",
+				Type:        proto.ColumnType_JSON,
+				Description: "The object that this event is about.",
+				Transform:   transform.FromField("InvolvedObject"),
+			},
+			{
+				Name:        "related",
+				Type:        proto.ColumnType_JSON,
+				Description: "Optional secondary object for more complex actions.",
+			},
+			{
 				Name:        "series",
 				Type:        proto.ColumnType_JSON,
 				Description: "Data about the event series this event represents.",
@@ -95,11 +100,6 @@ func tableKubernetesEvent(ctx context.Context) *plugin.Table {
 				Name:        "source",
 				Type:        proto.ColumnType_JSON,
 				Description: "The component reporting this event.",
-			},
-			{
-				Name:        "type",
-				Type:        proto.ColumnType_STRING,
-				Description: "Type of this event (Normal, Warning), new types could be added in the future.",
 			},
 		}),
 	}
