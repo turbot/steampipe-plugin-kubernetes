@@ -110,6 +110,11 @@ func listK8sClusterRoleBindings(ctx context.Context, d *plugin.QueryData, _ *plu
 
 		for _, clusterRoleBinding := range response.Items {
 			d.StreamListItem(ctx, clusterRoleBinding)
+
+			// Context can be cancelled due to manual cancellation or the limit has been hit
+			if d.RowsRemaining(ctx) == 0 {
+				return nil, nil
+			}
 		}
 	}
 

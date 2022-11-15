@@ -108,6 +108,11 @@ func listK8sCustomResources(ctx context.Context, crdName string, resourceName st
 				Labels:            crd.GetLabels(),
 				Spec:              data["spec"],
 			})
+
+			// Context can be cancelled due to manual cancellation or the limit has been hit
+			if d.RowsRemaining(ctx) == 0 {
+				return nil, nil
+			}
 		}
 
 		return nil, nil

@@ -156,6 +156,11 @@ func listK8sCronJobs(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 
 		for _, cronJob := range response.Items {
 			d.StreamListItem(ctx, cronJob)
+
+			// Context can be cancelled due to manual cancellation or the limit has been hit
+			if d.RowsRemaining(ctx) == 0 {
+				return nil, nil
+			}
 		}
 	}
 

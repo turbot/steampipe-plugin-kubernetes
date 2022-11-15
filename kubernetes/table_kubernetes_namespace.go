@@ -113,8 +113,13 @@ func listK8sNamespaces(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 			pageLeft = false
 		}
 
-		for _, pod := range response.Items {
-			d.StreamListItem(ctx, pod)
+		for _, namespace := range response.Items {
+			d.StreamListItem(ctx, namespace)
+
+			// Context can be cancelled due to manual cancellation or the limit has been hit
+			if d.RowsRemaining(ctx) == 0 {
+				return nil, nil
+			}
 		}
 	}
 

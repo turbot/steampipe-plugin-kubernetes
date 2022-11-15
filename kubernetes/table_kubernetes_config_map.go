@@ -109,6 +109,11 @@ func listK8sConfigMaps(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 
 		for _, configMap := range response.Items {
 			d.StreamListItem(ctx, configMap)
+
+			// Context can be cancelled due to manual cancellation or the limit has been hit
+			if d.RowsRemaining(ctx) == 0 {
+				return nil, nil
+			}
 		}
 	}
 

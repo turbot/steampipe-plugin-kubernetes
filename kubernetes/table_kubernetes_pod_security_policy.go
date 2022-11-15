@@ -229,6 +229,11 @@ func listPodSecurityPolicy(ctx context.Context, d *plugin.QueryData, _ *plugin.H
 
 		for _, podSecurityPolicy := range response.Items {
 			d.StreamListItem(ctx, podSecurityPolicy)
+
+			// Context can be cancelled due to manual cancellation or the limit has been hit
+			if d.RowsRemaining(ctx) == 0 {
+				return nil, nil
+			}
 		}
 	}
 

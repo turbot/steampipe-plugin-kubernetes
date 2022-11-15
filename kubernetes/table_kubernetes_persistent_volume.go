@@ -160,6 +160,11 @@ func listK8sPVs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData)
 
 		for _, persistentVolume := range response.Items {
 			d.StreamListItem(ctx, persistentVolume)
+
+			// Context can be cancelled due to manual cancellation or the limit has been hit
+			if d.RowsRemaining(ctx) == 0 {
+				return nil, nil
+			}
 		}
 	}
 

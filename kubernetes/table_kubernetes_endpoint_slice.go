@@ -108,6 +108,11 @@ func listK8sEnpointSlices(ctx context.Context, d *plugin.QueryData, _ *plugin.Hy
 
 		for _, endpointSlice := range response.Items {
 			d.StreamListItem(ctx, endpointSlice)
+
+			// Context can be cancelled due to manual cancellation or the limit has been hit
+			if d.RowsRemaining(ctx) == 0 {
+				return nil, nil
+			}
 		}
 	}
 

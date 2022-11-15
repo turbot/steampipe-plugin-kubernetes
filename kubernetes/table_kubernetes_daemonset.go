@@ -193,6 +193,11 @@ func listK8sDaemonSets(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 
 		for _, daemonSet := range response.Items {
 			d.StreamListItem(ctx, daemonSet)
+
+			// Context can be cancelled due to manual cancellation or the limit has been hit
+			if d.RowsRemaining(ctx) == 0 {
+				return nil, nil
+			}
 		}
 	}
 

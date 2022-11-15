@@ -189,8 +189,13 @@ func listK8sNodes(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 			pageLeft = false
 		}
 
-		for _, pod := range response.Items {
-			d.StreamListItem(ctx, pod)
+		for _, node := range response.Items {
+			d.StreamListItem(ctx, node)
+
+			// Context can be cancelled due to manual cancellation or the limit has been hit
+			if d.RowsRemaining(ctx) == 0 {
+				return nil, nil
+			}
 		}
 	}
 

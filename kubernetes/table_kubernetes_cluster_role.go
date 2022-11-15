@@ -95,6 +95,11 @@ func listK8sClusterRoles(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 
 		for _, clusterRole := range response.Items {
 			d.StreamListItem(ctx, clusterRole)
+
+			// Context can be cancelled due to manual cancellation or the limit has been hit
+			if d.RowsRemaining(ctx) == 0 {
+				return nil, nil
+			}
 		}
 	}
 

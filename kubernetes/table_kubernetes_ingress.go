@@ -126,6 +126,11 @@ func listK8sIngresses(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 
 		for _, ingress := range response.Items {
 			d.StreamListItem(ctx, ingress)
+
+			// Context can be cancelled due to manual cancellation or the limit has been hit
+			if d.RowsRemaining(ctx) == 0 {
+				return nil, nil
+			}
 		}
 	}
 
