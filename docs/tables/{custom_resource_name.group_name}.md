@@ -2,13 +2,9 @@
 
 Query data from the custom resource called `{custom_resource_name.group_name}`, e.g., `certificates.cert-manager.io`, `storeconfigs.crossplane.io`. A table is automatically created to represent each object in the `objects` argument.
 
-## Examples
+For instance, given the CRD `certManager.yaml`:
 
-### Query a sample CRD to fetch its custom resources
-
-Given the CRD `certManager.yaml` and custom resource `spCloudCertificate.yaml` with following configuration:
-
-```bash
+```yml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -62,10 +58,10 @@ spec:
             - spec
           properties:
             apiVersion:
-              description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+              description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources"
               type: string
             kind:
-              description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+              description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds"
               type: string
             metadata:
               type: object
@@ -92,7 +88,7 @@ spec:
                           - DER
                           - CombinedPEM
                 commonName:
-                  description: 'CommonName is a common name to be used on the Certificate. The CommonName should have a length of 64 characters or fewer to avoid generating invalid CSRs. This value is ignored by TLS clients when any subject alt name is set. This is x509 behaviour: https://tools.ietf.org/html/rfc6125#section-6.4.4'
+                  description: "CommonName is a common name to be used on the Certificate. The CommonName should have a length of 64 characters or fewer to avoid generating invalid CSRs. This value is ignored by TLS clients when any subject alt name is set. This is x509 behaviour: https://tools.ietf.org/html/rfc6125#section-6.4.4"
                   type: string
                 dnsNames:
                   description: DNSNames is a list of DNS subjectAltNames to be set on the Certificate.
@@ -157,7 +153,7 @@ spec:
                               description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
                               type: string
                             name:
-                              description: 'Name of the resource being referred to. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                              description: "Name of the resource being referred to. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names"
                               type: string
                     pkcs12:
                       description: PKCS12 configures options for storing a PKCS12 keystore in the `spec.secretName` Secret resource.
@@ -179,7 +175,7 @@ spec:
                               description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
                               type: string
                             name:
-                              description: 'Name of the resource being referred to. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                              description: "Name of the resource being referred to. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names"
                               type: string
                 literalSubject:
                   description: LiteralSubject is an LDAP formatted string that represents the [X.509 Subject field](https://datatracker.ietf.org/doc/html/rfc5280#section-4.1.2.6). Use this *instead* of the Subject field if you need to ensure the correct ordering of the RDN sequence, such as when issuing certs for LDAP authentication. See https://github.com/cert-manager/cert-manager/issues/3203, https://github.com/cert-manager/cert-manager/issues/4424. This field is alpha level and is only supported by cert-manager installations where LiteralCertificateSubject feature gate is enabled on both cert-manager controller and webhook.
@@ -381,7 +377,9 @@ spec:
       storage: true
 ```
 
-```bash
+And the custom resource `spCloudCertificate.yaml`:
+
+```yml
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
@@ -412,6 +410,7 @@ spec:
 ```
 
 This plugin will automatically create a table called `certificates.cert-manager.io`:
+
 ```
 > select name, uid, kind, api_version, namespace from "certificates.cert-manager.io";
 +------------------------------------+--------------------------------------+-------------+--------------------+-----------+
@@ -435,7 +434,7 @@ List all tables:
 | certificates.cert-manager.io          | Represents Custom resource certificates.cert-manager.io.                                                                                                         |
 | kubernetes_cluster_role               | ClusterRole contains rules that represent a set of permissions.                                                                                                  |
 | kubernetes_cluster_role_binding       | A ClusterRoleBinding grants the permissions defined in a cluster role to a user or set of users. Access granted by ClusterRoleBinding is cluster-wide.           |
-| ...                                                     | ...   
+| ...                                                     | ...
 ```
 
 To get details of a specific custom resource table, inspect it by name:
