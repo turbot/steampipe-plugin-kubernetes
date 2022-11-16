@@ -35,7 +35,6 @@ func GetNewClientset(ctx context.Context, d *plugin.QueryData) (*kubernetes.Clie
 
 	if cachedData, ok := d.ConnectionManager.Cache.Get(serviceCacheKey); ok {
 		return cachedData.(*kubernetes.Clientset), nil
-
 	}
 
 	kubeconfig, err := getK8Config(ctx, d)
