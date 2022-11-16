@@ -29,18 +29,17 @@ import (
 // GetNewClientset :: gets client for querying k8s apis for the provided context
 func GetNewClientset(ctx context.Context, d *plugin.QueryData) (*kubernetes.Clientset, error) {
 	logger := plugin.Logger(ctx)
-	logger.Trace("GetNewClientset")
 
 	// have we already created and cached the session?
-	serviceCacheKey := "k8sClient" //should probably per connection/context keys...
+	serviceCacheKey := "k8sClient"
 
 	if cachedData, ok := d.ConnectionManager.Cache.Get(serviceCacheKey); ok {
-		// logger.Warn("!!!! Clientset Found in Cache !!!!")
 		return cachedData.(*kubernetes.Clientset), nil
 	}
 
 	kubeconfig, err := getK8Config(ctx, d)
 	if err != nil {
+		logger.Error("GetNewClientset", "getK8Config", err)
 		return nil, err
 	}
 
@@ -71,14 +70,6 @@ func GetNewClientset(ctx context.Context, d *plugin.QueryData) (*kubernetes.Clie
 
 	// save clientset in cache
 	d.ConnectionManager.Cache.Set(serviceCacheKey, clientset)
-
-	// logger.Warn("@@@@@@@  GetNewClientset SET cache status ", "success", success)
-	// time.Sleep(5000 * time.Millisecond)
-	// if value, ok := d.ConnectionManager.Cache.Get(serviceCacheKey); ok {
-	// 	logger.Warn("!!!! Clientset added to cache !!!!")
-	// } else {
-	// 	logger.Warn("!!!! Clientset NOT Found in Cache after adding !!!!", "serviceCacheKey", serviceCacheKey, "Value", value)
-	// }
 
 	return clientset, err
 }
@@ -152,10 +143,9 @@ func GetNewClientCRDRaw(ctx context.Context, cn *connection.ConnectionCache, c *
 	logger.Trace("GetNewClientCRDRaw")
 
 	// have we already created and cached the session?
-	serviceCacheKey := "GetNewClientCRDRaw" //should probably per connection/context keys...
+	serviceCacheKey := "GetNewClientCRDRaw"
 
 	if cachedData, ok := cn.Get(ctx, serviceCacheKey); ok {
-		// logger.Warn("!!!! Clientset Found in Cache !!!!")
 		return cachedData.(*apiextension.Clientset), nil
 	}
 
@@ -287,7 +277,7 @@ func getK8Config(ctx context.Context, d *plugin.QueryData) (clientcmd.ClientConf
 	logger.Trace("getK8Config")
 
 	// have we already created and cached the session?
-	cacheKey := "getK8Config" //should probably per connection/context keys...
+	cacheKey := "getK8Config"
 
 	if cachedData, ok := d.ConnectionManager.Cache.Get(cacheKey); ok {
 		return cachedData.(clientcmd.ClientConfig), nil
@@ -303,7 +293,6 @@ func getK8Config(ctx context.Context, d *plugin.QueryData) (clientcmd.ClientConf
 	// variable to store paths for kubernetes config
 	// default kube config path
 	var configPaths = []string{"~/.kube/config"}
-	// Error: invalid configuration: no configuration has been provided, try setting KUBERNETES_MASTER environment variable
 
 	if kubernetesConfig.ConfigPath != nil {
 		configPaths = []string{*kubernetesConfig.ConfigPath}
@@ -332,29 +321,9 @@ func getK8Config(ctx context.Context, d *plugin.QueryData) (clientcmd.ClientConf
 			loader.Precedence = expandedPaths
 		}
 
-		// TODO -- Add other config options
-		// if kubernetesConfig.ConfigContext != nil {
-		// 	kubectx = *kubernetesConfig.ConfigContext
-		// }
-		// kubectx, ctxOk := d.GetOk("config_context")
-		// authInfo, authInfoOk := d.GetOk("config_context_auth_info")
-		// cluster, clusterOk := d.GetOk("config_context_cluster")
-		// if ctxOk || authInfoOk || clusterOk {
 		if kubernetesConfig.ConfigContext != nil {
-			// ctxSuffix := "; overridden context"
-			// if ctxOk {
 			overrides.CurrentContext = *kubernetesConfig.ConfigContext
 			overrides.Context = clientcmdapi.Context{}
-
-			// TODO -- Add other config options
-			// if authInfoOk {
-			// 	overrides.Context.AuthInfo = authInfo.(string)
-			// 	ctxSuffix += fmt.Sprintf("; auth_info: %s", overrides.Context.AuthInfo)
-			// }
-			// if clusterOk {
-			// 	overrides.Context.Cluster = cluster.(string)
-			// 	ctxSuffix += fmt.Sprintf("; cluster: %s", overrides.Context.Cluster)
-			// }
 		}
 	}
 
@@ -372,7 +341,7 @@ func getK8ConfigRaw(ctx context.Context, cn *connection.ConnectionCache, c *plug
 	logger.Trace("getK8ConfigRaw")
 
 	// have we already created and cached the session?
-	cacheKey := "getK8ConfigRaw" //should probably per connection/context keys...
+	cacheKey := "getK8ConfigRaw"
 
 	if cachedData, ok := cn.Get(ctx, cacheKey); ok {
 		return cachedData.(clientcmd.ClientConfig), nil
@@ -417,29 +386,9 @@ func getK8ConfigRaw(ctx context.Context, cn *connection.ConnectionCache, c *plug
 			loader.Precedence = expandedPaths
 		}
 
-		// TODO -- Add other config options
-		// if kubernetesConfig.ConfigContext != nil {
-		// 	kubectx = *kubernetesConfig.ConfigContext
-		// }
-		// kubectx, ctxOk := d.GetOk("config_context")
-		// authInfo, authInfoOk := d.GetOk("config_context_auth_info")
-		// cluster, clusterOk := d.GetOk("config_context_cluster")
-		// if ctxOk || authInfoOk || clusterOk {
 		if kubernetesConfig.ConfigContext != nil {
-			// ctxSuffix := "; overridden context"
-			// if ctxOk {
 			overrides.CurrentContext = *kubernetesConfig.ConfigContext
 			overrides.Context = clientcmdapi.Context{}
-
-			// TODO -- Add other config options
-			// if authInfoOk {
-			// 	overrides.Context.AuthInfo = authInfo.(string)
-			// 	ctxSuffix += fmt.Sprintf("; auth_info: %s", overrides.Context.AuthInfo)
-			// }
-			// if clusterOk {
-			// 	overrides.Context.Cluster = cluster.(string)
-			// 	ctxSuffix += fmt.Sprintf("; cluster: %s", overrides.Context.Cluster)
-			// }
 		}
 	}
 
@@ -459,7 +408,6 @@ func getK8ConfigRaw(ctx context.Context, cn *connection.ConnectionCache, c *plug
 func getKubectlContext(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
 	cacheKey := "getKubectlContext"
 	if cachedData, ok := d.ConnectionManager.Cache.Get(cacheKey); ok {
-		// plugin.Logger(ctx).Warn("getKubectlContext", "######## CACHED CURRENT CONTEXT", cachedData.(string))
 		return cachedData.(string), nil
 	}
 
@@ -478,8 +426,6 @@ func getKubectlContext(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 	if kubernetesConfig.ConfigContext != nil {
 		currentContext = *kubernetesConfig.ConfigContext
 	}
-
-	// plugin.Logger(ctx).Warn("getKubectlContext", "######## CURRENT CONTEXT", currentContext)
 
 	// save current context in cache
 	d.ConnectionManager.Cache.Set(cacheKey, currentContext)
