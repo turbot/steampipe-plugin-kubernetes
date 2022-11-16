@@ -60,33 +60,38 @@ Installing the latest kubernetes plugin will create a config file (`~/.steampipe
 
 ```hcl
 connection "kubernetes" {
-  plugin      = "kubernetes"
+  plugin = "kubernetes"
+
+  # By default, the plugin will use credentials in "~/.kube/config" with the current context.
+  # OpenID Connect (OIDC) authentication is supported without any extra configuration.
+  # The kubeconfig path and context can also be specified with the following config arguments:
+
+  # Specify the file path to the kubeconfig.
+  # Can also be set with the "KUBE_CONFIG_PATHS" or "KUBERNETES_MASTER" environment variables.
+  # config_path = "~/.kube/config"
+
+  # Specify a context other than the current one.
+  # config_context = "minikube"
+
+  # If no kubeconfig file can be found, the plugin will attempt to use the service account Kubernetes gives to pods.
+  # This authentication method is intended for clients that expect to be running inside a pod running on Kubernetes.
 }
 ```
 
-This will create a `kubernetes` connection that uses the default kubeconfig context.
+- `config_context` - (Optional) The kubeconfig context to use. If not set, the current context will be used.
+- `config_path` - (Optional) The kubeconfig file path. If not set, the plugin will check `~/.kube/config`. Can also be set with the `KUBE_CONFIG_PATHS` or `KUBERNETES_MASTER` environment variables. 
+
+## Configuring Kubernetes Credentials
+
+By default, the plugin will use the kubeconfig in `~/.kube/config` with the current context. If using the default kubectl CLI configurations, the kubeconfig will be in this location and the Kubernetes plugin connections will work by default.
+
+You can also set the kubeconfig file path and context with the `config_path` and `config_context` config arguments respectively.
+
+This plugin supports querying Kubernetes clusters using [OpenID Connect](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#openid-connect-tokens) (OIDC) authentication. No extra configuration is required to query clusters using OIDC.
+
+If no kubeconfig file is found, then the plugin will [attempt to access the API from within a pod](https://kubernetes.io/docs/tasks/run-application/access-api-from-pod/#accessing-the-api-from-within-a-pod) using the service account Kubernetes gives to pods. 
 
 ## Get involved
 
 - Open source: https://github.com/turbot/steampipe-plugin-kubernetes
 - Community: [Slack Channel](https://steampipe.io/community/join)
-
-## Advanced configuration options
-
-If you have a kube config setup using the kubectl CLI Steampipe just works with that connection.
-
-The Kubernetes plugin allows you set the name of kube kubectl context with the `config_context` argument in any connection profile. You may also specify the path to kube config file with `config_path` argument.
-
-This plugin also supports querying Kubernetes clusters using [OpenID Connect](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#openid-connect-tokens) (OIDC) authentication. No extra configuration is required in a connection profile to query clusters using OIDC.
-
-This plugin also supports querying Kubernetes clusters using [InClusterConfig](https://kubernetes.io/docs/tasks/run-application/access-api-from-pod/#accessing-the-api-from-within-a-pod) configuration. No extra configuration is required in a connection profile to query clusters using InClusterConfig. If the `~/.kube/config` file is not available, plugin will automatically look for InClusterConfig configuration.
-
-### Credentials via kube config
-
-```hcl
-connection "k8s_minikube" {
-  plugin         = "kubernetes"
-  config_context = "minikube"
-  # config_path    = "~/.kube/config"
-}
-```

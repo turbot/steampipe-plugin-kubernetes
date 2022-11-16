@@ -138,19 +138,19 @@ func GetNewClientCRD(ctx context.Context, d *plugin.QueryData) (*apiextension.Cl
 }
 
 // GetNewClientCRDRaw :: gets client for querying k8s apis for CustomResourceDefinition
-func GetNewClientCRDRaw(ctx context.Context, cn *connection.ConnectionCache, c *plugin.Connection) (*apiextension.Clientset, error) {
+func GetNewClientCRDRaw(ctx context.Context, cc *connection.ConnectionCache, c *plugin.Connection) (*apiextension.Clientset, error) {
 	logger := plugin.Logger(ctx)
-	logger.Trace("GetNewClientCRDRaw")
 
 	// have we already created and cached the session?
 	serviceCacheKey := "GetNewClientCRDRaw"
 
-	if cachedData, ok := cn.Get(ctx, serviceCacheKey); ok {
+	if cachedData, ok := cc.Get(ctx, serviceCacheKey); ok {
 		return cachedData.(*apiextension.Clientset), nil
 	}
 
-	kubeconfig, err := getK8ConfigRaw(ctx, cn, c)
+	kubeconfig, err := getK8ConfigRaw(ctx, cc, c)
 	if err != nil {
+		logger.Error("GetNewClientCRDRaw", "getK8ConfigRaw", err)
 		return nil, err
 	}
 
@@ -166,7 +166,7 @@ func GetNewClientCRDRaw(ctx context.Context, cn *connection.ConnectionCache, c *
 			}
 
 			// save clientset in cache
-			cacheErr := cn.Set(ctx, serviceCacheKey, clientset)
+			cacheErr := cc.Set(ctx, serviceCacheKey, clientset)
 			if cacheErr != nil {
 				plugin.Logger(ctx).Error("inClusterConfigCRD", "cache-set", cacheErr)
 				return nil, err
@@ -184,7 +184,7 @@ func GetNewClientCRDRaw(ctx context.Context, cn *connection.ConnectionCache, c *
 	}
 
 	// save clientset in cache
-	cacheErr := cn.Set(ctx, serviceCacheKey, clientset)
+	cacheErr := cc.Set(ctx, serviceCacheKey, clientset)
 	if cacheErr != nil {
 		plugin.Logger(ctx).Error("GetNewClientCRDRaw", "cache-set", cacheErr)
 		return nil, err
@@ -336,14 +336,14 @@ func getK8Config(ctx context.Context, d *plugin.QueryData) (clientcmd.ClientConf
 }
 
 // Get kubernetes config based on environment variable and plugin config
-func getK8ConfigRaw(ctx context.Context, cn *connection.ConnectionCache, c *plugin.Connection) (clientcmd.ClientConfig, error) {
+func getK8ConfigRaw(ctx context.Context, cc *connection.ConnectionCache, c *plugin.Connection) (clientcmd.ClientConfig, error) {
 	logger := plugin.Logger(ctx)
 	logger.Trace("getK8ConfigRaw")
 
 	// have we already created and cached the session?
 	cacheKey := "getK8ConfigRaw"
 
-	if cachedData, ok := cn.Get(ctx, cacheKey); ok {
+	if cachedData, ok := cc.Get(ctx, cacheKey); ok {
 		return cachedData.(clientcmd.ClientConfig), nil
 	}
 
@@ -395,7 +395,7 @@ func getK8ConfigRaw(ctx context.Context, cn *connection.ConnectionCache, c *plug
 	kubeconfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loader, overrides)
 
 	// save the config in cache
-	err := cn.Set(ctx, cacheKey, kubeconfig)
+	err := cc.Set(ctx, cacheKey, kubeconfig)
 	if err != nil {
 		logger.Error("getK8ConfigRaw", "cache-set", err)
 	}
@@ -448,6 +448,24 @@ func v1TimeToRFC3339(_ context.Context, d *transform.TransformData) (interface{}
 			return nil, nil
 		}
 		return v.ToUnstructured(), nil
+	default:
+		return nil, fmt.Errorf("invalid time format %T! ", v)
+	}
+}
+
+func v1MicroTimeToRFC3339(_ context.Context, d *transform.TransformData) (interface{}, error) {
+	if d.Value == nil {
+		return nil, nil
+	}
+
+	switch v := d.Value.(type) {
+	case v1.MicroTime:
+		return v1.NewTime(v.Time).ToUnstructured(), nil
+	case *v1.MicroTime:
+		if v == nil {
+			return nil, nil
+		}
+		return v1.NewTime(v.Time).ToUnstructured(), nil
 	default:
 		return nil, fmt.Errorf("invalid time format %T! ", v)
 	}

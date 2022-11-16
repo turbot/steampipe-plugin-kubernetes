@@ -1,20 +1,17 @@
 connection "kubernetes" {
   plugin = "kubernetes"
 
-  # By default Plugin will pick the current context, present inside ~/.kube/config.
+  # By default, the plugin will use credentials in "~/.kube/config" with the current context.
+  # OpenID Connect (OIDC) authentication is supported without any extra configuration.
+  # The kubeconfig path and context can also be specified with the following config arguments:
 
-  # If ~/.kube/config file is unavailable, the plugin will check for InClusterConfig configuration. No extra configuration is required.
+  # Specify the file path to the kubeconfig.
+  # Can also be set with the "KUBE_CONFIG_PATHS" or "KUBERNETES_MASTER" environment variables.
+  # config_path = "~/.kube/config"
 
-  # If you want to choose a specific context, you can set the name of context with the `config_context` argument.
+  # Specify a context other than the current one.
   # config_context = "minikube"
 
-  # If the config file path is located in other location, you can specify the path of kube config file with `config_path` argument.
-  # config_path    = "~/.kube/config"
-
-  # If you have a kube config setup using the kubectl CLI(https://kubernetes.io/docs/reference/kubectl/), the plugin just works with that connection.
-
-  # This plugin also supports OpenID Connect (OIDC) authentication. No extra configuration is required.
+  # If no kubeconfig file can be found, the plugin will attempt to use the service account Kubernetes gives to pods.
+  # This authentication method is intended for clients that expect to be running inside a pod running on Kubernetes.
 }
-
-
-
