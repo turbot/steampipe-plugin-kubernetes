@@ -1,3 +1,12 @@
+## v0.13.0 [2022-11-16]
+
+_What's new?_
+
+- New tables added
+  - [kubernetes_event](https://hub.steampipe.io/plugins/turbot/kubernetes/tables/kubernetes_event) ([#93](https://github.com/turbot/steampipe-plugin-kubernetes/pull/93)) (Thanks to [@svend](https://github.com/svend) for the new table!)
+  - [{custom_resource_name.group_name}](https://hub.steampipe.io/plugins/turbot/kubernetes/tables/{custom_resource_name.group_name})
+- Added support for creating dynamic tables for custom resources. A table is automatically created for each custom resource in a cluster. To learn more, please see [{custom_resource_name.group_name}](https://hub.steampipe.io/plugins/turbot/kubernetes/tables/{custom_resource_name.group_name}).
+
 ## v0.12.0 [2022-10-19]
 
 _What's new?_
