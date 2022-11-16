@@ -356,7 +356,7 @@ func getK8ConfigRaw(ctx context.Context, cc *connection.ConnectionCache, c *plug
 	// variable to store paths for kubernetes config
 	// default kube config path
 	var configPaths = []string{"~/.kube/config"}
-	
+
 	if kubernetesConfig.ConfigPath != nil {
 		configPaths = []string{*kubernetesConfig.ConfigPath}
 	} else if kubernetesConfig.ConfigPaths != nil && len(kubernetesConfig.ConfigPaths) > 0 {
