@@ -207,7 +207,8 @@ List all tables:
 | certificates.cert-manager.io          | Represents Custom resource certificates.cert-manager.io.                                                                                                         |
 | kubernetes_cluster_role               | ClusterRole contains rules that represent a set of permissions.                                                                                                  |
 | kubernetes_cluster_role_binding       | A ClusterRoleBinding grants the permissions defined in a cluster role to a user or set of users. Access granted by ClusterRoleBinding is cluster-wide.           |
-| ...                                   | ...
+| ...                                   | ...                                                                                                                                                              |
++---------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 ```
 
 To get details of a specific custom resource table, inspect it by name:
