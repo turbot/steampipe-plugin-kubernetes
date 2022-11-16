@@ -4,8 +4,12 @@ _What's new?_
 
 - New tables added
   - [kubernetes_event](https://hub.steampipe.io/plugins/turbot/kubernetes/tables/kubernetes_event) ([#93](https://github.com/turbot/steampipe-plugin-kubernetes/pull/93)) (Thanks to [@svend](https://github.com/svend) for the new table!)
-  - [{custom_resource_name.group_name}](https://hub.steampipe.io/plugins/turbot/kubernetes/tables/{custom_resource_name.group_name})
+  - [{custom_resource_name.group_name}](https://hub.steampipe.io/plugins/turbot/kubernetes/tables/{custom_resource_name.group_name}) ([#85](https://github.com/turbot/steampipe-plugin-kubernetes/pull/85))
 - Added support for creating dynamic tables for custom resources. A table is automatically created for each custom resource in a cluster. To learn more, please see [{custom_resource_name.group_name}](https://hub.steampipe.io/plugins/turbot/kubernetes/tables/{custom_resource_name.group_name}).
+
+_Dependencies_
+
+- Recompiled plugin with [steampipe-plugin-sdk v5.0.0](https://github.com/turbot/steampipe-plugin-sdk/blob/main/CHANGELOG.md#v500-2022-11-16) which includes support for fetching remote files with go-getter and file watching. ([#85](https://github.com/turbot/steampipe-plugin-kubernetes/pull/85))
 
 ## v0.12.0 [2022-10-19]
 
