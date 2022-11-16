@@ -338,7 +338,6 @@ func getK8Config(ctx context.Context, d *plugin.QueryData) (clientcmd.ClientConf
 // Get kubernetes config based on environment variable and plugin config
 func getK8ConfigRaw(ctx context.Context, cc *connection.ConnectionCache, c *plugin.Connection) (clientcmd.ClientConfig, error) {
 	logger := plugin.Logger(ctx)
-	logger.Trace("getK8ConfigRaw")
 
 	// have we already created and cached the session?
 	cacheKey := "getK8ConfigRaw"
@@ -357,8 +356,7 @@ func getK8ConfigRaw(ctx context.Context, cc *connection.ConnectionCache, c *plug
 	// variable to store paths for kubernetes config
 	// default kube config path
 	var configPaths = []string{"~/.kube/config"}
-	// Error: invalid configuration: no configuration has been provided, try setting KUBERNETES_MASTER environment variable
-
+	
 	if kubernetesConfig.ConfigPath != nil {
 		configPaths = []string{*kubernetesConfig.ConfigPath}
 	} else if kubernetesConfig.ConfigPaths != nil && len(kubernetesConfig.ConfigPaths) > 0 {
