@@ -376,7 +376,6 @@ spec:
       served: true
       storage: true
 ```
-
 And the custom resource `spCloudCertificate.yaml`:
 
 ```yml
