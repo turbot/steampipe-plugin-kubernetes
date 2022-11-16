@@ -7,9 +7,9 @@ import (
 	v1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/turbot/steampipe-plugin-sdk/v4/grpc/proto"
-	"github.com/turbot/steampipe-plugin-sdk/v4/plugin"
-	"github.com/turbot/steampipe-plugin-sdk/v4/plugin/transform"
+	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
+	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
+	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
 )
 
 func tableKubernetesNetworkPolicy(ctx context.Context) *plugin.Table {
@@ -120,7 +120,7 @@ func listK8sNetworkPolicies(ctx context.Context, d *plugin.QueryData, _ *plugin.
 			d.StreamListItem(ctx, networkPolicy)
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
-			if d.QueryStatus.RowsRemaining(ctx) == 0 {
+			if d.RowsRemaining(ctx) == 0 {
 				return nil, nil
 			}
 		}
@@ -138,8 +138,8 @@ func getK8sNetworkPolicy(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 		return nil, err
 	}
 
-	name := d.KeyColumnQuals["name"].GetStringValue()
-	namespace := d.KeyColumnQuals["namespace"].GetStringValue()
+	name := d.EqualsQuals["name"].GetStringValue()
+	namespace := d.EqualsQuals["namespace"].GetStringValue()
 
 	// return if namespace or name is empty
 	if namespace == "" || name == "" {

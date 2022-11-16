@@ -7,9 +7,9 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/turbot/steampipe-plugin-sdk/v4/grpc/proto"
-	"github.com/turbot/steampipe-plugin-sdk/v4/plugin"
-	"github.com/turbot/steampipe-plugin-sdk/v4/plugin/transform"
+	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
+	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
+	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
 )
 
 func tableKubernetesPod(ctx context.Context) *plugin.Table {
@@ -433,8 +433,8 @@ func listK8sPods(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 		Limit: 500,
 	}
 
-	if d.KeyColumnQuals["selector_search"] != nil {
-		input.LabelSelector = d.KeyColumnQuals["selector_search"].GetStringValue()
+	if d.EqualsQuals["selector_search"] != nil {
+		input.LabelSelector = d.EqualsQuals["selector_search"].GetStringValue()
 	}
 
 	// Limiting the results
@@ -476,7 +476,7 @@ func listK8sPods(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 			d.StreamListItem(ctx, pod)
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
-			if d.QueryStatus.RowsRemaining(ctx) == 0 {
+			if d.RowsRemaining(ctx) == 0 {
 				return nil, nil
 			}
 		}
@@ -494,8 +494,8 @@ func getK8sPod(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) 
 		return nil, err
 	}
 
-	name := d.KeyColumnQuals["name"].GetStringValue()
-	namespace := d.KeyColumnQuals["namespace"].GetStringValue()
+	name := d.EqualsQuals["name"].GetStringValue()
+	namespace := d.EqualsQuals["namespace"].GetStringValue()
 
 	// return if namespace or name is empty
 	if namespace == "" || name == "" {
@@ -534,14 +534,14 @@ func buildKubernetsPodFieldSelectorFilter(ctx context.Context, d *plugin.QueryDa
 
 	for columnName, filterName := range filterQuals {
 		if columnName == "pod_ip" {
-			if d.KeyColumnQuals["pod_ip"] != nil {
-				value := d.KeyColumnQuals["pod_ip"].GetInetValue().GetAddr()
+			if d.EqualsQuals["pod_ip"] != nil {
+				value := d.EqualsQuals["pod_ip"].GetInetValue().GetAddr()
 				commonFieldSelectorValue = append(commonFieldSelectorValue, filterName+"="+value)
 			}
 			continue
 		}
-		if d.KeyColumnQualString(columnName) != "" {
-			commonFieldSelectorValue = append(commonFieldSelectorValue, filterName+"="+d.KeyColumnQualString(columnName))
+		if d.EqualsQualString(columnName) != "" {
+			commonFieldSelectorValue = append(commonFieldSelectorValue, filterName+"="+d.EqualsQualString(columnName))
 		}
 	}
 

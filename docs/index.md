@@ -81,11 +81,6 @@ connection "kubernetes" {
 - `config_context` - (Optional) The kubeconfig context to use. If not set, the current context will be used.
 - `config_path` - (Optional) The kubeconfig file path. If not set, the plugin will check `~/.kube/config`. Can also be set with the `KUBE_CONFIG_PATHS` or `KUBERNETES_MASTER` environment variables. 
 
-## Get involved
-
-- Open source: https://github.com/turbot/steampipe-plugin-kubernetes
-- Community: [Slack Channel](https://steampipe.io/community/join)
-
 ## Configuring Kubernetes Credentials
 
 By default, the plugin will use the kubeconfig in `~/.kube/config` with the current context. If using the default kubectl CLI configurations, the kubeconfig will be in this location and the Kubernetes plugin connections will work by default.
@@ -95,3 +90,8 @@ You can also set the kubeconfig file path and context with the `config_path` and
 This plugin supports querying Kubernetes clusters using [OpenID Connect](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#openid-connect-tokens) (OIDC) authentication. No extra configuration is required to query clusters using OIDC.
 
 If no kubeconfig file is found, then the plugin will [attempt to access the API from within a pod](https://kubernetes.io/docs/tasks/run-application/access-api-from-pod/#accessing-the-api-from-within-a-pod) using the service account Kubernetes gives to pods. 
+
+## Get involved
+
+- Open source: https://github.com/turbot/steampipe-plugin-kubernetes
+- Community: [Slack Channel](https://steampipe.io/community/join)
