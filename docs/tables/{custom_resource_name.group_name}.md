@@ -31,25 +31,6 @@ spec:
     - name: v1
       subresources:
         status: {}
-      additionalPrinterColumns:
-        - jsonPath: .status.conditions[?(@.type=="Ready")].status
-          name: Ready
-          type: string
-        - jsonPath: .spec.secretName
-          name: Secret
-          type: string
-        - jsonPath: .spec.issuerRef.name
-          name: Issuer
-          priority: 1
-          type: string
-        - jsonPath: .status.conditions[?(@.type=="Ready")].message
-          name: Status
-          priority: 1
-          type: string
-        - jsonPath: .metadata.creationTimestamp
-          description: CreationTimestamp is a timestamp representing the server time when this object was created. It is not guaranteed to be set in happens-before order across separate operations. Clients may not set this value. It is represented in RFC3339 form and is in UTC.
-          name: Age
-          type: date
       schema:
         openAPIV3Schema:
           description: "A Certificate resource should be created to ensure an up to date and signed x509 certificate is stored in the Kubernetes Secret resource named in `spec.secretName`. \n The stored certificate will be renewed before it expires (as configured by `spec.renewBefore`)."
@@ -69,7 +50,6 @@ spec:
               description: Desired state of the Certificate resource.
               type: object
               required:
-                - issuerRef
                 - secretName
               properties:
                 additionalOutputFormats:
@@ -114,69 +94,6 @@ spec:
                 isCA:
                   description: IsCA will mark this Certificate as valid for certificate signing. This will automatically add the `cert sign` usage to the list of `usages`.
                   type: boolean
-                issuerRef:
-                  description: IssuerRef is a reference to the issuer for this certificate. If the `kind` field is not set, or set to `Issuer`, an Issuer resource with the given name in the same namespace as the Certificate will be used. If the `kind` field is set to `ClusterIssuer`, a ClusterIssuer with the provided name will be used. The `name` field in this stanza is required at all times.
-                  type: object
-                  required:
-                    - name
-                  properties:
-                    group:
-                      description: Group of the resource being referred to.
-                      type: string
-                    kind:
-                      description: Kind of the resource being referred to.
-                      type: string
-                    name:
-                      description: Name of the resource being referred to.
-                      type: string
-                keystores:
-                  description: Keystores configures additional keystore output formats stored in the `secretName` Secret resource.
-                  type: object
-                  properties:
-                    jks:
-                      description: JKS configures options for storing a JKS keystore in the `spec.secretName` Secret resource.
-                      type: object
-                      required:
-                        - create
-                        - passwordSecretRef
-                      properties:
-                        create:
-                          description: Create enables JKS keystore creation for the Certificate. If true, a file named `keystore.jks` will be created in the target Secret resource, encrypted using the password stored in `passwordSecretRef`. The keystore file will only be updated upon re-issuance. A file named `truststore.jks` will also be created in the target Secret resource, encrypted using the password stored in `passwordSecretRef` containing the issuing Certificate Authority
-                          type: boolean
-                        passwordSecretRef:
-                          description: PasswordSecretRef is a reference to a key in a Secret resource containing the password used to encrypt the JKS keystore.
-                          type: object
-                          required:
-                            - name
-                          properties:
-                            key:
-                              description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
-                              type: string
-                            name:
-                              description: "Name of the resource being referred to. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names"
-                              type: string
-                    pkcs12:
-                      description: PKCS12 configures options for storing a PKCS12 keystore in the `spec.secretName` Secret resource.
-                      type: object
-                      required:
-                        - create
-                        - passwordSecretRef
-                      properties:
-                        create:
-                          description: Create enables PKCS12 keystore creation for the Certificate. If true, a file named `keystore.p12` will be created in the target Secret resource, encrypted using the password stored in `passwordSecretRef`. The keystore file will only be updated upon re-issuance. A file named `truststore.p12` will also be created in the target Secret resource, encrypted using the password stored in `passwordSecretRef` containing the issuing Certificate Authority
-                          type: boolean
-                        passwordSecretRef:
-                          description: PasswordSecretRef is a reference to a key in a Secret resource containing the password used to encrypt the PKCS12 keystore.
-                          type: object
-                          required:
-                            - name
-                          properties:
-                            key:
-                              description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
-                              type: string
-                            name:
-                              description: "Name of the resource being referred to. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names"
-                              type: string
                 literalSubject:
                   description: LiteralSubject is an LDAP formatted string that represents the [X.509 Subject field](https://datatracker.ietf.org/doc/html/rfc5280#section-4.1.2.6). Use this *instead* of the Subject field if you need to ensure the correct ordering of the RDN sequence, such as when issuing certs for LDAP authentication. See https://github.com/cert-manager/cert-manager/issues/3203, https://github.com/cert-manager/cert-manager/issues/4424. This field is alpha level and is only supported by cert-manager installations where LiteralCertificateSubject feature gate is enabled on both cert-manager controller and webhook.
                   type: string
@@ -230,53 +147,6 @@ spec:
                       type: object
                       additionalProperties:
                         type: string
-                subject:
-                  description: Full X509 name specification (https://golang.org/pkg/crypto/x509/pkix/#Name).
-                  type: object
-                  properties:
-                    countries:
-                      description: Countries to be used on the Certificate.
-                      type: array
-                      items:
-                        type: string
-                    localities:
-                      description: Cities to be used on the Certificate.
-                      type: array
-                      items:
-                        type: string
-                    organizationalUnits:
-                      description: Organizational Units to be used on the Certificate.
-                      type: array
-                      items:
-                        type: string
-                    organizations:
-                      description: Organizations to be used on the Certificate.
-                      type: array
-                      items:
-                        type: string
-                    postalCodes:
-                      description: Postal codes to be used on the Certificate.
-                      type: array
-                      items:
-                        type: string
-                    provinces:
-                      description: State/Provinces to be used on the Certificate.
-                      type: array
-                      items:
-                        type: string
-                    serialNumber:
-                      description: Serial number to be used on the Certificate.
-                      type: string
-                    streetAddresses:
-                      description: Street addresses to be used on the Certificate.
-                      type: array
-                      items:
-                        type: string
-                uris:
-                  description: URIs is a list of URI subjectAltNames to be set on the Certificate.
-                  type: array
-                  items:
-                    type: string
                 usages:
                   description: Usages is the set of x509 usages that are requested for the certificate. Defaults to `digital signature` and `key encipherment` if not specified.
                   type: array
@@ -307,75 +177,10 @@ spec:
                       - ocsp signing
                       - microsoft sgc
                       - netscape sgc
-            status:
-              description: Status of the Certificate. This is set and managed automatically.
-              type: object
-              properties:
-                conditions:
-                  description: List of status conditions to indicate the status of certificates. Known condition types are `Ready` and `Issuing`.
-                  type: array
-                  items:
-                    description: CertificateCondition contains condition information for an Certificate.
-                    type: object
-                    required:
-                      - status
-                      - type
-                    properties:
-                      lastTransitionTime:
-                        description: LastTransitionTime is the timestamp corresponding to the last status change of this condition.
-                        type: string
-                        format: date-time
-                      message:
-                        description: Message is a human readable description of the details of the last transition, complementing reason.
-                        type: string
-                      observedGeneration:
-                        description: If set, this represents the .metadata.generation that the condition was set based upon. For instance, if .metadata.generation is currently 12, but the .status.condition[x].observedGeneration is 9, the condition is out of date with respect to the current state of the Certificate.
-                        type: integer
-                        format: int64
-                      reason:
-                        description: Reason is a brief machine readable explanation for the condition's last transition.
-                        type: string
-                      status:
-                        description: Status of the condition, one of (`True`, `False`, `Unknown`).
-                        type: string
-                        enum:
-                          - "True"
-                          - "False"
-                          - Unknown
-                      type:
-                        description: Type of the condition, known values are (`Ready`, `Issuing`).
-                        type: string
-                  x-kubernetes-list-map-keys:
-                    - type
-                  x-kubernetes-list-type: map
-                failedIssuanceAttempts:
-                  description: The number of continuous failed issuance attempts up till now. This field gets removed (if set) on a successful issuance and gets set to 1 if unset and an issuance has failed. If an issuance has failed, the delay till the next issuance will be calculated using formula time.Hour * 2 ^ (failedIssuanceAttempts - 1).
-                  type: integer
-                lastFailureTime:
-                  description: LastFailureTime is the time as recorded by the Certificate controller of the most recent failure to complete a CertificateRequest for this Certificate resource. If set, cert-manager will not re-request another Certificate until 1 hour has elapsed from this time.
-                  type: string
-                  format: date-time
-                nextPrivateKeySecretName:
-                  description: The name of the Secret resource containing the private key to be used for the next certificate iteration. The keymanager controller will automatically set this field if the `Issuing` condition is set to `True`. It will automatically unset this field when the Issuing condition is not set or False.
-                  type: string
-                notAfter:
-                  description: The expiration time of the certificate stored in the secret named by this resource in `spec.secretName`.
-                  type: string
-                  format: date-time
-                notBefore:
-                  description: The time after which the certificate stored in the secret named by this resource in spec.secretName is valid.
-                  type: string
-                  format: date-time
-                renewalTime:
-                  description: RenewalTime is the time at which the certificate will be next renewed. If not set, no upcoming renewal is scheduled.
-                  type: string
-                  format: date-time
-                revision:
-                  description: "The current 'revision' of the certificate as issued. \n When a CertificateRequest resource is created, it will have the `cert-manager.io/certificate-revision` set to one greater than the current value of this field. \n Upon issuance, this field will be set to the value of the annotation on the CertificateRequest resource used to issue the certificate. \n Persisting the value on the CertificateRequest resource allows the certificates controller to know whether a request is part of an old issuance or if it is part of the ongoing revision's issuance by checking if the revision value in the annotation is greater than this field."
-                  type: integer
       served: true
       storage: true
 ```
+
 And the custom resource `spCloudCertificate.yaml`:
 
 ```yml
@@ -397,13 +202,6 @@ metadata:
 spec:
   secretName: temporal-w-spcloudt6t6sk7toegg-tls
   duration: 87600h # 10 years
-  renewBefore: 360h # 15d
-  usages:
-    - server auth
-    - client auth
-  issuerRef:
-    name: ca-issuer-temporal
-    kind: ClusterIssuer
   dnsNames:
     - w-spcloudt6t6sk7toegg
 ```
@@ -433,7 +231,7 @@ List all tables:
 | certificates.cert-manager.io          | Represents Custom resource certificates.cert-manager.io.                                                                                                         |
 | kubernetes_cluster_role               | ClusterRole contains rules that represent a set of permissions.                                                                                                  |
 | kubernetes_cluster_role_binding       | A ClusterRoleBinding grants the permissions defined in a cluster role to a user or set of users. Access granted by ClusterRoleBinding is cluster-wide.           |
-| ...                                                     | ...
+| ...                                   | ...
 ```
 
 To get details of a specific custom resource table, inspect it by name:
