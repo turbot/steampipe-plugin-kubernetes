@@ -163,23 +163,23 @@ And the custom resource `spCloudCertificate.yaml`:
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: temporal-w-spcloudt6t6sk7toegg-tls
+  name: temporal-w-spcloud123456
   labels:
-    workspace-id: w_spcloudct6t6sk7toegg
-    identity-id: o_spcloud6un5ogrh1bc0
+    workspace-id: w_spcloud123456
+    identity-id: o_spcloud123456
     region: apse1
     shard: "0001"
-    workspace-pluginset: "20220317010004"
+    workspace-pluginset: "202203170111114"
     app.kubernetes.io/component: steampipe-workspace-db
     app.kubernetes.io/managed-by: steampipe-api
     app.kubernetes.io/part-of: steampipe-cloud
-    app.kubernetes.io/instance: w-spcloudct6t6sk7toegg
+    app.kubernetes.io/instance: w-spcloud123456
     app.kubernetes.io/version: 0.13.3-workspace-spcloud.20220317010004
 spec:
-  secretName: temporal-w-spcloudt6t6sk7toegg-tls
+  secretName: temporal-w-spcloud123456-tls
   duration: 87600h # 10 years
   dnsNames:
-    - w-spcloudt6t6sk7toegg
+    - w-spcloud123456
 ```
 
 This plugin will automatically create a table called `certificates.cert-manager.io`:
