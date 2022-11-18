@@ -2,7 +2,7 @@
 
 _Bug fixes_
 
-- Temporarily disabled dynamic custom resource table creation due to aggregator connection incompatibility.([#95](https://github.com/turbot/steampipe-plugin-kubernetes/pull/95))
+- Temporarily disabled dynamic custom resource table creation due to aggregator connection incompatibility. ([#95](https://github.com/turbot/steampipe-plugin-kubernetes/pull/95))
 
 ## v0.13.0 [2022-11-16]
 
