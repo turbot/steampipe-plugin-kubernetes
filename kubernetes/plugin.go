@@ -30,7 +30,8 @@ func Plugin(ctx context.Context) *plugin.Plugin {
 			NewInstance: ConfigInstance,
 			Schema:      ConfigSchema,
 		},
-		SchemaMode:   plugin.SchemaModeDynamic,
+		// TODO: Change to dynamic, once aggregator functionality available with dynamic tables
+		SchemaMode:   plugin.SchemaModeStatic,
 		TableMapFunc: pluginTableDefinitions,
 	}
 
@@ -74,26 +75,27 @@ func pluginTableDefinitions(ctx context.Context, d *plugin.TableMapData) (map[st
 	}
 
 	// Fetch available CRDs
-	crds, err := listK8sDynamicCRDs(ctx, d.ConectionCache, d.Connection)
-	if err != nil {
-		plugin.Logger(ctx).Error("listK8sDynamicCRDs", "crds", err)
-		return nil, err
-	}
+	// TODO: Re-enable once aggregator functionality works with dynamic tables
+	// crds, err := listK8sDynamicCRDs(ctx, d.ConectionCache, d.Connection)
+	// if err != nil {
+	// 	plugin.Logger(ctx).Error("listK8sDynamicCRDs", "crds", err)
+	// 	return nil, err
+	// }
 
-	for _, crd := range crds {
-		ctx = context.WithValue(ctx, contextKey("CRDName"), crd.Name)
-		ctx = context.WithValue(ctx, contextKey("CustomResourceName"), crd.Spec.Names.Plural)
-		ctx = context.WithValue(ctx, contextKey("GroupName"), crd.Spec.Group)
-		for _, version := range crd.Spec.Versions {
-			if version.Served {
-				ctx = context.WithValue(ctx, contextKey("ActiveVersion"), version.Name)
-				ctx = context.WithValue(ctx, contextKey("VersionSchema"), version.Schema.OpenAPIV3Schema.Properties["spec"])
-			}
-		}
-		if tables[crd.Name] == nil {
-			tables[crd.Name] = tableKubernetesCustomResource(ctx)
-		}
-	}
+	// for _, crd := range crds {
+	// 	ctx = context.WithValue(ctx, contextKey("CRDName"), crd.Name)
+	// 	ctx = context.WithValue(ctx, contextKey("CustomResourceName"), crd.Spec.Names.Plural)
+	// 	ctx = context.WithValue(ctx, contextKey("GroupName"), crd.Spec.Group)
+	// 	for _, version := range crd.Spec.Versions {
+	// 		if version.Served {
+	// 			ctx = context.WithValue(ctx, contextKey("ActiveVersion"), version.Name)
+	// 			ctx = context.WithValue(ctx, contextKey("VersionSchema"), version.Schema.OpenAPIV3Schema.Properties["spec"])
+	// 		}
+	// 	}
+	// 	if tables[crd.Name] == nil {
+	// 		tables[crd.Name] = tableKubernetesCustomResource(ctx)
+	// 	}
+	// }
 
 	return tables, nil
 }
