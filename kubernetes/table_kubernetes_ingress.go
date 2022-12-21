@@ -33,7 +33,7 @@ func tableKubernetesIngress(ctx context.Context) *plugin.Table {
 				Transform:   transform.FromField("Spec.IngressClassName"),
 			},
 			{
-				Name:        "backend",
+				Name:        "default_backend",
 				Type:        proto.ColumnType_JSON,
 				Description: "A default backend capable of servicing requests that don't match any rule. At least one of 'backend' or 'rules' must be specified.",
 				Transform:   transform.FromField("Spec.DefaultBackend"),
