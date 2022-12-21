@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"k8s.io/api/extensions/v1beta1"
+	v1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
@@ -36,7 +36,7 @@ func tableKubernetesIngress(ctx context.Context) *plugin.Table {
 				Name:        "backend",
 				Type:        proto.ColumnType_JSON,
 				Description: "A default backend capable of servicing requests that don't match any rule. At least one of 'backend' or 'rules' must be specified.",
-				Transform:   transform.FromField("Spec.Backend"),
+				Transform:   transform.FromField("Spec.DefaultBackend"),
 			},
 			{
 				Name:        "tls",
@@ -109,11 +109,11 @@ func listK8sIngresses(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 		}
 	}
 
-	var response *v1beta1.IngressList
+	var response *v1.IngressList
 	pageLeft := true
 
 	for pageLeft {
-		response, err = clientset.ExtensionsV1beta1().Ingresses("").List(ctx, input)
+		response, err = clientset.NetworkingV1().Ingresses("").List(ctx, input)
 		if err != nil {
 			return nil, err
 		}
@@ -154,7 +154,7 @@ func getK8sIngress(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDa
 		return nil, nil
 	}
 
-	ingress, err := clientset.ExtensionsV1beta1().Ingresses(namespace).Get(ctx, name, metav1.GetOptions{})
+	ingress, err := clientset.NetworkingV1().Ingresses(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
 		return nil, err
 	}
@@ -165,6 +165,6 @@ func getK8sIngress(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDa
 //// TRANSFORM FUNCTIONS
 
 func transformIngressTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	obj := d.HydrateItem.(v1beta1.Ingress)
+	obj := d.HydrateItem.(v1.Ingress)
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }
