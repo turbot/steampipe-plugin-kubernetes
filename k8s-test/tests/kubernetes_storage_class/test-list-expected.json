@@ -1,0 +1,9 @@
+[
+	{
+		"allow_volume_expansion": true,
+		"name": "mystorage",
+		"reclaim_policy": "Retain",
+		"title": "mystorage",
+		"volume_binding_mode": "Immediate"
+	}
+]
