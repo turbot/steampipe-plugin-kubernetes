@@ -30,7 +30,7 @@ select
 from
   kubernetes_storage_class
 where
-  allow_volume_expansion;
+  not allow_volume_expansion;
 ```
 
 ### List storage classes with immediate volume binding mode
