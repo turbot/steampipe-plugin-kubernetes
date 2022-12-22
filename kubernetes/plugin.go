@@ -8,18 +8,15 @@ package kubernetes
 
 import (
 	"context"
-	"strings"
 
-	"github.com/turbot/steampipe-plugin-sdk/v5/connection"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
-	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const pluginName = "steampipe-plugin-kubernetes"
 
-type contextKey string
+// Uncomment once aggregator functionality available with dynamic tables
+// type contextKey string
 
 // Plugin creates this (k8s) plugin
 func Plugin(ctx context.Context) *plugin.Plugin {
@@ -100,39 +97,41 @@ func pluginTableDefinitions(ctx context.Context, d *plugin.TableMapData) (map[st
 	return tables, nil
 }
 
-func listK8sDynamicCRDs(ctx context.Context, cn *connection.ConnectionCache, c *plugin.Connection) ([]v1.CustomResourceDefinition, error) {
-	clientset, err := GetNewClientCRDRaw(ctx, cn, c)
-	if err != nil {
-		plugin.Logger(ctx).Error("listK8sDynamicCRDs", "GetNewClientCRDRaw", err)
-		return nil, err
-	}
+// Uncomment once aggregator functionality available with dynamic tables
 
-	input := metav1.ListOptions{
-		Limit: 500,
-	}
+// func listK8sDynamicCRDs(ctx context.Context, cn *connection.ConnectionCache, c *plugin.Connection) ([]v1.CustomResourceDefinition, error) {
+// 	clientset, err := GetNewClientCRDRaw(ctx, cn, c)
+// 	if err != nil {
+// 		plugin.Logger(ctx).Error("listK8sDynamicCRDs", "GetNewClientCRDRaw", err)
+// 		return nil, err
+// 	}
 
-	crds := []v1.CustomResourceDefinition{}
+// 	input := metav1.ListOptions{
+// 		Limit: 500,
+// 	}
 
-	pageLeft := true
-	for pageLeft {
-		response, err := clientset.ApiextensionsV1().CustomResourceDefinitions().List(ctx, input)
-		if err != nil {
-			// Handle err at the plugin load time if config is not setup properly
-			if strings.Contains(err.Error(), "/apis/apiextensions.k8s.io/v1/customresourcedefinitions?limit=500") {
-				return nil, nil
-			}
-			plugin.Logger(ctx).Error("listK8sDynamicCRDs", "list_err", err)
-			return nil, err
-		}
+// 	crds := []v1.CustomResourceDefinition{}
 
-		if response.GetContinue() != "" {
-			input.Continue = response.Continue
-		} else {
-			pageLeft = false
-		}
+// 	pageLeft := true
+// 	for pageLeft {
+// 		response, err := clientset.ApiextensionsV1().CustomResourceDefinitions().List(ctx, input)
+// 		if err != nil {
+// 			// Handle err at the plugin load time if config is not setup properly
+// 			if strings.Contains(err.Error(), "/apis/apiextensions.k8s.io/v1/customresourcedefinitions?limit=500") {
+// 				return nil, nil
+// 			}
+// 			plugin.Logger(ctx).Error("listK8sDynamicCRDs", "list_err", err)
+// 			return nil, err
+// 		}
 
-		crds = append(crds, response.Items...)
-	}
+// 		if response.GetContinue() != "" {
+// 			input.Continue = response.Continue
+// 		} else {
+// 			pageLeft = false
+// 		}
 
-	return crds, nil
-}
+// 		crds = append(crds, response.Items...)
+// 	}
+
+// 	return crds, nil
+// }
