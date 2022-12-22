@@ -144,7 +144,7 @@ func getK8sStorageClass(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 
 	name := d.EqualsQuals["name"].GetStringValue()
 
-	// return name is empty
+	// check if name is empty
 	if name == "" {
 		return nil, nil
 	}
