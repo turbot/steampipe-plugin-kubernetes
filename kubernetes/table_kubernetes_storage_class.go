@@ -91,11 +91,7 @@ func listK8sStorageClasses(ctx context.Context, d *plugin.QueryData, _ *plugin.H
 	limit := d.QueryContext.Limit
 	if d.QueryContext.Limit != nil {
 		if *limit < input.Limit {
-			if *limit < 1 {
-				input.Limit = 1
-			} else {
-				input.Limit = *limit
-			}
+			input.Limit = *limit
 		}
 	}
 
