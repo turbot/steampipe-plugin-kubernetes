@@ -17,7 +17,7 @@ from
   kubernetes_storage_class;
 ```
 
-### List storage classes that doesn't allow volume expansion
+### List storage classes that don't allow volume expansion
 
 ```sql
 select
