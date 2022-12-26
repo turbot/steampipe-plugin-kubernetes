@@ -33,7 +33,8 @@ where
   not allow_volume_expansion;
 ```
 
-### List storage classes with immediate volume binding mode
+### List storage classes with immediate volume binding mode enabled
+
 ```sql
 select
   name,
