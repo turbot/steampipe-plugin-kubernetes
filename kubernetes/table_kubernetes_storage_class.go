@@ -38,7 +38,7 @@ func tableKubernetesStorageClass(ctx context.Context) *plugin.Table {
 			{
 				Name:        "allow_volume_expansion",
 				Type:        proto.ColumnType_BOOL,
-				Description: "AllowVolumeExpansion shows whether the storage class allow volume expand.",
+				Description: "AllowVolumeExpansion shows whether the storage class allows volume expand.",
 				Transform:   transform.FromField("AllowVolumeExpansion"),
 			},
 			{
