@@ -44,7 +44,7 @@ func tableKubernetesStorageClass(ctx context.Context) *plugin.Table {
 			{
 				Name:        "volume_binding_mode",
 				Type:        proto.ColumnType_STRING,
-				Description: "VolumeBindingMode indicates how PersistentVolumeClaims should be provisioned and bound.  When unset, VolumeBindingImmediate is used. This field is only honored by servers that enable the VolumeScheduling feature.",
+				Description: "VolumeBindingMode indicates how PersistentVolumeClaims should be provisioned and bound. When unset, VolumeBindingImmediate is used. This field is only honored by servers that enable the VolumeScheduling feature.",
 			},
 			{
 				Name:        "allowed_topologies",
