@@ -15,7 +15,7 @@ import (
 func tableKubernetesStorageClass(ctx context.Context) *plugin.Table {
 	return &plugin.Table{
 		Name:        "kubernetes_storage_class",
-		Description: "A StorageClass provides a way for administrators to describe the classes of storage they offer.",
+		Description: "Storage class provides a way for administrators to describe the classes of storage they offer.",
 		Get: &plugin.GetConfig{
 			KeyColumns: plugin.SingleColumn("name"),
 			Hydrate:    getK8sStorageClass,
