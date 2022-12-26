@@ -1,3 +1,10 @@
+## v0.14.0 [2022-12-26]
+
+_What's new?_
+
+- New tables added
+  - [kubernetes_storage_class](https://hub.steampipe.io/plugins/turbot/kubernetes/tables/kubernetes_storage_class) ([#99](https://github.com/turbot/steampipe-plugin-kubernetes/pull/99))
+
 ## v0.13.1 [2022-11-18]
 
 _Bug fixes_
