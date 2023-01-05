@@ -7,7 +7,7 @@ _Bug fixes_
 
 _Dependencies_
 
-- Recompiled plugin with [steampipe-plugin-sdk v5.0.2](https://github.com/turbot/steampipe-plugin-sdk/blob/main/CHANGELOG.md#v502-2023-01-04) which fixes the issue where optional key column quals were not working correctly when passed in the `where` clause for the list hydrate call. ([#103](https://github.com/turbot/steampipe-plugin-kubernetes/pull/103))
+- Recompiled plugin with [steampipe-plugin-sdk v5.0.2](https://github.com/turbot/steampipe-plugin-sdk/blob/main/CHANGELOG.md#v502-2023-01-04) which fixes optional key column quals not working correctly for list hydrate call for plugins using `TableMapFunc`. ([#103](https://github.com/turbot/steampipe-plugin-kubernetes/pull/103))
 
 ## v0.14.0 [2022-12-26]
 
