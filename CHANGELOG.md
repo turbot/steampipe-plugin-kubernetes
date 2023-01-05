@@ -1,3 +1,14 @@
+## v0.15.0 [2023-01-05]
+
+_Bug fixes_
+
+- Renamed column `backend` to `default_backend` in `kubernetes_ingress` table to correctly follow the naming convention used in the API response. ([#98](https://github.com/turbot/steampipe-plugin-kubernetes/pull/98))
+- Fixed the `default_backend` column (earlier named as `backend`) in `kubernetes_ingress` table to correctly return data instead of an error. ([#98](https://github.com/turbot/steampipe-plugin-kubernetes/pull/98))
+
+_Dependencies_
+
+- Recompiled plugin with [steampipe-plugin-sdk v5.0.2](https://github.com/turbot/steampipe-plugin-sdk/blob/main/CHANGELOG.md#v502-2023-01-04) which fixes the issue where optional key column quals were not working correctly when passed in the `where` clause for the list hydrate call. ([#103](https://github.com/turbot/steampipe-plugin-kubernetes/pull/103))
+
 ## v0.14.0 [2022-12-26]
 
 _What's new?_
