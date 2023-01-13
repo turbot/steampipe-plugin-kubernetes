@@ -43,12 +43,12 @@ func tableKubernetesConfigMap(ctx context.Context) *plugin.Table {
 			},
 
 			//// Steampipe Standard Columns
-			// {
-			// 	Name:        "title",
-			// 	Type:        proto.ColumnType_STRING,
-			// 	Description: ColumnDescriptionTitle,
-			// 	Transform:   transform.FromField("Name"),
-			// },
+			{
+				Name:        "title",
+				Type:        proto.ColumnType_STRING,
+				Description: ColumnDescriptionTitle,
+				Transform:   transform.FromField("Name"),
+			},
 			{
 				Name:        "tags",
 				Type:        proto.ColumnType_JSON,
