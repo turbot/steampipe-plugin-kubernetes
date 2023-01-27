@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	ciliumClientset "github.com/cilium/cilium/pkg/k8s/client/clientset/versioned"
 	apiextension "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -201,6 +202,69 @@ func inClusterConfigCRD(ctx context.Context) (*apiextension.Clientset, error) {
 	}
 
 	clientset, err := apiextension.NewForConfig(clusterConfig)
+	if err != nil {
+		plugin.Logger(ctx).Error("inClusterConfigCRD", "NewForConfig", err)
+		return nil, err
+	}
+
+	return clientset, nil
+}
+
+// GetNewClientCilium :: gets client for querying k8s apis for CustomResourceDefinition
+func GetNewClientCilium(ctx context.Context, d *plugin.QueryData) (*ciliumClientset.Clientset, error) {
+	// have we already created and cached the session?
+	serviceCacheKey := "GetNewClientCilium"
+
+	if cachedData, ok := d.ConnectionManager.Cache.Get(serviceCacheKey); ok {
+		return cachedData.(*ciliumClientset.Clientset), nil
+	}
+
+	kubeconfig, err := getK8Config(ctx, d)
+	if err != nil {
+		plugin.Logger(ctx).Error("GetNewClientCilium", "getK8Config", err)
+		return nil, err
+	}
+
+	// Get a rest.Config from the kubeconfig file.
+	restconfig, err := kubeconfig.ClientConfig()
+	if err != nil {
+		// if .kube/config file is not available check for inClusterConfig
+		configErr := err
+		if strings.Contains(err.Error(), ".kube/config: no such file or directory") {
+			clientset, err := inClusterConfigCilium(ctx)
+			if err != nil {
+				return nil, errors.New(configErr.Error() + ", " + err.Error())
+			}
+
+			// save clientset in cache
+			d.ConnectionManager.Cache.Set(serviceCacheKey, clientset)
+
+			return clientset, nil
+		}
+
+		return nil, err
+	}
+
+	clientset, err := ciliumClientset.NewForConfig(restconfig)
+	if err != nil {
+		plugin.Logger(ctx).Error("GetNewClientCilium", "NewForConfig", err)
+		return nil, err
+	}
+
+	// save clientset in cache
+	d.ConnectionManager.Cache.Set(serviceCacheKey, clientset)
+
+	return clientset, err
+}
+
+func inClusterConfigCilium(ctx context.Context) (*ciliumClientset.Clientset, error) {
+	clusterConfig, err := rest.InClusterConfig()
+	if err != nil {
+		plugin.Logger(ctx).Error("inClusterConfigCRD", "InClusterConfig", err)
+		return nil, err
+	}
+
+	clientset, err := ciliumClientset.NewForConfig(clusterConfig)
 	if err != nil {
 		plugin.Logger(ctx).Error("inClusterConfigCRD", "NewForConfig", err)
 		return nil, err

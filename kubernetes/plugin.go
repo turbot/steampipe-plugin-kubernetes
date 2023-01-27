@@ -38,6 +38,7 @@ func Plugin(ctx context.Context) *plugin.Plugin {
 func pluginTableDefinitions(ctx context.Context, d *plugin.TableMapData) (map[string]*plugin.Table, error) {
 	// Initialize tables
 	tables := map[string]*plugin.Table{
+		"kubernetes_cilium_network_policy":      tableKubernetesCiliumNetworkPolicy(ctx),
 		"kubernetes_cluster_role":               tableKubernetesClusterRole(ctx),
 		"kubernetes_cluster_role_binding":       tableKubernetesClusterRoleBinding(ctx),
 		"kubernetes_config_map":                 tableKubernetesConfigMap(ctx),
