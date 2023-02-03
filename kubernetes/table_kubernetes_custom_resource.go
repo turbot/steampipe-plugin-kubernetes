@@ -32,29 +32,34 @@ func tableKubernetesCustomResource(ctx context.Context) *plugin.Table {
 func getCustomResourcesDynamicColumns(ctx context.Context, versionSchema interface{}) []*plugin.Column {
 	var columns []*plugin.Column
 
+	// default metadata columns
+	allColumns := []string{"name", "uid", "kind", "api_version", "namespace", "creation_timestamp", "labels"}
+
+	flag := 0
 	schema := versionSchema.(v1.JSONSchemaProps)
 	for k, v := range schema.Properties {
-		column := &plugin.Column{
-			Name:        k,
-			Description: v.Description,
-			Transform:   transform.FromP(extractSpecProperty, k),
+		for _, specColumn := range allColumns {
+			if specColumn == k {
+				flag = 1
+				column := &plugin.Column{
+					Name:        "spec_" + k,
+					Description: v.Description,
+					Transform:   transform.FromP(extractSpecProperty, k),
+				}
+				setDynamicColumns(v, column)
+				columns = append(columns, column)
+			}
 		}
-		switch v.Type {
-		case "string":
-			column.Type = proto.ColumnType_STRING
-		case "integer":
-			column.Type = proto.ColumnType_INT
-		case "boolean":
-			column.Type = proto.ColumnType_BOOL
-		case "date", "dateTime":
-			column.Type = proto.ColumnType_TIMESTAMP
-		case "double":
-			column.Type = proto.ColumnType_DOUBLE
-		default:
-			column.Type = proto.ColumnType_JSON
+		if flag == 0 {
+			column := &plugin.Column{
+				Name:        k,
+				Description: v.Description,
+				Transform:   transform.FromP(extractSpecProperty, k),
+			}
+			allColumns = append(allColumns, k)
+			setDynamicColumns(v, column)
+			columns = append(columns, column)
 		}
-
-		columns = append(columns, column)
 	}
 
 	return columns
@@ -128,4 +133,21 @@ func extractSpecProperty(_ context.Context, d *transform.TransformData) (interfa
 	}
 
 	return nil, nil
+}
+
+func setDynamicColumns(v v1.JSONSchemaProps, column *plugin.Column) {
+	switch v.Type {
+	case "string":
+		column.Type = proto.ColumnType_STRING
+	case "integer":
+		column.Type = proto.ColumnType_INT
+	case "boolean":
+		column.Type = proto.ColumnType_BOOL
+	case "date", "dateTime":
+		column.Type = proto.ColumnType_TIMESTAMP
+	case "double":
+		column.Type = proto.ColumnType_DOUBLE
+	default:
+		column.Type = proto.ColumnType_JSON
+	}
 }

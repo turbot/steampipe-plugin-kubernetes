@@ -30,6 +30,7 @@ func Plugin(ctx context.Context) *plugin.Plugin {
 			NewInstance: ConfigInstance,
 			Schema:      ConfigSchema,
 		},
+		// TODO: Change to dynamic, once aggregator functionality available with dynamic tables
 		SchemaMode:   plugin.SchemaModeDynamic,
 		TableMapFunc: pluginTableDefinitions,
 	}
@@ -88,9 +89,12 @@ func pluginTableDefinitions(ctx context.Context, d *plugin.TableMapData) (map[st
 		for _, version := range crd.Spec.Versions {
 			if version.Served {
 				ctx = context.WithValue(ctx, contextKey("ActiveVersion"), version.Name)
-				ctx = context.WithValue(ctx, contextKey("VersionSchema"), version.Schema.OpenAPIV3Schema.Properties["spec"])
+				if version.Schema != nil && version.Schema.OpenAPIV3Schema != nil {
+					ctx = context.WithValue(ctx, contextKey("VersionSchema"), version.Schema.OpenAPIV3Schema.Properties["spec"])
+				}
 			}
 		}
+
 		if tables[crd.Name] == nil {
 			tables[crd.Name] = tableKubernetesCustomResource(ctx)
 		}
