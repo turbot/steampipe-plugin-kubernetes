@@ -41,29 +41,28 @@ func getCustomResourcesDynamicColumns(ctx context.Context, versionSchemaSpec int
 	flag := 0
 	schemaSpec := versionSchemaSpec.(v1.JSONSchemaProps)
 	for k, v := range schemaSpec.Properties {
-		if !strings.Contains(v.Description, "Deprecated") {
-			for _, specColumn := range allColumns {
-				if specColumn == k {
-					flag = 1
-					column := &plugin.Column{
-						Name:        "spec_" + strcase.ToSnake(k),
-						Description: v.Description,
-						Transform:   transform.FromP(extractSpecProperty, k),
-					}
-					setDynamicColumns(v, column)
-					columns = append(columns, column)
-				}
-			}
-			if flag == 0 {
+		for _, specColumn := range allColumns {
+			if specColumn == strcase.ToSnake(k) {
+				flag = 1
 				column := &plugin.Column{
-					Name:        strcase.ToSnake(k),
+					Name:        "spec_" + strcase.ToSnake(k),
 					Description: v.Description,
 					Transform:   transform.FromP(extractSpecProperty, k),
 				}
-				allColumns = append(allColumns, k)
 				setDynamicColumns(v, column)
 				columns = append(columns, column)
 			}
+		}
+		// remove any conflicting column if it is deprecated
+		if flag == 0 && !strings.Contains(v.Description, "Deprecated") {
+			column := &plugin.Column{
+				Name:        strcase.ToSnake(k),
+				Description: v.Description,
+				Transform:   transform.FromP(extractSpecProperty, k),
+			}
+			allColumns = append(allColumns, strcase.ToSnake(k))
+			setDynamicColumns(v, column)
+			columns = append(columns, column)
 		}
 	}
 
@@ -71,29 +70,27 @@ func getCustomResourcesDynamicColumns(ctx context.Context, versionSchemaSpec int
 	flag = 0
 	schemaStaus := versionSchemaStatus.(v1.JSONSchemaProps)
 	for k, v := range schemaStaus.Properties {
-		if !strings.Contains(v.Description, "Deprecated") {
-			for _, statusColumn := range allColumns {
-				if statusColumn == k {
-					flag = 1
-					column := &plugin.Column{
-						Name:        "status_" + strcase.ToSnake(k),
-						Description: v.Description,
-						Transform:   transform.FromP(extractStatusProperty, k),
-					}
-					setDynamicColumns(v, column)
-					columns = append(columns, column)
-				}
-			}
-			if flag == 0 {
+		for _, statusColumn := range allColumns {
+			if statusColumn == k {
+				flag = 1
 				column := &plugin.Column{
-					Name:        strcase.ToSnake(k),
+					Name:        "status_" + strcase.ToSnake(k),
 					Description: v.Description,
 					Transform:   transform.FromP(extractStatusProperty, k),
 				}
-				allColumns = append(allColumns, k)
 				setDynamicColumns(v, column)
 				columns = append(columns, column)
 			}
+		}
+		if flag == 0 {
+			column := &plugin.Column{
+				Name:        strcase.ToSnake(k),
+				Description: v.Description,
+				Transform:   transform.FromP(extractStatusProperty, k),
+			}
+			allColumns = append(allColumns, k)
+			setDynamicColumns(v, column)
+			columns = append(columns, column)
 		}
 	}
 
