@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/iancoleman/strcase"
 	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
@@ -18,47 +19,81 @@ func tableKubernetesCustomResource(ctx context.Context) *plugin.Table {
 	resourceName := ctx.Value(contextKey("CustomResourceName")).(string)
 	groupName := ctx.Value(contextKey("GroupName")).(string)
 	activeVersion := ctx.Value(contextKey("ActiveVersion")).(string)
-	versionSchema := ctx.Value(contextKey("VersionSchema"))
+	versionSchemaSpec := ctx.Value(contextKey("VersionSchemaSpec"))
+	versionSchemaStatus := ctx.Value(contextKey("VersionSchemaStatus"))
 	return &plugin.Table{
 		Name:        crdName,
 		Description: fmt.Sprintf("Custom resource for %s.", crdName),
 		List: &plugin.ListConfig{
 			Hydrate: listK8sCustomResources(ctx, crdName, resourceName, groupName, activeVersion),
 		},
-		Columns: k8sCRDResourceCommonColumns(getCustomResourcesDynamicColumns(ctx, versionSchema)),
+		Columns: k8sCRDResourceCommonColumns(getCustomResourcesDynamicColumns(ctx, versionSchemaSpec, versionSchemaStatus)),
 	}
 }
 
-func getCustomResourcesDynamicColumns(ctx context.Context, versionSchema interface{}) []*plugin.Column {
+func getCustomResourcesDynamicColumns(ctx context.Context, versionSchemaSpec interface{}, versionSchemaStatus interface{}) []*plugin.Column {
 	var columns []*plugin.Column
 
 	// default metadata columns
 	allColumns := []string{"name", "uid", "kind", "api_version", "namespace", "creation_timestamp", "labels"}
 
+	// add the spec columns
 	flag := 0
-	schema := versionSchema.(v1.JSONSchemaProps)
-	for k, v := range schema.Properties {
-		for _, specColumn := range allColumns {
-			if specColumn == k {
-				flag = 1
+	schemaSpec := versionSchemaSpec.(v1.JSONSchemaProps)
+	for k, v := range schemaSpec.Properties {
+		if !strings.Contains(v.Description, "Deprecated") {
+			for _, specColumn := range allColumns {
+				if specColumn == k {
+					flag = 1
+					column := &plugin.Column{
+						Name:        "spec_" + strcase.ToSnake(k),
+						Description: v.Description,
+						Transform:   transform.FromP(extractSpecProperty, k),
+					}
+					setDynamicColumns(v, column)
+					columns = append(columns, column)
+				}
+			}
+			if flag == 0 {
 				column := &plugin.Column{
-					Name:        "spec_" + k,
+					Name:        strcase.ToSnake(k),
 					Description: v.Description,
 					Transform:   transform.FromP(extractSpecProperty, k),
 				}
+				allColumns = append(allColumns, k)
 				setDynamicColumns(v, column)
 				columns = append(columns, column)
 			}
 		}
-		if flag == 0 {
-			column := &plugin.Column{
-				Name:        k,
-				Description: v.Description,
-				Transform:   transform.FromP(extractSpecProperty, k),
+	}
+
+	// add the status columns
+	flag = 0
+	schemaStaus := versionSchemaStatus.(v1.JSONSchemaProps)
+	for k, v := range schemaStaus.Properties {
+		if !strings.Contains(v.Description, "Deprecated") {
+			for _, statusColumn := range allColumns {
+				if statusColumn == k {
+					flag = 1
+					column := &plugin.Column{
+						Name:        "status_" + strcase.ToSnake(k),
+						Description: v.Description,
+						Transform:   transform.FromP(extractStatusProperty, k),
+					}
+					setDynamicColumns(v, column)
+					columns = append(columns, column)
+				}
 			}
-			allColumns = append(allColumns, k)
-			setDynamicColumns(v, column)
-			columns = append(columns, column)
+			if flag == 0 {
+				column := &plugin.Column{
+					Name:        strcase.ToSnake(k),
+					Description: v.Description,
+					Transform:   transform.FromP(extractStatusProperty, k),
+				}
+				allColumns = append(allColumns, k)
+				setDynamicColumns(v, column)
+				columns = append(columns, column)
+			}
 		}
 	}
 
@@ -75,6 +110,7 @@ type CRDResourceInfo struct {
 	Annotations       interface{}
 	Spec              interface{}
 	Labels            interface{}
+	Status            interface{}
 }
 
 // //// HYDRATE FUNCTIONS
@@ -102,6 +138,7 @@ func listK8sCustomResources(ctx context.Context, crdName string, resourceName st
 
 		for _, crd := range response.Items {
 			data := crd.Object
+			plugin.Logger(ctx).Error("status", data["status"])
 			d.StreamListItem(ctx, &CRDResourceInfo{
 				Name:              crd.GetName(),
 				UID:               crd.GetUID(),
@@ -111,6 +148,7 @@ func listK8sCustomResources(ctx context.Context, crdName string, resourceName st
 				CreationTimestamp: crd.GetCreationTimestamp(),
 				Labels:            crd.GetLabels(),
 				Spec:              data["spec"],
+				Status:            data["status"],
 			})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
@@ -130,6 +168,17 @@ func extractSpecProperty(_ context.Context, d *transform.TransformData) (interfa
 	spec := ob.(map[string]interface{})
 	if spec[param] != nil {
 		return spec[param], nil
+	}
+
+	return nil, nil
+}
+
+func extractStatusProperty(_ context.Context, d *transform.TransformData) (interface{}, error) {
+	ob := d.HydrateItem.(*CRDResourceInfo).Status
+	param := d.Param.(string)
+	status := ob.(map[string]interface{})
+	if status[param] != nil {
+		return status[param], nil
 	}
 
 	return nil, nil

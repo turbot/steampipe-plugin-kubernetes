@@ -8,6 +8,7 @@ package kubernetes
 
 import (
 	"context"
+	"regexp"
 	"strings"
 
 	"github.com/turbot/steampipe-plugin-sdk/v5/connection"
@@ -90,13 +91,16 @@ func pluginTableDefinitions(ctx context.Context, d *plugin.TableMapData) (map[st
 			if version.Served {
 				ctx = context.WithValue(ctx, contextKey("ActiveVersion"), version.Name)
 				if version.Schema != nil && version.Schema.OpenAPIV3Schema != nil {
-					ctx = context.WithValue(ctx, contextKey("VersionSchema"), version.Schema.OpenAPIV3Schema.Properties["spec"])
+					ctx = context.WithValue(ctx, contextKey("VersionSchemaSpec"), version.Schema.OpenAPIV3Schema.Properties["spec"])
+					ctx = context.WithValue(ctx, contextKey("VersionSchemaStatus"), version.Schema.OpenAPIV3Schema.Properties["status"])
+
 				}
 			}
 		}
 
 		if tables[crd.Name] == nil {
-			tables[crd.Name] = tableKubernetesCustomResource(ctx)
+			re := regexp.MustCompile(`[-.]`)
+			tables[re.ReplaceAllString(crd.Name, "_")] = tableKubernetesCustomResource(ctx)
 		}
 	}
 
