@@ -8,7 +8,6 @@ For instance, given the CRD `certManager.yaml`:
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  # Table name of the custom resource
   name: certificates.cert-manager.io
   labels:
     app: cert-manager
@@ -31,6 +30,25 @@ spec:
     - name: v1
       subresources:
         status: {}
+      additionalPrinterColumns:
+        - jsonPath: .status.conditions[?(@.type=="Ready")].status
+          name: Ready
+          type: string
+        - jsonPath: .spec.secretName
+          name: Secret
+          type: string
+        - jsonPath: .spec.issuerRef.name
+          name: Issuer
+          priority: 1
+          type: string
+        - jsonPath: .status.conditions[?(@.type=="Ready")].message
+          name: Status
+          priority: 1
+          type: string
+        - jsonPath: .metadata.creationTimestamp
+          description: CreationTimestamp is a timestamp representing the server time when this object was created. It is not guaranteed to be set in happens-before order across separate operations. Clients may not set this value. It is represented in RFC3339 form and is in UTC.
+          name: Age
+          type: date
       schema:
         openAPIV3Schema:
           description: "A Certificate resource should be created to ensure an up to date and signed x509 certificate is stored in the Kubernetes Secret resource named in `spec.secretName`. \n The stored certificate will be renewed before it expires (as configured by `spec.renewBefore`)."
@@ -50,6 +68,7 @@ spec:
               description: Desired state of the Certificate resource.
               type: object
               required:
+                - issuerRef
                 - secretName
               properties:
                 additionalOutputFormats:
@@ -94,6 +113,24 @@ spec:
                 isCA:
                   description: IsCA will mark this Certificate as valid for certificate signing. This will automatically add the `cert sign` usage to the list of `usages`.
                   type: boolean
+                issuerRef:
+                  description: IssuerRef is a reference to the issuer for this certificate. If the `kind` field is not set, or set to `Issuer`, an Issuer resource with the given name in the same namespace as the Certificate will be used. If the `kind` field is set to `ClusterIssuer`, a ClusterIssuer with the provided name will be used. The `name` field in this stanza is required at all times.
+                  type: object
+                  required:
+                    - name
+                  properties:
+                    group:
+                      description: Group of the resource being referred to.
+                      type: string
+                    kind:
+                      description: Kind of the resource being referred to.
+                      type: string
+                    name:
+                      description: Name of the resource being referred to.
+                      type: string
+                keystores:
+                  description: Keystores configures additional keystore output formats stored in the `secretName` Secret resource.
+                  type: object
                 literalSubject:
                   description: LiteralSubject is an LDAP formatted string that represents the [X.509 Subject field](https://datatracker.ietf.org/doc/html/rfc5280#section-4.1.2.6). Use this *instead* of the Subject field if you need to ensure the correct ordering of the RDN sequence, such as when issuing certs for LDAP authentication. See https://github.com/cert-manager/cert-manager/issues/3203, https://github.com/cert-manager/cert-manager/issues/4424. This field is alpha level and is only supported by cert-manager installations where LiteralCertificateSubject feature gate is enabled on both cert-manager controller and webhook.
                   type: string
@@ -147,78 +184,74 @@ spec:
                       type: object
                       additionalProperties:
                         type: string
+                uris:
+                  description: URIs is a list of URI subjectAltNames to be set on the Certificate.
+                  type: array
+                  items:
+                    type: string
                 usages:
                   description: Usages is the set of x509 usages that are requested for the certificate. Defaults to `digital signature` and `key encipherment` if not specified.
                   type: array
                   items:
                     description: "KeyUsage specifies valid usage contexts for keys. See: https://tools.ietf.org/html/rfc5280#section-4.2.1.3 https://tools.ietf.org/html/rfc5280#section-4.2.1.12 \n Valid KeyUsage values are as follows: \"signing\", \"digital signature\", \"content commitment\", \"key encipherment\", \"key agreement\", \"data encipherment\", \"cert sign\", \"crl sign\", \"encipher only\", \"decipher only\", \"any\", \"server auth\", \"client auth\", \"code signing\", \"email protection\", \"s/mime\", \"ipsec end system\", \"ipsec tunnel\", \"ipsec user\", \"timestamping\", \"ocsp signing\", \"microsoft sgc\", \"netscape sgc\""
                     type: string
-      status:
-        description: Status of the Certificate. This is set and managed automatically.
-        type: object
-        properties:
-          conditions:
-            description: List of status conditions to indicate the status of certificates. Known condition types are `Ready` and `Issuing`.
-            type: array
-            items:
-              description: CertificateCondition contains condition information for an Certificate.
+            status:
+              description: Status of the Certificate. This is set and managed automatically.
               type: object
-              required:
-                - status
-                - type
               properties:
-                lastTransitionTime:
-                  description: LastTransitionTime is the timestamp corresponding to the last status change of this condition.
+                conditions:
+                  description: List of status conditions to indicate the status of certificates. Known condition types are `Ready` and `Issuing`.
+                  type: array
+                  items:
+                    description: CertificateCondition contains condition information for an Certificate.
+                    type: object
+                    required:
+                      - status
+                      - type
+                    properties:
+                      lastTransitionTime:
+                        description: LastTransitionTime is the timestamp corresponding to the last status change of this condition.
+                        type: string
+                        format: date-time
+                      message:
+                        description: Message is a human readable description of the details of the last transition, complementing reason.
+                        type: string
+                      observedGeneration:
+                        description: If set, this represents the .metadata.generation that the condition was set based upon. For instance, if .metadata.generation is currently 12, but the .status.condition[x].observedGeneration is 9, the condition is out of date with respect to the current state of the Certificate.
+                        type: integer
+                        format: int64
+                      reason:
+                        description: Reason is a brief machine readable explanation for the condition's last transition.
+                        type: string
+                      status:
+                        description: Status of the condition, one of (`True`, `False`, `Unknown`).
+                        type: string
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                      type:
+                        description: Type of the condition, known values are (`Ready`, `Issuing`).
+                        type: string
+                  x-kubernetes-list-map-keys:
+                    - type
+                  x-kubernetes-list-type: map
+                lastFailureTime:
+                  description: LastFailureTime is the time as recorded by the Certificate controller of the most recent failure to complete a CertificateRequest for this Certificate resource. If set, cert-manager will not re-request another Certificate until 1 hour has elapsed from this time.
                   type: string
                   format: date-time
-                message:
-                  description: Message is a human readable description of the details of the last transition, complementing reason.
+                notAfter:
+                  description: The expiration time of the certificate stored in the secret named by this resource in `spec.secretName`.
                   type: string
-                observedGeneration:
-                  description: If set, this represents the .metadata.generation that the condition was set based upon. For instance, if .metadata.generation is currently 12, but the .status.condition[x].observedGeneration is 9, the condition is out of date with respect to the current state of the Certificate.
-                  type: integer
-                  format: int64
-                reason:
-                  description: Reason is a brief machine readable explanation for the condition's last transition.
+                  format: date-time
+                notBefore:
+                  description: The time after which the certificate stored in the secret named by this resource in spec.secretName is valid.
                   type: string
-                status:
-                  description: Status of the condition, one of (`True`, `False`, `Unknown`).
+                  format: date-time
+                renewalTime:
+                  description: RenewalTime is the time at which the certificate will be next renewed. If not set, no upcoming renewal is scheduled.
                   type: string
-                  enum:
-                    - "True"
-                    - "False"
-                    - Unknown
-                type:
-                  description: Type of the condition, known values are (`Ready`, `Issuing`).
-                  type: string
-            x-kubernetes-list-map-keys:
-              - type
-            x-kubernetes-list-type: map
-          failedIssuanceAttempts:
-            description: The number of continuous failed issuance attempts up till now. This field gets removed (if set) on a successful issuance and gets set to 1 if unset and an issuance has failed. If an issuance has failed, the delay till the next issuance will be calculated using formula time.Hour * 2 ^ (failedIssuanceAttempts - 1).
-            type: integer
-          lastFailureTime:
-            description: LastFailureTime is the time as recorded by the Certificate controller of the most recent failure to complete a CertificateRequest for this Certificate resource. If set, cert-manager will not re-request another Certificate until 1 hour has elapsed from this time.
-            type: string
-            format: date-time
-          nextPrivateKeySecretName:
-            description: The name of the Secret resource containing the private key to be used for the next certificate iteration. The keymanager controller will automatically set this field if the `Issuing` condition is set to `True`. It will automatically unset this field when the Issuing condition is not set or False.
-            type: string
-          notAfter:
-            description: The expiration time of the certificate stored in the secret named by this resource in `spec.secretName`.
-            type: string
-            format: date-time
-          notBefore:
-            description: The time after which the certificate stored in the secret named by this resource in spec.secretName is valid.
-            type: string
-            format: date-time
-          renewalTime:
-            description: RenewalTime is the time at which the certificate will be next renewed. If not set, no upcoming renewal is scheduled.
-            type: string
-            format: date-time
-          revision:
-            description: "The current 'revision' of the certificate as issued. \n When a CertificateRequest resource is created, it will have the `cert-manager.io/certificate-revision` set to one greater than the current value of this field. \n Upon issuance, this field will be set to the value of the annotation on the CertificateRequest resource used to issue the certificate. \n Persisting the value on the CertificateRequest resource allows the certificates controller to know whether a request is part of an old issuance or if it is part of the ongoing revision's issuance by checking if the revision value in the annotation is greater than this field."
-            type: integer
+                  format: date-time
       served: true
       storage: true
 ```
@@ -281,77 +314,74 @@ To get details of a specific custom resource table, inspect it by name:
 
 ```sql
 .inspect certificates_cert_manager_io;
-+------------------------------+--------------------------+----------------------------------------------------------------------------------------------------------+
-| column                       | type                     | description                                                                                              |
-+------------------------------+--------------------------+----------------------------------------------------------------------------------------------------------+
-| _ctx                         | jsonb                    | Steampipe context in JSON form, e.g. connection_name.                                                    |
-| api_version                  | text                     | The API version of the resource.                                                                         |
-| common_name                  | text                     | CommonName is a common name to be used on the Certificate. The CommonName should have a length of 64 cha |
-|                              |                          | racters or fewer to avoid generating invalid CSRs. This value is ignored by TLS clients when any subject |
-|                              |                          |  alt name is set. This is x509 behaviour: https://tools.ietf.org/html/rfc6125#section-6.4.4              |
-| conditions                   | jsonb                    | List of status conditions to indicate the status of certificates. Known condition types are `Ready` and  |
-|                              |                          | `Issuing`.                                                                                               |
-| creation_timestamp           | timestamp with time zone | CreationTimestamp is a timestamp representing the server time when this object was created.              |
-| dns_names                    | jsonb                    | DNSNames is a list of DNS subjectAltNames to be set on the Certificate.                                  |
-| duration                     | text                     | The requested 'duration' (i.e. lifetime) of the Certificate. This option may be ignored/overridden by so |
-|                              |                          | me issuer types. If unset this defaults to 90 days. Certificate will be renewed either 2/3 through its d |
-|                              |                          | uration or `renewBefore` period before its expiry, whichever is later. Minimum accepted duration is 1 ho |
-|                              |                          | ur. Value must be in units accepted by Go time.ParseDuration https://golang.org/pkg/time/#ParseDuration  |
-| email_addresses              | jsonb                    | EmailAddresses is a list of email subjectAltNames to be set on the Certificate.                          |
-| encode_usages_in_request     | boolean                  | EncodeUsagesInRequest controls whether key usages should be present in the CertificateRequest            |
-| ip_addresses                 | jsonb                    | IPAddresses is a list of IP address subjectAltNames to be set on the Certificate.                        |
-| is_ca                        | boolean                  | IsCA will mark this Certificate as valid for certificate signing. This will automatically add the `cert  |
-|                              |                          | sign` usage to the list of `usages`.                                                                     |
-| issuer_ref                   | jsonb                    | IssuerRef is a reference to the issuer for this certificate. If the `kind` field is not set, or set to ` |
-|                              |                          | Issuer`, an Issuer resource with the given name in the same namespace as the Certificate will be used. I |
-|                              |                          | f the `kind` field is set to `ClusterIssuer`, a ClusterIssuer with the provided name will be used. The ` |
-|                              |                          | name` field in this stanza is required at all times.                                                     |
-| keystores                    | jsonb                    | Keystores configures additional keystore output formats stored in the `secretName` Secret resource.      |
-| kind                         | text                     | Type of resource.                                                                                        |
-| labels                       | jsonb                    | Map of string keys and values that can be used to organize and categorize (scope and select) objects. Ma |
-|                              |                          | y match selectors of replication controllers and services.                                               |
-| last_failure_time            | text                     | LastFailureTime is the time as recorded by the Certificate controller of the most recent failure to comp |
-|                              |                          | lete a CertificateRequest for this Certificate resource. If set, cert-manager will not re-request anothe |
-|                              |                          | r Certificate until 1 hour has elapsed from this time.                                                   |
-| name                         | text                     | Name of resource.                                                                                        |
-| namespace                    | text                     | Namespace defines the space within which each name must be unique.                                       |
-| next_private_key_secret_name | text                     | The name of the Secret resource containing the private key to be used for the next certificate iteration |
-|                              |                          | . The keymanager controller will automatically set this field if the `Issuing` condition is set to `True |
-|                              |                          | `. It will automatically unset this field when the Issuing condition is not set or False.                |
-| not_after                    | text                     | The expiration time of the certificate stored in the secret named by this resource in `spec.secretName`. |
-| not_before                   | text                     | The time after which the certificate stored in the secret named by this resource in spec.secretName is v |
-|                              |                          | alid.                                                                                                    |
-| private_key                  | jsonb                    | Options to control private keys used for the Certificate.                                                |
-| renew_before                 | text                     | How long before the currently issued certificate's expiry cert-manager should renew the certificate. The |
-|                              |                          |  default is 2/3 of the issued certificate's duration. Minimum accepted value is 5 minutes. Value must be |
-|                              |                          |  in units accepted by Go time.ParseDuration https://golang.org/pkg/time/#ParseDuration                   |
-| renewal_time                 | text                     | RenewalTime is the time at which the certificate will be next renewed. If not set, no upcoming renewal i |
-|                              |                          | s scheduled.                                                                                             |
-| revision                     | bigint                   | The current 'revision' of the certificate as issued.                                                     |
-|                              |                          |  When a CertificateRequest resource is created, it will have the `cert-manager.io/certificate-revision`  |
-|                              |                          | set to one greater than the current value of this field.                                                 |
-|                              |                          |  Upon issuance, this field will be set to the value of the annotation on the CertificateRequest resource |
-|                              |                          |  used to issue the certificate.                                                                          |
-|                              |                          |  Persisting the value on the CertificateRequest resource allows the certificates controller to know whet |
-|                              |                          | her a request is part of an old issuance or if it is part of the ongoing revision's issuance by checking |
-|                              |                          |  if the revision value in the annotation is greater than this field.                                     |
-| revision_history_limit       | bigint                   | revisionHistoryLimit is the maximum number of CertificateRequest revisions that are maintained in the Ce |
-|                              |                          | rtificate's history. Each revision represents a single `CertificateRequest` created by this Certificate, |
-|                              |                          |  either when it was created, renewed, or Spec was changed. Revisions will be removed by oldest first if  |
-|                              |                          | the number of revisions exceeds this number. If set, revisionHistoryLimit must be a value of `1` or grea |
-|                              |                          | ter. If unset (`nil`), revisions will not be garbage collected. Default value is `nil`.                  |
-| secret_name                  | text                     | SecretName is the name of the secret resource that will be automatically created and managed by this Cer |
-|                              |                          | tificate resource. It will be populated with a private key and certificate, signed by the denoted issuer |
-|                              |                          | .                                                                                                        |
-| secret_template              | jsonb                    | SecretTemplate defines annotations and labels to be propagated to the Kubernetes Secret when it is creat |
-|                              |                          | ed or updated. Once created, labels and annotations are not yet removed from the Secret when they are re |
-|                              |                          | moved from the template. See https://github.com/jetstack/cert-manager/issues/4292                        |
-| subject                      | jsonb                    | Full X509 name specification (https://golang.org/pkg/crypto/x509/pkix/#Name).                            |
-| uid                          | text                     | UID is the unique in time and space value for this object.                                               |
-| uris                         | jsonb                    | URIs is a list of URI subjectAltNames to be set on the Certificate.                                      |
-| usages                       | jsonb                    | Usages is the set of x509 usages that are requested for the certificate. Defaults to `digital signature` |
-|                              |                          |  and `key encipherment` if not specified.                                                                |
-+------------------------------+--------------------------+----------------------------------------------------------------------------------------------------------+
++---------------------------+--------------------------+-------------------------------------------------------------------------------------------------------------+
+| column                    | type                     | description                                                                                                 |
++---------------------------+--------------------------+-------------------------------------------------------------------------------------------------------------+
+| _ctx                      | jsonb                    | Steampipe context in JSON form, e.g. connection_name.                                                       |
+| additional_output_formats | jsonb                    | AdditionalOutputFormats defines extra output formats of the private key and signed certificate chain to be  |
+|                           |                          | written to this Certificate's target Secret. This is an Alpha Feature and is only enabled with the `--featu |
+|                           |                          | re-gates=AdditionalCertificateOutputFormats=true` option on both the controller and webhook components.     |
+| api_version               | text                     | The API version of the resource.                                                                            |
+| common_name               | text                     | CommonName is a common name to be used on the Certificate. The CommonName should have a length of 64 charac |
+|                           |                          | ters or fewer to avoid generating invalid CSRs. This value is ignored by TLS clients when any subject alt n |
+|                           |                          | ame is set. This is x509 behaviour: https://tools.ietf.org/html/rfc6125#section-6.4.4                       |
+| conditions                | jsonb                    | List of status conditions to indicate the status of certificates. Known condition types are `Ready` and `Is |
+|                           |                          | suing`.                                                                                                     |
+| creation_timestamp        | timestamp with time zone | CreationTimestamp is a timestamp representing the server time when this object was created.                 |
+| dns_names                 | jsonb                    | DNSNames is a list of DNS subjectAltNames to be set on the Certificate.                                     |
+| duration                  | text                     | The requested 'duration' (i.e. lifetime) of the Certificate. This option may be ignored/overridden by some  |
+|                           |                          | issuer types. If unset this defaults to 90 days. Certificate will be renewed either 2/3 through its duratio |
+|                           |                          | n or `renewBefore` period before its expiry, whichever is later. Minimum accepted duration is 1 hour. Value |
+|                           |                          |  must be in units accepted by Go time.ParseDuration https://golang.org/pkg/time/#ParseDuration              |
+| email_addresses           | jsonb                    | EmailAddresses is a list of email subjectAltNames to be set on the Certificate.                             |
+| encode_usages_in_request  | boolean                  | EncodeUsagesInRequest controls whether key usages should be present in the CertificateRequest               |
+| ip_addresses              | jsonb                    | IPAddresses is a list of IP address subjectAltNames to be set on the Certificate.                           |
+| is_ca                     | boolean                  | IsCA will mark this Certificate as valid for certificate signing. This will automatically add the `cert sig |
+|                           |                          | n` usage to the list of `usages`.                                                                           |
+| issuer_ref                | jsonb                    | IssuerRef is a reference to the issuer for this certificate. If the `kind` field is not set, or set to `Iss |
+|                           |                          | uer`, an Issuer resource with the given name in the same namespace as the Certificate will be used. If the  |
+|                           |                          | `kind` field is set to `ClusterIssuer`, a ClusterIssuer with the provided name will be used. The `name` fie |
+|                           |                          | ld in this stanza is required at all times.                                                                 |
+| keystores                 | jsonb                    | Keystores configures additional keystore output formats stored in the `secretName` Secret resource.         |
+| kind                      | text                     | Type of resource.                                                                                           |
+| labels                    | jsonb                    | Map of string keys and values that can be used to organize and categorize (scope and select) objects. May m |
+|                           |                          | atch selectors of replication controllers and services.                                                     |
+| last_failure_time         | text                     | LastFailureTime is the time as recorded by the Certificate controller of the most recent failure to complet |
+|                           |                          | e a CertificateRequest for this Certificate resource. If set, cert-manager will not re-request another Cert |
+|                           |                          | ificate until 1 hour has elapsed from this time.                                                            |
+| literal_subject           | text                     | LiteralSubject is an LDAP formatted string that represents the [X.509 Subject field](https://datatracker.ie |
+|                           |                          | tf.org/doc/html/rfc5280#section-4.1.2.6). Use this *instead* of the Subject field if you need to ensure the |
+|                           |                          |  correct ordering of the RDN sequence, such as when issuing certs for LDAP authentication. See https://gith |
+|                           |                          | ub.com/cert-manager/cert-manager/issues/3203, https://github.com/cert-manager/cert-manager/issues/4424. Thi |
+|                           |                          | s field is alpha level and is only supported by cert-manager installations where LiteralCertificateSubject  |
+|                           |                          | feature gate is enabled on both cert-manager controller and webhook.                                        |
+| name                      | text                     | Name of resource.                                                                                           |
+| namespace                 | text                     | Namespace defines the space within which each name must be unique.                                          |
+| not_after                 | text                     | The expiration time of the certificate stored in the secret named by this resource in `spec.secretName`.    |
+| not_before                | text                     | The time after which the certificate stored in the secret named by this resource in spec.secretName is vali |
+|                           |                          | d.                                                                                                          |
+| private_key               | jsonb                    | Options to control private keys used for the Certificate.                                                   |
+| renew_before              | text                     | How long before the currently issued certificate's expiry cert-manager should renew the certificate. The de |
+|                           |                          | fault is 2/3 of the issued certificate's duration. Minimum accepted value is 5 minutes. Value must be in un |
+|                           |                          | its accepted by Go time.ParseDuration https://golang.org/pkg/time/#ParseDuration                            |
+| renewal_time              | text                     | RenewalTime is the time at which the certificate will be next renewed. If not set, no upcoming renewal is s |
+|                           |                          | cheduled.                                                                                                   |
+| revision_history_limit    | bigint                   | revisionHistoryLimit is the maximum number of CertificateRequest revisions that are maintained in the Certi |
+|                           |                          | ficate's history. Each revision represents a single `CertificateRequest` created by this Certificate, eithe |
+|                           |                          | r when it was created, renewed, or Spec was changed. Revisions will be removed by oldest first if the numbe |
+|                           |                          | r of revisions exceeds this number. If set, revisionHistoryLimit must be a value of `1` or greater. If unse |
+|                           |                          | t (`nil`), revisions will not be garbage collected. Default value is `nil`.                                 |
+| secret_name               | text                     | SecretName is the name of the secret resource that will be automatically created and managed by this Certif |
+|                           |                          | icate resource. It will be populated with a private key and certificate, signed by the denoted issuer.      |
+| secret_template           | jsonb                    | SecretTemplate defines annotations and labels to be copied to the Certificate's Secret. Labels and annotati |
+|                           |                          | ons on the Secret will be changed as they appear on the SecretTemplate when added or removed. SecretTemplat |
+|                           |                          | e annotations are added in conjunction with, and cannot overwrite, the base set of annotations cert-manager |
+|                           |                          |  sets on the Certificate's Secret.                                                                          |
+| uid                       | text                     | UID is the unique in time and space value for this object.                                                  |
+| uris                      | jsonb                    | URIs is a list of URI subjectAltNames to be set on the Certificate.                                         |
+| usages                    | jsonb                    | Usages is the set of x509 usages that are requested for the certificate. Defaults to `digital signature` an |
+|                           |                          | d `key encipherment` if not specified.                                                                      |
++---------------------------+--------------------------+-------------------------------------------------------------------------------------------------------------+
 ```
 
 ### List all certificates
