@@ -138,7 +138,6 @@ func listK8sCustomResources(ctx context.Context, crdName string, resourceName st
 
 		for _, crd := range response.Items {
 			data := crd.Object
-			plugin.Logger(ctx).Error("status", data["status"])
 			d.StreamListItem(ctx, &CRDResourceInfo{
 				Name:              crd.GetName(),
 				UID:               crd.GetUID(),
