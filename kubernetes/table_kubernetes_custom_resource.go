@@ -32,7 +32,7 @@ func tableKubernetesCustomResource(ctx context.Context) *plugin.Table {
 }
 
 func getCustomResourcesDynamicColumns(ctx context.Context, versionSchemaSpec interface{}, versionSchemaStatus interface{}) []*plugin.Column {
-	var columns []*plugin.Column
+	columns := []*plugin.Column{}
 
 	// default metadata columns
 	allColumns := []string{"name", "uid", "kind", "api_version", "namespace", "creation_timestamp", "labels"}
@@ -53,8 +53,7 @@ func getCustomResourcesDynamicColumns(ctx context.Context, versionSchemaSpec int
 				columns = append(columns, column)
 			}
 		}
-		// remove any conflicting column if it is deprecated
-		if flag == 0 && !strings.Contains(v.Description, "Deprecated") {
+		if flag == 0 {
 			column := &plugin.Column{
 				Name:        strcase.ToSnake(k),
 				Description: v.Description,
@@ -68,10 +67,10 @@ func getCustomResourcesDynamicColumns(ctx context.Context, versionSchemaSpec int
 
 	// add the status columns
 	flag = 0
-	schemaStaus := versionSchemaStatus.(v1.JSONSchemaProps)
-	for k, v := range schemaStaus.Properties {
+	schemaStatus := versionSchemaStatus.(v1.JSONSchemaProps)
+	for k, v := range schemaStatus.Properties {
 		for _, statusColumn := range allColumns {
-			if statusColumn == k {
+			if statusColumn == strcase.ToSnake(k) {
 				flag = 1
 				column := &plugin.Column{
 					Name:        "status_" + strcase.ToSnake(k),
@@ -88,7 +87,6 @@ func getCustomResourcesDynamicColumns(ctx context.Context, versionSchemaSpec int
 				Description: v.Description,
 				Transform:   transform.FromP(extractStatusProperty, k),
 			}
-			allColumns = append(allColumns, k)
 			setDynamicColumns(v, column)
 			columns = append(columns, column)
 		}

@@ -31,7 +31,6 @@ func Plugin(ctx context.Context) *plugin.Plugin {
 			NewInstance: ConfigInstance,
 			Schema:      ConfigSchema,
 		},
-		// TODO: Change to dynamic, once aggregator functionality available with dynamic tables
 		SchemaMode:   plugin.SchemaModeDynamic,
 		TableMapFunc: pluginTableDefinitions,
 	}
@@ -98,8 +97,9 @@ func pluginTableDefinitions(ctx context.Context, d *plugin.TableMapData) (map[st
 			}
 		}
 
+		// add the tables in sneak case
+		re := regexp.MustCompile(`[-.]`)
 		if tables[crd.Name] == nil {
-			re := regexp.MustCompile(`[-.]`)
 			tables[re.ReplaceAllString(crd.Name, "_")] = tableKubernetesCustomResource(ctx)
 		}
 	}
