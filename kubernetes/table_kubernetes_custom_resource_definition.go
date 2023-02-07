@@ -103,7 +103,7 @@ func getK8sCustomResourceDefinition(ctx context.Context, d *plugin.QueryData, _ 
 	}
 
 	response, err := clientset.ApiextensionsV1().CustomResourceDefinitions().Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
+	if err != nil && !isNotFoundError(err) {
 		plugin.Logger(ctx).Error("getK8sCustomResourceDefinition", "api_err", err)
 		return nil, err
 	}
