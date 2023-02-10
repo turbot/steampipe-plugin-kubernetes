@@ -1,3 +1,13 @@
+## v0.16.0 [2023-02-10]
+
+_Enhancements_
+
+- Added column `title` to `kubernetes_config_map` table. ([#107](https://github.com/turbot/steampipe-plugin-kubernetes/pull/107))
+
+_Dependencies_
+
+- Recompiled plugin with [steampipe-plugin-sdk v5.1.3](https://github.com/turbot/steampipe-plugin-sdk/blob/main/CHANGELOG.md#v513-2023-02-09) which fixes the query caching functionality. ([#111](https://github.com/turbot/steampipe-plugin-kubernetes/pull/111))
+
 ## v0.15.0 [2023-01-05]
 
 _Bug fixes_
