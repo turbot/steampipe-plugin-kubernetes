@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/turbot/go-kit/types"
 	"github.com/turbot/steampipe-plugin-sdk/v5/connection"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
@@ -115,7 +116,8 @@ func listK8sDynamicCRDs(ctx context.Context, cn *connection.ConnectionCache, c *
 	}
 
 	input := metav1.ListOptions{
-		Limit: 500,
+		Limit:          500,
+		TimeoutSeconds: types.Int64(10),
 	}
 
 	crds := []v1.CustomResourceDefinition{}
