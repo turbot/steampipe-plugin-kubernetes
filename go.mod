@@ -6,7 +6,7 @@ require (
 	github.com/iancoleman/strcase v0.2.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/turbot/go-kit v0.5.0
-	github.com/turbot/steampipe-plugin-sdk/v5 v5.3.0-alpha.1
+	github.com/turbot/steampipe-plugin-sdk/v5 v5.2.0-rc.8
 	k8s.io/api v0.25.2
 	k8s.io/apiextensions-apiserver v0.25.2
 	k8s.io/apimachinery v0.25.3
@@ -47,7 +47,6 @@ require (
 	github.com/fatih/color v1.13.0 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/gertd/go-pluralize v0.2.1 // indirect
-	github.com/gertd/wild v0.0.1 // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
