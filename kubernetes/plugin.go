@@ -100,8 +100,10 @@ func pluginTableDefinitions(ctx context.Context, d *plugin.TableMapData) (map[st
 
 		// add the tables in sneak case
 		re := regexp.MustCompile(`[-.]`)
-		if tables[crd.Name] == nil {
-			tables[re.ReplaceAllString(crd.Name, "_")] = tableKubernetesCustomResource(ctx)
+		if tables["kubernetes_"+crd.Spec.Names.Singular] == nil {
+			tables["kubernetes_"+crd.Spec.Names.Singular] = tableKubernetesCustomResource(ctx)
+		} else {
+			tables["kubernetes_"+crd.Spec.Names.Singular+"_"+re.ReplaceAllString(crd.Spec.Group, "_")] = tableKubernetesCustomResource(ctx)
 		}
 	}
 

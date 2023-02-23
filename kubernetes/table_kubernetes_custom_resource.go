@@ -158,6 +158,9 @@ func listK8sCustomResources(ctx context.Context, crdName string, resourceName st
 
 func extractSpecProperty(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	ob := d.HydrateItem.(*CRDResourceInfo).Spec
+	if ob == nil {
+		return nil, nil
+	}
 	param := d.Param.(string)
 	spec := ob.(map[string]interface{})
 	if spec[param] != nil {
@@ -169,6 +172,9 @@ func extractSpecProperty(_ context.Context, d *transform.TransformData) (interfa
 
 func extractStatusProperty(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	ob := d.HydrateItem.(*CRDResourceInfo).Status
+	if ob == nil {
+		return nil, nil
+	}
 	param := d.Param.(string)
 	status := ob.(map[string]interface{})
 	if status[param] != nil {
