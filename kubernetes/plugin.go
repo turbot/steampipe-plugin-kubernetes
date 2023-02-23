@@ -117,7 +117,7 @@ func listK8sDynamicCRDs(ctx context.Context, cn *connection.ConnectionCache, c *
 
 	input := metav1.ListOptions{
 		Limit:          500,
-		TimeoutSeconds: types.Int64(10),
+		TimeoutSeconds: types.Int64(5),
 	}
 
 	crds := []v1.CustomResourceDefinition{}
