@@ -93,7 +93,7 @@ func pluginTableDefinitions(ctx context.Context, d *plugin.TableMapData) (map[st
 				if version.Schema != nil && version.Schema.OpenAPIV3Schema != nil {
 					ctx = context.WithValue(ctx, contextKey("VersionSchemaSpec"), version.Schema.OpenAPIV3Schema.Properties["spec"])
 					ctx = context.WithValue(ctx, contextKey("VersionSchemaStatus"), version.Schema.OpenAPIV3Schema.Properties["status"])
-
+					ctx = context.WithValue(ctx, contextKey("VersionSchemaDescription"), version.Schema.OpenAPIV3Schema.Description)
 				}
 			}
 		}

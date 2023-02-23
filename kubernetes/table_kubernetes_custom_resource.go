@@ -2,7 +2,6 @@ package kubernetes
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/iancoleman/strcase"
@@ -21,9 +20,10 @@ func tableKubernetesCustomResource(ctx context.Context) *plugin.Table {
 	activeVersion := ctx.Value(contextKey("ActiveVersion")).(string)
 	versionSchemaSpec := ctx.Value(contextKey("VersionSchemaSpec"))
 	versionSchemaStatus := ctx.Value(contextKey("VersionSchemaStatus"))
+	VersionSchemaDescription := ctx.Value(contextKey("VersionSchemaDescription")).(string)
 	return &plugin.Table{
 		Name:        crdName,
-		Description: fmt.Sprintf("Custom resource for %s.", crdName),
+		Description: VersionSchemaDescription + "Custom resource for " + crdName + ".",
 		List: &plugin.ListConfig{
 			Hydrate: listK8sCustomResources(ctx, crdName, resourceName, groupName, activeVersion),
 		},
