@@ -21,8 +21,9 @@ func tableKubernetesCustomResource(ctx context.Context) *plugin.Table {
 	versionSchemaSpec := ctx.Value(contextKey("VersionSchemaSpec"))
 	versionSchemaStatus := ctx.Value(contextKey("VersionSchemaStatus"))
 	VersionSchemaDescription := ctx.Value(contextKey("VersionSchemaDescription")).(string)
+	tableName := ctx.Value(contextKey("TableName")).(string)
 	return &plugin.Table{
-		Name:        crdName,
+		Name:        tableName,
 		Description: VersionSchemaDescription + "Custom resource for " + crdName + ".",
 		List: &plugin.ListConfig{
 			Hydrate: listK8sCustomResources(ctx, crdName, resourceName, groupName, activeVersion),
@@ -31,7 +32,7 @@ func tableKubernetesCustomResource(ctx context.Context) *plugin.Table {
 	}
 }
 
-func getCustomResourcesDynamicColumns(ctx context.Context, versionSchemaSpec interface{}, versionSchemaStatus interface{}) []*plugin.Column {
+func getCustomResourcesDynamicColumns(_ context.Context, versionSchemaSpec interface{}, versionSchemaStatus interface{}) []*plugin.Column {
 	columns := []*plugin.Column{}
 
 	// default metadata columns

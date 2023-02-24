@@ -93,7 +93,9 @@ func pluginTableDefinitions(ctx context.Context, d *plugin.TableMapData) (map[st
 				if version.Schema != nil && version.Schema.OpenAPIV3Schema != nil {
 					ctx = context.WithValue(ctx, contextKey("VersionSchemaSpec"), version.Schema.OpenAPIV3Schema.Properties["spec"])
 					ctx = context.WithValue(ctx, contextKey("VersionSchemaStatus"), version.Schema.OpenAPIV3Schema.Properties["status"])
-					ctx = context.WithValue(ctx, contextKey("VersionSchemaDescription"), version.Schema.OpenAPIV3Schema.Description)
+					if len(version.Schema.OpenAPIV3Schema.Description) > 0 {
+						ctx = context.WithValue(ctx, contextKey("VersionSchemaDescription"), strings.TrimSuffix(version.Schema.OpenAPIV3Schema.Description, ".")+".")
+					}
 				}
 			}
 		}
@@ -101,8 +103,10 @@ func pluginTableDefinitions(ctx context.Context, d *plugin.TableMapData) (map[st
 		// add the tables in sneak case
 		re := regexp.MustCompile(`[-.]`)
 		if tables["kubernetes_"+crd.Spec.Names.Singular] == nil {
+			ctx = context.WithValue(ctx, contextKey("TableName"), "kubernetes_"+crd.Spec.Names.Singular)
 			tables["kubernetes_"+crd.Spec.Names.Singular] = tableKubernetesCustomResource(ctx)
 		} else {
+			ctx = context.WithValue(ctx, contextKey("TableName"), "kubernetes_"+crd.Spec.Names.Singular+"_"+re.ReplaceAllString(crd.Spec.Group, "_"))
 			tables["kubernetes_"+crd.Spec.Names.Singular+"_"+re.ReplaceAllString(crd.Spec.Group, "_")] = tableKubernetesCustomResource(ctx)
 		}
 	}

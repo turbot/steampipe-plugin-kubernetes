@@ -1,6 +1,6 @@
-# Table: {custom_resource_name_group_name}
+# Table: kubernetes\_{custom_resource_name}
 
-Query data from the custom resource called `{custom_resource_name_group_name}`, e.g., `certificates_cert_manager_io`, `storeconfigs_crossplane_io`. A table is automatically created to represent each custom resource.
+Query data from the custom resource called `kubernetes_{custom_resource_singular_name}`, e.g., `kubernetes_certificate`, `kubernetes_capacityrequest`. A table is automatically created to represent each custom resource.
 
 For instance, given the CRD `certManager.yaml`:
 
@@ -22,6 +22,7 @@ spec:
     shortNames:
       - cert
       - certs
+    # table name - kubernetes_certificate
     singular: certificate
     categories:
       - cert-manager
@@ -281,10 +282,10 @@ spec:
     - w-spcloud123456
 ```
 
-This plugin will automatically create a table called `certificates_cert_manager_io`:
+This plugin will automatically create a table called `kubernetes_certificate`:
 
 ```
-> select name, uid, kind, api_version, namespace from certificates_cert_manager_io;
+> select name, uid, kind, api_version, namespace from kubernetes_certificate;
 +------------------------------------+--------------------------------------+-------------+--------------------+-----------+
 | name                               | uid                                  | kind        | api_version        | namespace |
 +------------------------------------+--------------------------------------+-------------+--------------------+-----------+
@@ -303,7 +304,7 @@ List all tables:
 +---------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 | table                                 | description                                                                                                                                                      |
 +---------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| certificates_cert_manager_io          | Represents Custom resource certificates.cert-manager.io.                                                                                                         |
+| kubernetes_certificate                | A Certificate resource should be created to ensure an up to date and signed x509 certificate is stored in the Kubernetes Secret resource named in `spec.secretName`. The stored certificate will be renewed before it expires (as configured by `spec.renewBefore`).Custom resource for certificates.cert-manager.io.                                                                                                         |
 | kubernetes_cluster_role               | ClusterRole contains rules that represent a set of permissions.                                                                                                  |
 | kubernetes_cluster_role_binding       | A ClusterRoleBinding grants the permissions defined in a cluster role to a user or set of users. Access granted by ClusterRoleBinding is cluster-wide.           |
 | ...                                   | ...                                                                                                                                                              |
@@ -313,7 +314,7 @@ List all tables:
 To get details of a specific custom resource table, inspect it by name:
 
 ```sql
-.inspect certificates_cert_manager_io;
+.inspect kubernetes_certificate;
 +---------------------------+--------------------------+-------------------------------------------------------------------------------------------------------------+
 | column                    | type                     | description                                                                                                 |
 +---------------------------+--------------------------+-------------------------------------------------------------------------------------------------------------+
@@ -394,7 +395,7 @@ select
   creation_timestamp,
   api_version
 from
-  certificates_cert_manager_io;
+  kubernetes_certificate;
 ```
 
 ### List certificates added in the last 24 hours
@@ -407,7 +408,7 @@ select
   creation_timestamp,
   api_version
 from
-  certificates_cert_manager_io
+  kubernetes_certificate
 where
   creation_timestamp = now() - interval '24 hrs';
 ```
@@ -422,7 +423,7 @@ select
   creation_timestamp,
   api_version
 from
-  certificates_cert_manager_io
+  kubernetes_certificate
 where
   is_ca;
 ```
@@ -437,7 +438,7 @@ select
   creation_timestamp,
   api_version
 from
-  certificates_cert_manager_io
+  kubernetes_certificate
 where
   now() > to_timestamp(not_after,'YYYY-MM-DD');
 ```
