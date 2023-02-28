@@ -8,7 +8,6 @@ package kubernetes
 
 import (
 	"context"
-	"regexp"
 	"strings"
 
 	"github.com/turbot/go-kit/types"
@@ -77,39 +76,39 @@ func pluginTableDefinitions(ctx context.Context, d *plugin.TableMapData) (map[st
 	}
 
 	// Fetch available CRDs
-	crds, err := listK8sDynamicCRDs(ctx, d.ConectionCache, d.Connection)
+	_, err := listK8sDynamicCRDs(ctx, d.ConectionCache, d.Connection)
 	if err != nil {
 		plugin.Logger(ctx).Error("listK8sDynamicCRDs", "crds", err)
 		return nil, err
 	}
 
-	for _, crd := range crds {
-		ctx = context.WithValue(ctx, contextKey("CRDName"), crd.Name)
-		ctx = context.WithValue(ctx, contextKey("CustomResourceName"), crd.Spec.Names.Plural)
-		ctx = context.WithValue(ctx, contextKey("GroupName"), crd.Spec.Group)
-		for _, version := range crd.Spec.Versions {
-			if version.Served {
-				ctx = context.WithValue(ctx, contextKey("ActiveVersion"), version.Name)
-				if version.Schema != nil && version.Schema.OpenAPIV3Schema != nil {
-					ctx = context.WithValue(ctx, contextKey("VersionSchemaSpec"), version.Schema.OpenAPIV3Schema.Properties["spec"])
-					ctx = context.WithValue(ctx, contextKey("VersionSchemaStatus"), version.Schema.OpenAPIV3Schema.Properties["status"])
-					if len(version.Schema.OpenAPIV3Schema.Description) > 0 {
-						ctx = context.WithValue(ctx, contextKey("VersionSchemaDescription"), strings.TrimSuffix(version.Schema.OpenAPIV3Schema.Description, ".")+".")
-					}
-				}
-			}
-		}
+	// for _, crd := range crds {
+	// 	ctx = context.WithValue(ctx, contextKey("CRDName"), crd.Name)
+	// 	ctx = context.WithValue(ctx, contextKey("CustomResourceName"), crd.Spec.Names.Plural)
+	// 	ctx = context.WithValue(ctx, contextKey("GroupName"), crd.Spec.Group)
+	// 	for _, version := range crd.Spec.Versions {
+	// 		if version.Served {
+	// 			ctx = context.WithValue(ctx, contextKey("ActiveVersion"), version.Name)
+	// 			if version.Schema != nil && version.Schema.OpenAPIV3Schema != nil {
+	// 				ctx = context.WithValue(ctx, contextKey("VersionSchemaSpec"), version.Schema.OpenAPIV3Schema.Properties["spec"])
+	// 				ctx = context.WithValue(ctx, contextKey("VersionSchemaStatus"), version.Schema.OpenAPIV3Schema.Properties["status"])
+	// 				if len(version.Schema.OpenAPIV3Schema.Description) > 0 {
+	// 					ctx = context.WithValue(ctx, contextKey("VersionSchemaDescription"), strings.TrimSuffix(version.Schema.OpenAPIV3Schema.Description, ".")+".")
+	// 				}
+	// 			}
+	// 		}
+	// 	}
 
-		// add the tables in sneak case
-		re := regexp.MustCompile(`[-.]`)
-		if tables["kubernetes_"+crd.Spec.Names.Singular] == nil {
-			ctx = context.WithValue(ctx, contextKey("TableName"), "kubernetes_"+crd.Spec.Names.Singular)
-			tables["kubernetes_"+crd.Spec.Names.Singular] = tableKubernetesCustomResource(ctx)
-		} else {
-			ctx = context.WithValue(ctx, contextKey("TableName"), "kubernetes_"+crd.Spec.Names.Singular+"_"+re.ReplaceAllString(crd.Spec.Group, "_"))
-			tables["kubernetes_"+crd.Spec.Names.Singular+"_"+re.ReplaceAllString(crd.Spec.Group, "_")] = tableKubernetesCustomResource(ctx)
-		}
-	}
+	// 	// add the tables in sneak case
+	// 	re := regexp.MustCompile(`[-.]`)
+	// 	if tables["kubernetes_"+crd.Spec.Names.Singular] == nil {
+	// 		ctx = context.WithValue(ctx, contextKey("TableName"), "kubernetes_"+crd.Spec.Names.Singular)
+	// 		tables["kubernetes_"+crd.Spec.Names.Singular] = tableKubernetesCustomResource(ctx)
+	// 	} else {
+	// 		ctx = context.WithValue(ctx, contextKey("TableName"), "kubernetes_"+crd.Spec.Names.Singular+"_"+re.ReplaceAllString(crd.Spec.Group, "_"))
+	// 		tables["kubernetes_"+crd.Spec.Names.Singular+"_"+re.ReplaceAllString(crd.Spec.Group, "_")] = tableKubernetesCustomResource(ctx)
+	// 	}
+	// }
 
 	return tables, nil
 }
