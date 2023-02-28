@@ -8,6 +8,7 @@ package kubernetes
 
 import (
 	"context"
+	"regexp"
 	"strings"
 
 	"github.com/turbot/go-kit/types"
@@ -100,14 +101,15 @@ func pluginTableDefinitions(ctx context.Context, d *plugin.TableMapData) (map[st
 		}
 
 		// add the tables in sneak case
-		// re := regexp.MustCompile(`[-.]`)
-		// if tables["kubernetes_"+crd.Spec.Names.Singular] == nil {
-		// 	ctx = context.WithValue(ctx, contextKey("TableName"), "kubernetes_"+crd.Spec.Names.Singular)
-		// 	tables["kubernetes_"+crd.Spec.Names.Singular] = tableKubernetesCustomResource(ctx)
-		// } else {
-		// 	ctx = context.WithValue(ctx, contextKey("TableName"), "kubernetes_"+crd.Spec.Names.Singular+"_"+re.ReplaceAllString(crd.Spec.Group, "_"))
-		// 	tables["kubernetes_"+crd.Spec.Names.Singular+"_"+re.ReplaceAllString(crd.Spec.Group, "_")] = tableKubernetesCustomResource(ctx)
-		// }
+		re := regexp.MustCompile(`[-.]`)
+		plugin.Logger(ctx).Error("listK8sDynamicCRDs", "spec_names", crd.Spec.Names)
+		if tables["kubernetes_"+crd.Spec.Names.Singular] == nil {
+			ctx = context.WithValue(ctx, contextKey("TableName"), "kubernetes_"+crd.Spec.Names.Singular)
+			tables["kubernetes_"+crd.Spec.Names.Singular] = tableKubernetesCustomResource(ctx)
+		} else {
+			ctx = context.WithValue(ctx, contextKey("TableName"), "kubernetes_"+crd.Spec.Names.Singular+"_"+re.ReplaceAllString(crd.Spec.Group, "_"))
+			tables["kubernetes_"+crd.Spec.Names.Singular+"_"+re.ReplaceAllString(crd.Spec.Group, "_")] = tableKubernetesCustomResource(ctx)
+		}
 	}
 
 	return tables, nil
