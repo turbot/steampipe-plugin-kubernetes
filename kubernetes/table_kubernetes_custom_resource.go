@@ -20,11 +20,16 @@ func tableKubernetesCustomResource(ctx context.Context) *plugin.Table {
 	activeVersion := ctx.Value(contextKey("ActiveVersion")).(string)
 	versionSchemaSpec := ctx.Value(contextKey("VersionSchemaSpec"))
 	versionSchemaStatus := ctx.Value(contextKey("VersionSchemaStatus"))
-	VersionSchemaDescription := ctx.Value(contextKey("VersionSchemaDescription")).(string)
 	tableName := ctx.Value(contextKey("TableName")).(string)
+	var description string
+	if ctx.Value(contextKey("VersionSchemaDescription")) == nil {
+		description = "Custom resource for " + crdName + "."
+	} else {
+		description = ctx.Value(contextKey("VersionSchemaDescription")).(string) + " Custom resource for " + crdName + "."
+	}
 	return &plugin.Table{
 		Name:        tableName,
-		Description: VersionSchemaDescription + "Custom resource for " + crdName + ".",
+		Description: description,
 		List: &plugin.ListConfig{
 			Hydrate: listK8sCustomResources(ctx, crdName, resourceName, groupName, activeVersion),
 		},

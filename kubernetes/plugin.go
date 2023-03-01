@@ -102,16 +102,12 @@ func pluginTableDefinitions(ctx context.Context, d *plugin.TableMapData) (map[st
 
 		// add the tables in sneak case
 		re := regexp.MustCompile(`[-.]`)
-		// if crd.Spec.Names == nil {
-		// 	plugin.Logger(ctx).Error("listK8sDynamicCRDs", "spec_names_crd.Name", crd.Name)
-		// 	plugin.Logger(ctx).Error("listK8sDynamicCRDs", "spec_names2", crd.Spec.Names.Plural)
-		// }
-		if tables["kubernetes_"+crd.Spec.Names.Plural] == nil {
-			ctx = context.WithValue(ctx, contextKey("TableName"), "kubernetes_"+crd.Spec.Names.Plural)
-			tables["kubernetes_"+crd.Spec.Names.Plural] = tableKubernetesCustomResource(ctx)
+		if tables["kubernetes_"+crd.Spec.Names.Singular] == nil {
+			ctx = context.WithValue(ctx, contextKey("TableName"), "kubernetes_"+crd.Spec.Names.Singular)
+			tables["kubernetes_"+crd.Spec.Names.Singular] = tableKubernetesCustomResource(ctx)
 		} else {
-			ctx = context.WithValue(ctx, contextKey("TableName"), "kubernetes_"+crd.Spec.Names.Plural+"_"+re.ReplaceAllString(crd.Spec.Group, "_"))
-			tables["kubernetes_"+crd.Spec.Names.Plural+"_"+re.ReplaceAllString(crd.Spec.Group, "_")] = tableKubernetesCustomResource(ctx)
+			ctx = context.WithValue(ctx, contextKey("TableName"), "kubernetes_"+crd.Spec.Names.Singular+"_"+re.ReplaceAllString(crd.Spec.Group, "_"))
+			tables["kubernetes_"+crd.Spec.Names.Singular+"_"+re.ReplaceAllString(crd.Spec.Group, "_")] = tableKubernetesCustomResource(ctx)
 		}
 	}
 
