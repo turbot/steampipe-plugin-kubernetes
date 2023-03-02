@@ -132,6 +132,7 @@ func listK8sCustomResources(ctx context.Context, crdName string, resourceName st
 
 		response, err := clientset.Resource(resourceId).List(ctx, metav1.ListOptions{})
 		if err != nil {
+			// Handle not found error code
 			if strings.Contains(err.Error(), "could not find the requested resource") {
 				return nil, nil
 			}

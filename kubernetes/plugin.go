@@ -100,7 +100,7 @@ func pluginTableDefinitions(ctx context.Context, d *plugin.TableMapData) (map[st
 			}
 		}
 
-		// add the tables in sneak case
+		// add the tables in snake case
 		re := regexp.MustCompile(`[-.]`)
 		if tables["kubernetes_"+crd.Spec.Names.Singular] == nil {
 			ctx = context.WithValue(ctx, contextKey("TableName"), "kubernetes_"+crd.Spec.Names.Singular)

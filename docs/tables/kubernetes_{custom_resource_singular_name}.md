@@ -1,8 +1,8 @@
-# Table: kubernetes_{custom_resource_singular_name}
+# Table: kubernetes\_{custom_resource_singular_name}
 
 Query data from the custom resource called `kubernetes_{custom_resource_singular_name}`, e.g., `kubernetes_certificate`, `kubernetes_capacityrequest`. A table is automatically created to represent each custom resource.
 
-If the table name is already created in the above format and exist in the table list, then the subsequent ones will have the fully qualified name `kubernetes_{custom_resource_singular_name}_{custom_resource_group_name}`, e.g., `kubernetes_certificate_cert_manager_io`.
+If the table name is already created in the above format and exists in the table list, then the subsequent ones will have the fully qualified name `kubernetes_{custom_resource_singular_name}_{custom_resource_group_name}`, e.g., `kubernetes_certificate_cert_manager_io`.
 
 For instance, given the CRD `certManager.yaml`:
 
@@ -14,7 +14,6 @@ metadata:
   labels:
     app: cert-manager
     app.kubernetes.io/name: cert-manager-crd
-    # Generated labels {{- include "labels" . | nindent 4 }}
 spec:
   group: cert-manager.io
   names:
@@ -206,7 +205,7 @@ spec:
                   description: List of status conditions to indicate the status of certificates. Known condition types are `Ready` and `Issuing`.
                   type: array
                   items:
-                    description: CertificateCondition contains condition information for an Certificate.
+                    description: CertificateCondition contains condition information for a Certificate.
                     type: object
                     required:
                       - status
