@@ -21,6 +21,7 @@ func tableKubernetesCustomResource(ctx context.Context) *plugin.Table {
 	versionSchemaSpec := ctx.Value(contextKey("VersionSchemaSpec"))
 	versionSchemaStatus := ctx.Value(contextKey("VersionSchemaStatus"))
 	tableName := ctx.Value(contextKey("TableName")).(string)
+
 	var description string
 	if ctx.Value(contextKey("VersionSchemaDescription")) == nil {
 		description = "Custom resource for " + crdName + "."

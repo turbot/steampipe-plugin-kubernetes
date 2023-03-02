@@ -1,6 +1,8 @@
-# Table: kubernetes\_{custom_resource_name}
+# Table: kubernetes\_{custom_resource_singular_name}
 
 Query data from the custom resource called `kubernetes_{custom_resource_singular_name}`, e.g., `kubernetes_certificate`, `kubernetes_capacityrequest`. A table is automatically created to represent each custom resource.
+
+If the table name is already created in the above format and exist in the table list, then the subsequent ones will have the fully qualified name `kubernetes_{custom_resource_singular_name}_{custom_resource_group_name}`, e.g., `kubernetes_certificate_cert_manager_io`.
 
 For instance, given the CRD `certManager.yaml`:
 
