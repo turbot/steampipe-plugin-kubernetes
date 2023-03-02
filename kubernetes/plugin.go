@@ -132,7 +132,7 @@ func listK8sDynamicCRDs(ctx context.Context, cn *connection.ConnectionCache, c *
 	for pageLeft {
 		response, err := clientset.ApiextensionsV1().CustomResourceDefinitions().List(ctx, input)
 		if err != nil {
-			// Handle err at the plugin load time if config is not setup properly
+			// At the plugin load time, if the config is not setup properly, return nil
 			if strings.Contains(err.Error(), "/apis/apiextensions.k8s.io/v1/customresourcedefinitions?limit=500") {
 				return nil, nil
 			}
