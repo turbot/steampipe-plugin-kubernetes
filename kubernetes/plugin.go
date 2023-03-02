@@ -77,7 +77,7 @@ func pluginTableDefinitions(ctx context.Context, d *plugin.TableMapData) (map[st
 	}
 
 	// Fetch available CRDs
-	crds, err := listK8sDynamicCRDs(ctx, d.ConectionCache, d.Connection)
+	crds, err := listK8sDynamicCRDs(ctx, d.ConnectionCache, d.Connection)
 	if err != nil {
 		plugin.Logger(ctx).Error("listK8sDynamicCRDs", "crds", err)
 		return nil, err
