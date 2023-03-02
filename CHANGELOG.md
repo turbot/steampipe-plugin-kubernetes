@@ -1,3 +1,15 @@
+## v0.17.0 [2023-03-02]
+
+_What's new?_
+
+- New tables added
+  - [kubernetes_{custom_resource_singular_name}](https://hub.steampipe.io/plugins/turbot/kubernetes/tables/kubernetes_{custom_resource_singular_name}) ([#110](https://github.com/turbot/steampipe-plugin-kubernetes/pull/110))
+- Added support for creating dynamic tables for custom resources. A table is automatically created for each custom resource in a cluster. To learn more, please see [kubernetes_{custom_resource_singular_name}](https://hub.steampipe.io/plugins/turbot/kubernetes/tables/kubernetes_{custom_resource_singular_name}).
+
+_Dependencies_
+
+- Recompiled plugin with [steampipe-plugin-sdk v5.2.0](https://github.com/turbot/steampipe-plugin-sdk/blob/main/CHANGELOG.md#v520-2023-03-02) which includes fixes for query cache pending item mechanism and aggregator connections not working for dynamic tables.
+
 ## v0.16.0 [2023-02-10]
 
 _Enhancements_
