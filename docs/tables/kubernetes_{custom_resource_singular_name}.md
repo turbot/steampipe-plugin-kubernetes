@@ -1,4 +1,4 @@
-# Table: kubernetes\_{custom_resource_singular_name}
+# Table: kubernetes_{custom_resource_singular_name}
 
 Query data from the custom resource called `kubernetes_{custom_resource_singular_name}`, e.g., `kubernetes_certificate`, `kubernetes_capacityrequest`. A table is automatically created to represent each custom resource.
 
@@ -154,7 +154,7 @@ spec:
                         - PKCS1
                         - PKCS8
                     rotationPolicy:
-                      description: RotationPolicy controls how private keys should be regenerated when a re-issuance is being processed. If set to Never, a private key will only be generated if one does not already exist in the target `spec.secretName`. If one does exists but it does not have the correct algorithm or size, a warning will be raised to await user intervention. If set to Always, a private key matching the specified requirements will be generated whenever a re-issuance occurs. Default is 'Never' for backward compatibility.
+                      description: RotationPolicy controls how private keys should be regenerated when a re-issuance is being processed. If set to Never, a private key will only be generated if one does not already exist in the target `spec.secretName`. If one does exist but it does not have the correct algorithm or size, a warning will be raised to await user intervention. If set to Always, a private key matching the specified requirements will be generated whenever a re-issuance occurs. The Default is 'Never' for backward compatibility.
                       type: string
                       enum:
                         - Never
@@ -233,7 +233,7 @@ spec:
                           - "False"
                           - Unknown
                       type:
-                        description: Type of the condition, known values are (`Ready`, `Issuing`).
+                        description: Type of the condition, known values are `Ready` and `Issuing`.
                         type: string
                   x-kubernetes-list-map-keys:
                     - type
@@ -285,7 +285,7 @@ spec:
 
 This plugin will automatically create a table called `kubernetes_certificate`:
 
-```
+```bash
 > select name, uid, kind, api_version, namespace from kubernetes_certificate;
 +------------------------------------+--------------------------------------+-------------+--------------------+-----------+
 | name                               | uid                                  | kind        | api_version        | namespace |
@@ -300,7 +300,7 @@ This plugin will automatically create a table called `kubernetes_certificate`:
 
 List all tables:
 
-```sql
+```bash
 .inspect kubernetes;
 +---------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 | table                                 | description                                                                                                                                                      |
@@ -314,7 +314,7 @@ List all tables:
 
 To get details of a specific custom resource table, inspect it by name:
 
-```sql
+```bash
 .inspect kubernetes_certificate;
 +---------------------------+--------------------------+-------------------------------------------------------------------------------------------------------------+
 | column                    | type                     | description                                                                                                 |
