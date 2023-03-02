@@ -1,99 +1,8 @@
----
-organization: Turbot
-category: ["software development"]
-icon_url: "/images/plugins/turbot/kubernetes.svg"
-brand_color: "#326CE5"
-display_name: "Kubernetes"
-short_name: "kubernetes"
-description: "Steampipe plugin for Kubernetes components."
-og_description: "Query Kubernetes with SQL! Open source CLI. No DB required."
-og_image: "/images/plugins/turbot/kubernetes-social-graphic.png"
----
+# Table: kubernetes_{custom_resource_singular_name}
 
-# Kubernetes + Steampipe
+Query data from the custom resource called `kubernetes_{custom_resource_singular_name}`, e.g., `kubernetes_certificate`, `kubernetes_capacityrequest`. A table is automatically created to represent each custom resource.
 
-[Steampipe](https://steampipe.io) is an open source CLI to instantly query cloud APIs using SQL.
-
-[Kubernetes](https://kubernetes.io) is an open-source system for automating deployment, scaling, and management of containerized applications.
-
-For example:
-
-```sql
-select
-  name,
-  namespace,
-  phase,
-  creation_timestamp,
-  pod_ip
-from
-  kubernetes_pod;
-```
-
-```
-+-----------------------------------------+-------------+-----------+---------------------+-----------+
-| name                                    | namespace   | phase     | creation_timestamp  | pod_ip    |
-+-----------------------------------------+-------------+-----------+---------------------+-----------+
-| metrics-server-86cbb8457f-bf8dm         | kube-system | Running   | 2021-06-11 14:21:48 | 10.42.0.5 |
-| coredns-7448499f4d-klb8l                | kube-system | Running   | 2021-06-11 14:21:48 | 10.42.0.6 |
-| helm-install-traefik-crd-hb87d          | kube-system | Succeeded | 2021-06-11 14:21:48 | 10.42.0.3 |
-| local-path-provisioner-5ff76fc89d-c9hnm | kube-system | Running   | 2021-06-11 14:21:48 | 10.42.0.2 |
-+-----------------------------------------+-------------+-----------+---------------------+-----------+
-```
-
-## Documentation
-
-- **[Table definitions & examples →](/plugins/turbot/kubernetes/tables)**
-
-## Get started
-
-### Install
-
-Download and install the latest Kubernetes plugin:
-
-```bash
-steampipe plugin install kubernetes
-```
-
-### Configuration
-
-Installing the latest kubernetes plugin will create a config file (`~/.steampipe/config/kubernetes.spc`) with a single connection named `kubernetes`:
-
-```hcl
-connection "kubernetes" {
-  plugin = "kubernetes"
-
-  # By default, the plugin will use credentials in "~/.kube/config" with the current context.
-  # OpenID Connect (OIDC) authentication is supported without any extra configuration.
-  # The kubeconfig path and context can also be specified with the following config arguments:
-
-  # Specify the file path to the kubeconfig.
-  # Can also be set with the "KUBE_CONFIG_PATHS" or "KUBERNETES_MASTER" environment variables.
-  # config_path = "~/.kube/config"
-
-  # Specify a context other than the current one.
-  # config_context = "minikube"
-
-  # If no kubeconfig file can be found, the plugin will attempt to use the service account Kubernetes gives to pods.
-  # This authentication method is intended for clients that expect to be running inside a pod running on Kubernetes.
-}
-```
-
-- `config_context` - (Optional) The kubeconfig context to use. If not set, the current context will be used.
-- `config_path` - (Optional) The kubeconfig file path. If not set, the plugin will check `~/.kube/config`. Can also be set with the `KUBE_CONFIG_PATHS` or `KUBERNETES_MASTER` environment variables. 
-
-## Configuring Kubernetes Credentials
-
-By default, the plugin will use the kubeconfig in `~/.kube/config` with the current context. If using the default kubectl CLI configurations, the kubeconfig will be in this location and the Kubernetes plugin connections will work by default.
-
-You can also set the kubeconfig file path and context with the `config_path` and `config_context` config arguments respectively.
-
-This plugin supports querying Kubernetes clusters using [OpenID Connect](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#openid-connect-tokens) (OIDC) authentication. No extra configuration is required to query clusters using OIDC.
-
-If no kubeconfig file is found, then the plugin will [attempt to access the API from within a pod](https://kubernetes.io/docs/tasks/run-application/access-api-from-pod/#accessing-the-api-from-within-a-pod) using the service account Kubernetes gives to pods.
-
-## Custom Resource Definitions
-
-Kubernetes also supports creating [Custom Resource Definitions](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/#customresourcedefinitions) with a name and schema that you specify which allows you to extend Kubernetes capabilities by adding any kind of API object useful for your application.
+If the table name is already created in the above format and exists in the table list, then the subsequent ones will have the fully qualified name `kubernetes_{custom_resource_singular_name}_{custom_resource_group_name}`, e.g., `kubernetes_certificate_cert_manager_io`.
 
 For instance, given the CRD `certManager.yaml`:
 
@@ -385,6 +294,24 @@ This plugin will automatically create a table called `kubernetes_certificate`:
 +------------------------------------+--------------------------------------+-------------+--------------------+-----------+
 ```
 
+## Examples
+
+### Inspect the table structure
+
+List all tables:
+
+```bash
+.inspect kubernetes;
++---------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| table                                 | description                                                                                                                                                      |
++---------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| kubernetes_certificate                | A Certificate resource should be created to ensure an up to date and signed x509 certificate is stored in the Kubernetes Secret resource named in `spec.secretName`. The stored certificate will be renewed before it expires (as configured by `spec.renewBefore`).Custom resource for certificates.cert-manager.io.                                                                                                         |
+| kubernetes_cluster_role               | ClusterRole contains rules that represent a set of permissions.                                                                                                  |
+| kubernetes_cluster_role_binding       | A ClusterRoleBinding grants the permissions defined in a cluster role to a user or set of users. Access granted by ClusterRoleBinding is cluster-wide.           |
+| ...                                   | ...                                                                                                                                                              |
++---------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+```
+
 To get details of a specific custom resource table, inspect it by name:
 
 ```bash
@@ -406,7 +333,7 @@ To get details of a specific custom resource table, inspect it by name:
 | dns_names                 | jsonb                    | DNSNames is a list of DNS subjectAltNames to be set on the Certificate.                                     |
 | duration                  | text                     | The requested 'duration' (i.e. lifetime) of the Certificate. This option may be ignored/overridden by some  |
 |                           |                          | issuer types. If unset this defaults to 90 days. Certificate will be renewed either 2/3 through its duratio |
-|                           |                          |n or `renewBefore` period before its expiry, whichever is later. Minimum accepted duration is 1 hour. Value |
+|                           |                          | n or `renewBefore` period before its expiry, whichever is later. Minimum accepted duration is 1 hour. Value |
 |                           |                          |  must be in units accepted by Go time.ParseDuration https://golang.org/pkg/time/#ParseDuration              |
 | email_addresses           | jsonb                    | EmailAddresses is a list of email subjectAltNames to be set on the Certificate.                             |
 | encode_usages_in_request  | boolean                  | EncodeUsagesInRequest controls whether key usages should be present in the CertificateRequest               |
@@ -459,16 +386,60 @@ To get details of a specific custom resource table, inspect it by name:
 +---------------------------+--------------------------+-------------------------------------------------------------------------------------------------------------+
 ```
 
-This table can also be queried like other tables:
+### List all certificates
 
 ```sql
 select
-  *
+  name,
+  uid,
+  namespace,
+  creation_timestamp,
+  api_version
 from
   kubernetes_certificate;
 ```
 
-## Get involved
+### List certificates added in the last 24 hours
 
-- Open source: https://github.com/turbot/steampipe-plugin-kubernetes
-- Community: [Slack Channel](https://steampipe.io/community/join)
+```sql
+select
+  name,
+  uid,
+  namespace,
+  creation_timestamp,
+  api_version
+from
+  kubernetes_certificate
+where
+  creation_timestamp = now() - interval '24 hrs';
+```
+
+### List ISCA certificates
+
+```sql
+select
+  name,
+  uid,
+  namespace,
+  creation_timestamp,
+  api_version
+from
+  kubernetes_certificate
+where
+  is_ca;
+```
+
+### List expired certificates
+
+```sql
+select
+  name,
+  uid,
+  namespace,
+  creation_timestamp,
+  api_version
+from
+  kubernetes_certificate
+where
+  now() > to_timestamp(not_after,'YYYY-MM-DD');
+```

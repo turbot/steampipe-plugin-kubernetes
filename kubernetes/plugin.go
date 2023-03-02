@@ -8,15 +8,20 @@ package kubernetes
 
 import (
 	"context"
+	"regexp"
+	"strings"
 
+	"github.com/turbot/go-kit/types"
+	"github.com/turbot/steampipe-plugin-sdk/v5/connection"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
+	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const pluginName = "steampipe-plugin-kubernetes"
 
-// Uncomment once aggregator functionality available with dynamic tables
-// type contextKey string
+type contextKey string
 
 // Plugin creates this (k8s) plugin
 func Plugin(ctx context.Context) *plugin.Plugin {
@@ -27,8 +32,7 @@ func Plugin(ctx context.Context) *plugin.Plugin {
 			NewInstance: ConfigInstance,
 			Schema:      ConfigSchema,
 		},
-		// TODO: Change to dynamic, once aggregator functionality available with dynamic tables
-		SchemaMode:   plugin.SchemaModeStatic,
+		SchemaMode:   plugin.SchemaModeDynamic,
 		TableMapFunc: pluginTableDefinitions,
 	}
 
@@ -73,66 +77,77 @@ func pluginTableDefinitions(ctx context.Context, d *plugin.TableMapData) (map[st
 	}
 
 	// Fetch available CRDs
-	// TODO: Re-enable once aggregator functionality works with dynamic tables
-	// crds, err := listK8sDynamicCRDs(ctx, d.ConectionCache, d.Connection)
-	// if err != nil {
-	// 	plugin.Logger(ctx).Error("listK8sDynamicCRDs", "crds", err)
-	// 	return nil, err
-	// }
+	crds, err := listK8sDynamicCRDs(ctx, d.ConnectionCache, d.Connection)
+	if err != nil {
+		plugin.Logger(ctx).Error("listK8sDynamicCRDs", "crds", err)
+		return nil, err
+	}
 
-	// for _, crd := range crds {
-	// 	ctx = context.WithValue(ctx, contextKey("CRDName"), crd.Name)
-	// 	ctx = context.WithValue(ctx, contextKey("CustomResourceName"), crd.Spec.Names.Plural)
-	// 	ctx = context.WithValue(ctx, contextKey("GroupName"), crd.Spec.Group)
-	// 	for _, version := range crd.Spec.Versions {
-	// 		if version.Served {
-	// 			ctx = context.WithValue(ctx, contextKey("ActiveVersion"), version.Name)
-	// 			ctx = context.WithValue(ctx, contextKey("VersionSchema"), version.Schema.OpenAPIV3Schema.Properties["spec"])
-	// 		}
-	// 	}
-	// 	if tables[crd.Name] == nil {
-	// 		tables[crd.Name] = tableKubernetesCustomResource(ctx)
-	// 	}
-	// }
+	for _, crd := range crds {
+		ctx = context.WithValue(ctx, contextKey("CRDName"), crd.Name)
+		ctx = context.WithValue(ctx, contextKey("CustomResourceName"), crd.Spec.Names.Plural)
+		ctx = context.WithValue(ctx, contextKey("GroupName"), crd.Spec.Group)
+		for _, version := range crd.Spec.Versions {
+			if version.Served {
+				ctx = context.WithValue(ctx, contextKey("ActiveVersion"), version.Name)
+				if version.Schema != nil && version.Schema.OpenAPIV3Schema != nil {
+					ctx = context.WithValue(ctx, contextKey("VersionSchemaSpec"), version.Schema.OpenAPIV3Schema.Properties["spec"])
+					ctx = context.WithValue(ctx, contextKey("VersionSchemaStatus"), version.Schema.OpenAPIV3Schema.Properties["status"])
+					if len(version.Schema.OpenAPIV3Schema.Description) > 0 {
+						ctx = context.WithValue(ctx, contextKey("VersionSchemaDescription"), strings.TrimSuffix(version.Schema.OpenAPIV3Schema.Description, ".")+".")
+					}
+				}
+			}
+		}
+
+		// add the tables in snake case
+		re := regexp.MustCompile(`[-.]`)
+		if tables["kubernetes_"+crd.Spec.Names.Singular] == nil {
+			ctx = context.WithValue(ctx, contextKey("TableName"), "kubernetes_"+crd.Spec.Names.Singular)
+			tables["kubernetes_"+crd.Spec.Names.Singular] = tableKubernetesCustomResource(ctx)
+		} else {
+			ctx = context.WithValue(ctx, contextKey("TableName"), "kubernetes_"+crd.Spec.Names.Singular+"_"+re.ReplaceAllString(crd.Spec.Group, "_"))
+			tables["kubernetes_"+crd.Spec.Names.Singular+"_"+re.ReplaceAllString(crd.Spec.Group, "_")] = tableKubernetesCustomResource(ctx)
+		}
+	}
 
 	return tables, nil
 }
 
-// Uncomment once aggregator functionality available with dynamic tables
+func listK8sDynamicCRDs(ctx context.Context, cn *connection.ConnectionCache, c *plugin.Connection) ([]v1.CustomResourceDefinition, error) {
+	clientset, err := GetNewClientCRDRaw(ctx, cn, c)
+	if err != nil {
+		plugin.Logger(ctx).Error("listK8sDynamicCRDs", "GetNewClientCRDRaw", err)
+		return nil, err
+	}
 
-// func listK8sDynamicCRDs(ctx context.Context, cn *connection.ConnectionCache, c *plugin.Connection) ([]v1.CustomResourceDefinition, error) {
-// 	clientset, err := GetNewClientCRDRaw(ctx, cn, c)
-// 	if err != nil {
-// 		plugin.Logger(ctx).Error("listK8sDynamicCRDs", "GetNewClientCRDRaw", err)
-// 		return nil, err
-// 	}
+	input := metav1.ListOptions{
+		Limit:          500,
+		TimeoutSeconds: types.Int64(5),
+	}
 
-// 	input := metav1.ListOptions{
-// 		Limit: 500,
-// 	}
+	crds := []v1.CustomResourceDefinition{}
 
-// 	crds := []v1.CustomResourceDefinition{}
+	pageLeft := true
+	for pageLeft {
+		response, err := clientset.ApiextensionsV1().CustomResourceDefinitions().List(ctx, input)
+		if err != nil {
+			// At the plugin load time, if the config is not setup properly, return nil
+			if strings.Contains(err.Error(), "/apis/apiextensions.k8s.io/v1/customresourcedefinitions?limit=500") {
+				return nil, nil
+			}
+			plugin.Logger(ctx).Error("listK8sDynamicCRDs", "list_err", err)
+			return nil, err
+		}
 
-// 	pageLeft := true
-// 	for pageLeft {
-// 		response, err := clientset.ApiextensionsV1().CustomResourceDefinitions().List(ctx, input)
-// 		if err != nil {
-// 			// Handle err at the plugin load time if config is not setup properly
-// 			if strings.Contains(err.Error(), "/apis/apiextensions.k8s.io/v1/customresourcedefinitions?limit=500") {
-// 				return nil, nil
-// 			}
-// 			plugin.Logger(ctx).Error("listK8sDynamicCRDs", "list_err", err)
-// 			return nil, err
-// 		}
+		if response.GetContinue() != "" {
+			input.Continue = response.Continue
+		} else {
+			pageLeft = false
+		}
 
-// 		if response.GetContinue() != "" {
-// 			input.Continue = response.Continue
-// 		} else {
-// 			pageLeft = false
-// 		}
+		crds = append(crds, response.Items...)
+	}
 
-// 		crds = append(crds, response.Items...)
-// 	}
-
-// 	return crds, nil
-// }
+	return crds, nil
+}
