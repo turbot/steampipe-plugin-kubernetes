@@ -91,7 +91,7 @@ This plugin supports querying Kubernetes clusters using [OpenID Connect](https:/
 
 If no kubeconfig file is found, then the plugin will [attempt to access the API from within a pod](https://kubernetes.io/docs/tasks/run-application/access-api-from-pod/#accessing-the-api-from-within-a-pod) using the service account Kubernetes gives to pods.
 
-## Custom Resource Definition
+## Custom Resource Definitions
 
 Kubernetes also supports creating [Custom Resource Definitions](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/#customresourcedefinitions) with a name and schema that you specify which allows you to extend Kubernetes capabilities by adding any kind of API object useful for your application.
 
