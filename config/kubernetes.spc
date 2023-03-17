@@ -12,6 +12,9 @@ connection "kubernetes" {
   # Specify a context other than the current one.
   # config_context = "minikube"
 
+  # Specify the custom resource definition singular names for which the dynamic tables will be created. By default plugin will load the dynamic tables for all the available custom resource definitions.
+  # custom_resource_definitions = ["certificate","ippool"]
+
   # If no kubeconfig file can be found, the plugin will attempt to use the service account Kubernetes gives to pods.
   # This authentication method is intended for clients that expect to be running inside a pod running on Kubernetes.
 }

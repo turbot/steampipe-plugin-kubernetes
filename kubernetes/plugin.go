@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/go-kit/types"
 	"github.com/turbot/steampipe-plugin-sdk/v5/connection"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
@@ -128,6 +129,10 @@ func listK8sDynamicCRDs(ctx context.Context, cn *connection.ConnectionCache, c *
 
 	crds := []v1.CustomResourceDefinition{}
 
+	// get the crds from config if any
+	kubernetesConfig := GetConfig(c)
+	filterCrds := kubernetesConfig.CustomResourceDefinitions
+
 	pageLeft := true
 	for pageLeft {
 		response, err := clientset.ApiextensionsV1().CustomResourceDefinitions().List(ctx, input)
@@ -146,7 +151,15 @@ func listK8sDynamicCRDs(ctx context.Context, cn *connection.ConnectionCache, c *
 			pageLeft = false
 		}
 
-		crds = append(crds, response.Items...)
+		if len(filterCrds) == 0 {
+			crds = append(crds, response.Items...)
+		} else {
+			for _, item := range response.Items {
+				if helpers.StringSliceContains(filterCrds, item.Spec.Names.Singular) {
+					crds = append(crds, item)
+				}
+			}
+		}
 	}
 
 	return crds, nil
