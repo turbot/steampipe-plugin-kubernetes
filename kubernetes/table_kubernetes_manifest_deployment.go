@@ -66,19 +66,21 @@ func listKubernetesManifestDeployments(ctx context.Context, d *plugin.QueryData,
 	}
 	decoder := scheme.Codecs.UniversalDeserializer()
 
-	for _, resourceYAML := range strings.Split(string(content), "---") {
+	// Check for the start of the document
+	for _, resource := range strings.Split(string(content), "---") {
 		// skip empty documents, `Decode` will fail on them
-		if len(resourceYAML) == 0 {
+		if len(resource) == 0 {
 			continue
 		}
 
 		// Decode the file content
-		obj, groupVersionKind, err := decoder.Decode([]byte(resourceYAML), nil, nil)
+		obj, groupVersionKind, err := decoder.Decode([]byte(resource), nil, nil)
 		if err != nil {
 			plugin.Logger(ctx).Error("kubernetes_manifest_deployment.listKubernetesManifestDeployments", "failed to decode the file", err, "path", path)
 			return nil, err
 		}
 
+		// Return if the definition is not for the deployment resource
 		if groupVersionKind.Kind == "Deployment" {
 			deployment := obj.(*v1.Deployment)
 
