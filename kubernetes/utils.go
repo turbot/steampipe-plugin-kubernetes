@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	filehelpers "github.com/turbot/go-kit/files"
 	apiextension "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -539,4 +540,55 @@ func mergeTags(labels map[string]string, annotations map[string]string) map[stri
 		tags[k] = v
 	}
 	return tags
+}
+
+type filePath struct {
+	Path string
+}
+
+func listKubernetesManifestFiles(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
+	// #1 - Path via qual
+
+	// If the path was requested through qualifier then match it exactly. Globs
+	// are not supported in this context since the output value for the column
+	// will never match the requested value.
+	quals := d.EqualsQuals
+	if quals["manifest_file_path"] != nil {
+		d.StreamListItem(ctx, filePath{Path: quals["manifest_file_path"].GetStringValue()})
+		return nil, nil
+	}
+
+	// #2 - paths in config
+
+	// Glob paths in config
+	// Fail if no paths are specified
+	k8sConfig := GetConfig(d.Connection)
+	if k8sConfig.ManifestFilePaths == nil {
+		return nil, errors.New("manifest_file_path must be configured")
+	}
+
+	// Gather file path matches for the glob
+	var matches []string
+	paths := k8sConfig.ManifestFilePaths
+	for _, i := range paths {
+
+		// List the files in the given source directory
+		files, err := d.GetSourceFiles(i)
+		if err != nil {
+			return nil, err
+		}
+		matches = append(matches, files...)
+	}
+
+	// Sanitize the matches to ignore the directories
+	for _, i := range matches {
+
+		// Ignore directories
+		if filehelpers.DirectoryExists(i) {
+			continue
+		}
+		d.StreamListItem(ctx, filePath{Path: i})
+	}
+
+	return nil, nil
 }
