@@ -57,6 +57,7 @@ func pluginTableDefinitions(ctx context.Context, d *plugin.TableMapData) (map[st
 		"kubernetes_job":                        tableKubernetesJob(ctx),
 		"kubernetes_limit_range":                tableKubernetesLimitRange(ctx),
 		"kubernetes_manifest_deployment":        tableKubernetesManifestDeployment(ctx),
+		"kubernetes_manifest_pod":               tableKubernetesManifestPod(ctx),
 		"kubernetes_namespace":                  tableKubernetesNamespace(ctx),
 		"kubernetes_network_policy":             tableKubernetesNetworkPolicy(ctx),
 		"kubernetes_node":                       tableKubernetesNode(ctx),
