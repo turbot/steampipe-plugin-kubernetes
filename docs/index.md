@@ -73,8 +73,12 @@ connection "kubernetes" {
   # Specify a context other than the current one.
   # config_context = "minikube"
 
-  # Specify the custom resource definition singular names for which the dynamic tables will be created. By default plugin will load the dynamic tables for all the available custom resource definitions.
-  # custom_resource_definitions = ["certificate","ippool"]
+  # Specify the custom resource definitions for which the dynamic tables will be created.
+  # The custom_resource_tables list may include wildcards (e.g. *, ip*, storagestates.migration.???.io), singular names or the full name.
+  # By default plugin will load the dynamic tables for all the available custom resource definitions.
+  # The plugin will not create dynamic tables if custom_resource_tables is empty or not set.
+  # custom_resource_tables = ["certificate","ip*","storagestates.migration.k8s.io"]
+  custom_resource_tables = ["*"]
 
   # If no kubeconfig file can be found, the plugin will attempt to use the service account Kubernetes gives to pods.
   # This authentication method is intended for clients that expect to be running inside a pod running on Kubernetes.
@@ -83,7 +87,7 @@ connection "kubernetes" {
 
 - `config_context` - (Optional) The kubeconfig context to use. If not set, the current context will be used.
 - `config_path` - (Optional) The kubeconfig file path. If not set, the plugin will check `~/.kube/config`. Can also be set with the `KUBE_CONFIG_PATHS` or `KUBERNETES_MASTER` environment variables.
-- `custom_resource_definitions` - (Optional) The custom resource definitions to use for the dynamic tables. If not set, the plugin will load the dynamic tables for all the available custom resource definitions.
+- `custom_resource_tables` - (Optional) The custom resource definitions to use for the dynamic tables. By default plugin will load the dynamic tables for all the available custom resource definitions. If not set, the plugin will not create any dynamic tables.
 
 ## Configuring Kubernetes Credentials
 
@@ -378,7 +382,20 @@ spec:
     - w-spcloud123456
 ```
 
-This plugin will automatically create a table called `kubernetes_certificate`:
+### Set custom_resource_tables parameter in config file
+
+You may specify the custom_resource_tables with singular name, full name or wild card values:
+
+- custom_resource_tables = ["certificate","certificates.cert-manager.io","certificates.*"]
+
+```hcl
+connection "kubernetes" {
+  plugin     = "kubernetes"
+  custom_resource_tables = ["certificate"]
+}
+```
+
+Based on the above custom_resource_tables this plugin will automatically create a table called `kubernetes_certificate`:
 
 ```bash
 > select name, uid, kind, api_version, namespace from kubernetes_certificate;

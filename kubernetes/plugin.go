@@ -8,6 +8,7 @@ package kubernetes
 
 import (
 	"context"
+	"path"
 	"regexp"
 	"strings"
 
@@ -128,10 +129,14 @@ func listK8sDynamicCRDs(ctx context.Context, cn *connection.ConnectionCache, c *
 	}
 
 	crds := []v1.CustomResourceDefinition{}
+	temp_crds := []string{}
 
 	// get the crds from config if any
 	kubernetesConfig := GetConfig(c)
-	filterCrds := kubernetesConfig.CustomResourceDefinitions
+	filterCrds := kubernetesConfig.CustomResourceTables
+	if len(filterCrds) == 0 {
+		return nil, nil
+	}
 
 	pageLeft := true
 	for pageLeft {
@@ -151,12 +156,18 @@ func listK8sDynamicCRDs(ctx context.Context, cn *connection.ConnectionCache, c *
 			pageLeft = false
 		}
 
-		if len(filterCrds) == 0 {
-			crds = append(crds, response.Items...)
-		} else {
+		for _, pattern := range filterCrds {
 			for _, item := range response.Items {
-				if helpers.StringSliceContains(filterCrds, item.Spec.Names.Singular) {
-					crds = append(crds, item)
+				if ok, _ := path.Match(pattern, item.Name); ok {
+					if !helpers.StringSliceContains(temp_crds, item.Name) {
+						crds = append(crds, item)
+					}
+					temp_crds = append(temp_crds, item.Name)
+				} else if ok, _ := path.Match(pattern, item.Spec.Names.Singular); ok {
+					if !helpers.StringSliceContains(temp_crds, item.Name) {
+						crds = append(crds, item)
+					}
+					temp_crds = append(temp_crds, item.Name)
 				}
 			}
 		}
