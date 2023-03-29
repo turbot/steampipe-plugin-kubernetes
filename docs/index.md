@@ -75,7 +75,7 @@ connection "kubernetes" {
 
   # Specify the custom resource definitions for which the dynamic tables will be created.
   # The custom_resource_tables list may include wildcards (e.g. *, ip*, storagestates.migration.???.io), singular names or the full name.
-  # By default plugin will load the dynamic tables for all the available custom resource definitions.
+  # By default plugin will create the dynamic tables for all the available custom resource definitions.
   # The plugin will not create dynamic tables if custom_resource_tables is empty or not set.
   # custom_resource_tables = ["certificate","ip*","storagestates.migration.k8s.io"]
   custom_resource_tables = ["*"]
@@ -395,7 +395,7 @@ connection "kubernetes" {
 }
 ```
 
-Based on the above custom_resource_tables this plugin will automatically create a table called `kubernetes_certificate`:
+Based on the above config file setup this plugin will automatically create a table called `kubernetes_certificate`:
 
 ```bash
 > select name, uid, kind, api_version, namespace from kubernetes_certificate;
