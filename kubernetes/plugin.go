@@ -10,6 +10,7 @@ import (
 	"context"
 	"path"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/turbot/go-kit/helpers"
@@ -103,6 +104,9 @@ func pluginTableDefinitions(ctx context.Context, d *plugin.TableMapData) (map[st
 		}
 
 		// add the tables in snake case
+		// if there is any name collision, plugin will create the dynamic tables in below order:
+		// plugin will use singular name for the first one, e.g. kubernetes_certificate
+		// plugin will use fully qualified names for the subsequent ones, e.g. kubernetes_certificate_cert_manager_io
 		re := regexp.MustCompile(`[-.]`)
 		if tables["kubernetes_"+crd.Spec.Names.Singular] == nil {
 			ctx = context.WithValue(ctx, contextKey("TableName"), "kubernetes_"+crd.Spec.Names.Singular)
@@ -158,20 +162,23 @@ func listK8sDynamicCRDs(ctx context.Context, cn *connection.ConnectionCache, c *
 
 		for _, pattern := range filterCrds {
 			for _, item := range response.Items {
-				if ok, _ := path.Match(pattern, item.Name); ok {
-					if !helpers.StringSliceContains(temp_crds, item.Name) {
-						crds = append(crds, item)
-					}
+				if helpers.StringSliceContains(temp_crds, item.Name) {
+					continue
+				} else if ok, _ := path.Match(pattern, item.Name); ok {
+					crds = append(crds, item)
 					temp_crds = append(temp_crds, item.Name)
 				} else if ok, _ := path.Match(pattern, item.Spec.Names.Singular); ok {
-					if !helpers.StringSliceContains(temp_crds, item.Name) {
-						crds = append(crds, item)
-					}
+					crds = append(crds, item)
 					temp_crds = append(temp_crds, item.Name)
 				}
 			}
 		}
 	}
+
+	// sort the crd list
+	sort.Slice(crds[:], func(i, j int) bool {
+		return crds[i].Name < crds[j].Name
+	})
 
 	return crds, nil
 }
