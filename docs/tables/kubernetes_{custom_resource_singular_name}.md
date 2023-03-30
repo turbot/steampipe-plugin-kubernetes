@@ -283,11 +283,7 @@ spec:
     - w-spcloud123456
 ```
 
-### Custom Resources
-
-Steampipe will create table schemas for all custom resources set in the `custom_resource_tables` argument.
-
-For instance, if my connection configuration is:
+If my connection configuration is:
 
 ```hcl
 connection "kubernetes" {
@@ -296,7 +292,7 @@ connection "kubernetes" {
 }
 ```
 
-Steampipe will automatically create the kubernetes_certificate table, which can then be inspected and queried like other tables:
+Steampipe will automatically create the `kubernetes_certificate` table, which can then be inspected and queried like other tables:
 
 ```bash
 .inspect kubernetes_certificate;
