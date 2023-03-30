@@ -155,6 +155,33 @@ func listK8sDeployments(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 	logger := plugin.Logger(ctx)
 	logger.Trace("listK8sDeployments")
 
+	isManifestFilePathsConfigured, err := validateKubernetesConfig(d.Connection)
+	if err != nil {
+		return nil, err
+	}
+
+	if isManifestFilePathsConfigured {
+		parsedContents, err := getParsedManifestFileContent(ctx, d)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, content := range parsedContents {
+			if content.GroupVersionKind.Kind == "Deployment" {
+				deployment := content.Data.(*v1.Deployment)
+
+				d.StreamListItem(ctx, *deployment)
+
+				// Context can be cancelled due to manual cancellation or the limit has been hit
+				if d.RowsRemaining(ctx) == 0 {
+					return nil, nil
+				}
+			}
+		}
+
+		return nil, nil
+	}
+
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err

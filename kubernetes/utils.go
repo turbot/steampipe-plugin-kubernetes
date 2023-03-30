@@ -12,8 +12,11 @@ import (
 	apiextension "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/azure"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
@@ -591,4 +594,95 @@ func listKubernetesManifestFiles(ctx context.Context, d *plugin.QueryData, _ *pl
 	}
 
 	return nil, nil
+}
+
+// Check whether the config file is configured correctly.
+// The plugin can list both live resources and the resources from the manifest file.
+// To avoid the conflict, a connection can only contains either config_path / config_paths to define the kube config files, or,
+// the manifest_file_paths to define the location to the manifest files.
+func validateKubernetesConfig(connection *plugin.Connection) (bool, error) {
+	kubernetesConfig := GetConfig(connection)
+
+	if (kubernetesConfig.ConfigPath != nil || kubernetesConfig.ConfigPaths != nil) &&
+		kubernetesConfig.ManifestFilePaths != nil {
+		return false, fmt.Errorf("both config_path, config_paths and manifest_file_paths can not be passed in a single connection")
+	}
+
+	isManifestFilePathsConfigured := kubernetesConfig.ManifestFilePaths != nil
+	return isManifestFilePathsConfigured, nil
+}
+
+type parsedContent struct {
+	Data             runtime.Object
+	GroupVersionKind *schema.GroupVersionKind
+}
+
+func getParsedManifestFileContent(ctx context.Context, d *plugin.QueryData) ([]parsedContent, error) {
+	conn, err := parsedManifestFileContentCached(ctx, d, nil)
+	if err != nil {
+		return nil, err
+	}
+	return conn.([]parsedContent), nil
+}
+
+var parsedManifestFileContentCached = plugin.HydrateFunc(parsedManifestFileContentUncached).Memoize()
+
+func parsedManifestFileContentUncached(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (any, error) {
+
+	k8sConfig := GetConfig(d.Connection)
+
+	// Gather file path matches for the glob
+	var matches, resolvedPaths []string
+	paths := k8sConfig.ManifestFilePaths
+	for _, i := range paths {
+
+		// List the files in the given source directory
+		files, err := d.GetSourceFiles(i)
+		if err != nil {
+			return nil, err
+		}
+		matches = append(matches, files...)
+	}
+
+	// Sanitize the matches to ignore the directories
+	for _, i := range matches {
+
+		// Ignore directories
+		if filehelpers.DirectoryExists(i) {
+			continue
+		}
+		resolvedPaths = append(resolvedPaths, i)
+	}
+
+	var parsedContents []parsedContent
+	for _, path := range resolvedPaths {
+		// Load the file into a buffer
+		content, err := os.ReadFile(path)
+		if err != nil {
+			plugin.Logger(ctx).Error("parseManifestFileContent", "failed to read file", err, "path", path)
+			return nil, err
+		}
+		decoder := scheme.Codecs.UniversalDeserializer()
+
+		// Check for the start of the document
+		for _, resource := range strings.Split(string(content), "---") {
+			// skip empty documents, `Decode` will fail on them
+			if len(resource) == 0 {
+				continue
+			}
+
+			// Decode the file content
+			obj, groupVersionKind, err := decoder.Decode([]byte(resource), nil, nil)
+			if err != nil {
+				plugin.Logger(ctx).Error("parseManifestFileContent", "failed to decode the file", err, "path", path)
+				return nil, err
+			}
+			parsedContents = append(parsedContents, parsedContent{
+				Data:             obj,
+				GroupVersionKind: groupVersionKind,
+			})
+		}
+	}
+
+	return parsedContents, nil
 }
