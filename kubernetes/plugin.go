@@ -176,7 +176,7 @@ func listK8sDynamicCRDs(ctx context.Context, cn *connection.ConnectionCache, c *
 	}
 
 	// sort the crd list
-	sort.Slice(crds[:], func(i, j int) bool {
+	sort.SliceStable(crds[:], func(i, j int) bool {
 		return crds[i].Name < crds[j].Name
 	})
 
