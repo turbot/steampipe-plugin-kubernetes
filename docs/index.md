@@ -78,9 +78,10 @@ connection "kubernetes" {
   # Wildcard based searches are supported
 
   # For example:
+  #  - "*" matches all custom resources available
   #  - "*.storage.k8s.io" matches all custom resources present in the storage.k8s.io group
-  #  - “certificates.cert-manager.io” matches the name of the custom resource present in the cert-manager.io group
-  #  - “backendconfig” matches with the singular name of the custom resource present in any group
+  #  - "certificates.cert-manager.io" matches the name of the custom resource present in the cert-manager.io group
+  #  - "backendconfig" matches with the singular name of the custom resource present in any group
 
   # Defaults to all custom resources
   custom_resource_tables = ["*"]
