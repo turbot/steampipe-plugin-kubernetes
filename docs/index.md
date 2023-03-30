@@ -73,11 +73,16 @@ connection "kubernetes" {
   # Specify a context other than the current one.
   # config_context = "minikube"
 
-  # Specify the custom resource definitions for which the dynamic tables will be created.
-  # The custom_resource_tables list may include wildcards (e.g. *, ip*, storagestates.migration.???.io), singular names or the full name.
-  # By default plugin will create the dynamic tables for all the available custom resource definitions.
-  # The plugin will not create dynamic tables if custom_resource_tables is empty or not set.
-  # custom_resource_tables = ["certificate","ip*","storagestates.migration.k8s.io"]
+  # List of custom resources that will be created as dynamic tables
+  # No dynamic tables will be created if this arg is empty or not set
+  # Wildcard based searches are supported
+
+  # For example:
+  #  - "*.storage.k8s.io" matches all custom resources present in the storage.k8s.io group
+  #  - “certificates.cert-manager.io” matches the name of the custom resource present in the cert-manager.io group
+  #  - “backendconfig” matches with the singular name of the custom resource present in any group
+
+  # Defaults to all custom resources
   custom_resource_tables = ["*"]
 
   # If no kubeconfig file can be found, the plugin will attempt to use the service account Kubernetes gives to pods.
@@ -87,7 +92,7 @@ connection "kubernetes" {
 
 - `config_context` - (Optional) The kubeconfig context to use. If not set, the current context will be used.
 - `config_path` - (Optional) The kubeconfig file path. If not set, the plugin will check `~/.kube/config`. Can also be set with the `KUBE_CONFIG_PATHS` or `KUBERNETES_MASTER` environment variables.
-- `custom_resource_tables` - (Optional) The custom resource definitions to use for the dynamic tables. By default plugin will load the dynamic tables for all the available custom resource definitions. If not set, the plugin will not create any dynamic tables.
+- `custom_resource_tables` - (Optional) The custom resources to use for the dynamic tables. If not set, the plugin will not create any dynamic tables.
 
 ## Configuring Kubernetes Credentials
 
@@ -382,31 +387,20 @@ spec:
     - w-spcloud123456
 ```
 
-### Set custom_resource_tables parameter in config file
+### Custom Resources
 
-You may specify the custom_resource_tables with singular name, full name or wild card values:
+Steampipe will create table schemas for all custom resources set in the `custom_resource_tables` argument.
 
-- custom_resource_tables = ["certificate","certificates.cert-manager.io","certificates.*"]
+For instance, if my connection configuration is:
 
 ```hcl
 connection "kubernetes" {
-  plugin     = "kubernetes"
-  custom_resource_tables = ["certificate"]
+  plugin = "kubernetes"
+  custom_resource_tables = ["certificates.*"]
 }
 ```
 
-Based on the above config file setup this plugin will automatically create a table called `kubernetes_certificate`:
-
-```bash
-> select name, uid, kind, api_version, namespace from kubernetes_certificate;
-+------------------------------------+--------------------------------------+-------------+--------------------+-----------+
-| name                               | uid                                  | kind        | api_version        | namespace |
-+------------------------------------+--------------------------------------+-------------+--------------------+-----------+
-| temporal-w-spcloudt6t6sk7toegg-tls | 5ccd69be-6e73-4edc-8c1d-bccd6a1e6e38 | Certificate | cert-manager.io/v1 | default   |
-+------------------------------------+--------------------------------------+-------------+--------------------+-----------+
-```
-
-To get details of a specific custom resource table, inspect it by name:
+Steampipe will automatically create the kubernetes_certificate table, which can then be inspected and queried like other tables:
 
 ```bash
 .inspect kubernetes_certificate;
@@ -480,13 +474,13 @@ To get details of a specific custom resource table, inspect it by name:
 +---------------------------+--------------------------+-------------------------------------------------------------------------------------------------------------+
 ```
 
-This table can also be queried like other tables:
-
-```sql
-select
-  *
-from
-  kubernetes_certificate;
+```bash
+> select name, uid, kind, api_version, namespace from kubernetes_certificate;
++------------------------------------+--------------------------------------+-------------+--------------------+-----------+
+| name                               | uid                                  | kind        | api_version        | namespace |
++------------------------------------+--------------------------------------+-------------+--------------------+-----------+
+| temporal-w-spcloudt6t6sk7toegg-tls | 5ccd69be-6e73-4edc-8c1d-bccd6a1e6e38 | Certificate | cert-manager.io/v1 | default   |
++------------------------------------+--------------------------------------+-------------+--------------------+-----------+
 ```
 
 ## Get involved

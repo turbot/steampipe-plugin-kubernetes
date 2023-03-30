@@ -1,4 +1,4 @@
-# Table: kubernetes_{custom_resource_singular_name}
+# Table: kubernetes\_{custom_resource_singular_name}
 
 Query data from the custom resource called `kubernetes_{custom_resource_singular_name}`, e.g., `kubernetes_certificate`, `kubernetes_capacityrequest`. A table is automatically created to represent each custom resource.
 
@@ -283,49 +283,20 @@ spec:
     - w-spcloud123456
 ```
 
-### Set custom_resource_tables parameter in config file
+### Custom Resources
 
-You may specify the custom_resource_tables with singular name, full name or wild card values:
+Steampipe will create table schemas for all custom resources set in the `custom_resource_tables` argument.
 
-- custom_resource_tables = ["certificate","certificates.cert-manager.io","certificates.*"]
+For instance, if my connection configuration is:
 
 ```hcl
 connection "kubernetes" {
-  plugin     = "kubernetes"
-  custom_resource_tables = ["certificate"]
+  plugin = "kubernetes"
+  custom_resource_tables = ["certificates.*"]
 }
 ```
 
-Based on the above config file setup this plugin will automatically create a table called `kubernetes_certificate`:
-
-```bash
-> select name, uid, kind, api_version, namespace from kubernetes_certificate;
-+------------------------------------+--------------------------------------+-------------+--------------------+-----------+
-| name                               | uid                                  | kind        | api_version        | namespace |
-+------------------------------------+--------------------------------------+-------------+--------------------+-----------+
-| temporal-w-spcloudt6t6sk7toegg-tls | 5ccd69be-6e73-4edc-8c1d-bccd6a1e6e38 | Certificate | cert-manager.io/v1 | default   |
-+------------------------------------+--------------------------------------+-------------+--------------------+-----------+
-```
-
-## Examples
-
-### Inspect the table structure
-
-List all tables:
-
-```bash
-.inspect kubernetes;
-+---------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| table                                 | description                                                                                                                                                      |
-+---------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| kubernetes_certificate                | A Certificate resource should be created to ensure an up to date and signed x509 certificate is stored in the Kubernetes Secret resource named in `spec.secretName`. The stored certificate will be renewed before it expires (as configured by `spec.renewBefore`).Custom resource for certificates.cert-manager.io.                                                                                                         |
-| kubernetes_cluster_role               | ClusterRole contains rules that represent a set of permissions.                                                                                                  |
-| kubernetes_cluster_role_binding       | A ClusterRoleBinding grants the permissions defined in a cluster role to a user or set of users. Access granted by ClusterRoleBinding is cluster-wide.           |
-| ...                                   | ...                                                                                                                                                              |
-+---------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-```
-
-To get details of a specific custom resource table, inspect it by name:
+Steampipe will automatically create the kubernetes_certificate table, which can then be inspected and queried like other tables:
 
 ```bash
 .inspect kubernetes_certificate;
@@ -346,7 +317,7 @@ To get details of a specific custom resource table, inspect it by name:
 | dns_names                 | jsonb                    | DNSNames is a list of DNS subjectAltNames to be set on the Certificate.                                     |
 | duration                  | text                     | The requested 'duration' (i.e. lifetime) of the Certificate. This option may be ignored/overridden by some  |
 |                           |                          | issuer types. If unset this defaults to 90 days. Certificate will be renewed either 2/3 through its duratio |
-|                           |                          | n or `renewBefore` period before its expiry, whichever is later. Minimum accepted duration is 1 hour. Value |
+|                           |                          |n or `renewBefore` period before its expiry, whichever is later. Minimum accepted duration is 1 hour. Value |
 |                           |                          |  must be in units accepted by Go time.ParseDuration https://golang.org/pkg/time/#ParseDuration              |
 | email_addresses           | jsonb                    | EmailAddresses is a list of email subjectAltNames to be set on the Certificate.                             |
 | encode_usages_in_request  | boolean                  | EncodeUsagesInRequest controls whether key usages should be present in the CertificateRequest               |
@@ -398,6 +369,17 @@ To get details of a specific custom resource table, inspect it by name:
 |                           |                          | d `key encipherment` if not specified.                                                                      |
 +---------------------------+--------------------------+-------------------------------------------------------------------------------------------------------------+
 ```
+
+```bash
+> select name, uid, kind, api_version, namespace from kubernetes_certificate;
++------------------------------------+--------------------------------------+-------------+--------------------+-----------+
+| name                               | uid                                  | kind        | api_version        | namespace |
++------------------------------------+--------------------------------------+-------------+--------------------+-----------+
+| temporal-w-spcloudt6t6sk7toegg-tls | 5ccd69be-6e73-4edc-8c1d-bccd6a1e6e38 | Certificate | cert-manager.io/v1 | default   |
++------------------------------------+--------------------------------------+-------------+--------------------+-----------+
+```
+
+## Examples
 
 ### List all certificates
 

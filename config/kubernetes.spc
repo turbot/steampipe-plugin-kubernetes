@@ -12,11 +12,16 @@ connection "kubernetes" {
   # Specify a context other than the current one.
   # config_context = "minikube"
 
-  # Specify the custom resource definitions for which the dynamic tables will be created.
-  # The custom_resource_tables list may include wildcards (e.g. *, ip*, storagestates.migration.???.io), singular names or the full name.
-  # By default plugin will create the dynamic tables for all the available custom resource definitions.
-  # The plugin will not create dynamic tables if custom_resource_tables is empty or not set.
-  # custom_resource_tables = ["certificate","ip*","storagestates.migration.k8s.io"]
+  # List of custom resources that will be created as dynamic tables
+  # No dynamic tables will be created if this arg is empty or not set
+  # Wildcard based searches are supported
+
+  # For example:
+  #  - "*.storage.k8s.io" matches all custom resources present in the storage.k8s.io group
+  #  - “certificates.cert-manager.io” matches the name of the custom resource present in the cert-manager.io group
+  #  - “backendconfig” matches with the singular name of the custom resource present in any group
+
+  # Defaults to all custom resources
   custom_resource_tables = ["*"]
 
   # If no kubeconfig file can be found, the plugin will attempt to use the service account Kubernetes gives to pods.
