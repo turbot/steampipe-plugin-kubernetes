@@ -8,9 +8,12 @@ package kubernetes
 
 import (
 	"context"
+	"path"
 	"regexp"
+	"sort"
 	"strings"
 
+	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/go-kit/types"
 	"github.com/turbot/steampipe-plugin-sdk/v5/connection"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
@@ -101,6 +104,9 @@ func pluginTableDefinitions(ctx context.Context, d *plugin.TableMapData) (map[st
 		}
 
 		// add the tables in snake case
+		// if there is any name collision, plugin will create the dynamic tables in below order:
+		// plugin will use singular name for the first one, e.g. kubernetes_certificate
+		// plugin will use fully qualified names for the subsequent ones, e.g. kubernetes_certificate_cert_manager_io
 		re := regexp.MustCompile(`[-.]`)
 		if tables["kubernetes_"+crd.Spec.Names.Singular] == nil {
 			ctx = context.WithValue(ctx, contextKey("TableName"), "kubernetes_"+crd.Spec.Names.Singular)
@@ -127,6 +133,14 @@ func listK8sDynamicCRDs(ctx context.Context, cn *connection.ConnectionCache, c *
 	}
 
 	crds := []v1.CustomResourceDefinition{}
+	temp_crd_names := []string{}
+
+	// get the crds from config if any
+	kubernetesConfig := GetConfig(c)
+	filterCrds := kubernetesConfig.CustomResourceTables
+	if len(filterCrds) == 0 {
+		return nil, nil
+	}
 
 	pageLeft := true
 	for pageLeft {
@@ -146,8 +160,25 @@ func listK8sDynamicCRDs(ctx context.Context, cn *connection.ConnectionCache, c *
 			pageLeft = false
 		}
 
-		crds = append(crds, response.Items...)
+		for _, pattern := range filterCrds {
+			for _, item := range response.Items {
+				if helpers.StringSliceContains(temp_crd_names, item.Name) {
+					continue
+				} else if ok, _ := path.Match(pattern, item.Name); ok {
+					crds = append(crds, item)
+					temp_crd_names = append(temp_crd_names, item.Name)
+				} else if ok, _ := path.Match(pattern, item.Spec.Names.Singular); ok {
+					crds = append(crds, item)
+					temp_crd_names = append(temp_crd_names, item.Name)
+				}
+			}
+		}
 	}
+
+	// the Kube API doesn't return CRDs in a consistent order, so sort here to guarantee consistent CRD table generation
+	sort.SliceStable(crds[:], func(i, j int) bool {
+		return crds[i].Name < crds[j].Name
+	})
 
 	return crds, nil
 }

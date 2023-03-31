@@ -6,9 +6,10 @@ import (
 )
 
 type kubernetesConfig struct {
-	ConfigPaths   []string `cty:"config_paths"`
-	ConfigPath    *string  `cty:"config_path"`
-	ConfigContext *string  `cty:"config_context"`
+	ConfigPaths          []string `cty:"config_paths"`
+	ConfigPath           *string  `cty:"config_path"`
+	ConfigContext        *string  `cty:"config_context"`
+	CustomResourceTables []string `cty:"custom_resource_tables"`
 }
 
 var ConfigSchema = map[string]*schema.Attribute{
@@ -21,6 +22,10 @@ var ConfigSchema = map[string]*schema.Attribute{
 	},
 	"config_context": {
 		Type: schema.TypeString,
+	},
+	"custom_resource_tables": {
+		Type: schema.TypeList,
+		Elem: &schema.Attribute{Type: schema.TypeString},
 	},
 }
 
