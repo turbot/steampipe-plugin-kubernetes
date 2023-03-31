@@ -175,7 +175,7 @@ func listK8sDynamicCRDs(ctx context.Context, cn *connection.ConnectionCache, c *
 		}
 	}
 
-	// sort the crd list
+	// the Kube API doesn't return CRDs in a consistent order, so sort here to guarantee consistent CRD table generation
 	sort.SliceStable(crds[:], func(i, j int) bool {
 		return crds[i].Name < crds[j].Name
 	})
