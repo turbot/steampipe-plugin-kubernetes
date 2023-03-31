@@ -313,7 +313,7 @@ Steampipe will automatically create the `kubernetes_certificate` table, which ca
 | dns_names                 | jsonb                    | DNSNames is a list of DNS subjectAltNames to be set on the Certificate.                                     |
 | duration                  | text                     | The requested 'duration' (i.e. lifetime) of the Certificate. This option may be ignored/overridden by some  |
 |                           |                          | issuer types. If unset this defaults to 90 days. Certificate will be renewed either 2/3 through its duratio |
-|                           |                          |n or `renewBefore` period before its expiry, whichever is later. Minimum accepted duration is 1 hour. Value |
+|                           |                          | n or `renewBefore` period before its expiry, whichever is later. Minimum accepted duration is 1 hour. Value |
 |                           |                          |  must be in units accepted by Go time.ParseDuration https://golang.org/pkg/time/#ParseDuration              |
 | email_addresses           | jsonb                    | EmailAddresses is a list of email subjectAltNames to be set on the Certificate.                             |
 | encode_usages_in_request  | boolean                  | EncodeUsagesInRequest controls whether key usages should be present in the CertificateRequest               |
