@@ -105,6 +105,69 @@ This plugin supports querying Kubernetes clusters using [OpenID Connect](https:/
 
 If no kubeconfig file is found, then the plugin will [attempt to access the API from within a pod](https://kubernetes.io/docs/tasks/run-application/access-api-from-pod/#accessing-the-api-from-within-a-pod) using the service account Kubernetes gives to pods.
 
+## Multiple Context Connections
+
+You may create multiple Kubernetes connections. Example of creating multiple connections per the same `kubeconfig` file and different contexts:
+
+```hcl
+connection "kubernetes_all" {
+  type        = "aggregator"
+  plugin      = "kubernetes"
+  connections = ["kubernetes_*"]
+}
+
+connection "kubernetes_cluster_aks" {
+  plugin          = "kubernetes"
+  config_path = "~/.kube/config"
+  config_context = "myAKSCluster"
+}
+
+connection "kubernetes_cluster_eks" {
+  plugin = "kubernetes"
+  config_path = "~/.kube/config"
+  config_context = "arn:aws:eks:us-east-1:123456789012:cluster/myEKSCluster"
+}
+
+```
+
+Each connection is implemented as a distinct [Postgres schema](https://www.postgresql.org/docs/current/ddl-schemas.html). As such, you can use qualified table names to query a specific connection:
+
+```sql
+select * from kubernetes_cluster_aks.kubernetes_namespace
+```
+
+Alternatively, you can use an unqualified name and it will be resolved according to the [Search Path](https://steampipe.io/docs/using-steampipe/managing-connections#setting-the-search-path):
+
+```sql
+select * from kubernetes_namespace
+```
+
+You can create multi-subscription connections by using an [**aggregator** connection](https://steampipe.io/docs/using-steampipe/managing-connections#using-aggregators). Aggregators allow you to query data from multiple connections for a plugin as if they are a single connection:
+
+```hcl
+connection "kubernetes_all" {
+  plugin      = "kubernetes"
+  type        = "aggregator"
+  connections = ["kubernetes_cluster_aks", "kubernetes_cluster_eks"]
+}
+```
+
+Querying tables from this connection will return results from the `kubernetes_cluster_aks` and `kubernetes_cluster_eks` connections:
+
+```sql
+select * from kubernetes_all.kubernetes_namespace
+```
+
+Steampipe supports the `*` wildcard in the connection names. For example, to aggregate all the Kubernetes plugin connections whose names begin with `kubernetes_`:
+
+```hcl
+connection "kubernetes_all" {
+  type        = "aggregator"
+  plugin      = "kubernetes"
+  connections = ["kubernetes_*"]
+}
+```
+
 ## Custom Resource Definitions
 
 Kubernetes also supports creating [Custom Resource Definitions](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/#customresourcedefinitions) with a name and schema that you specify in the `custom_resource_tables` configuration argument which allows you to extend Kubernetes capabilities by adding any kind of API object useful for your application.
