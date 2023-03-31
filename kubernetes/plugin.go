@@ -133,7 +133,7 @@ func listK8sDynamicCRDs(ctx context.Context, cn *connection.ConnectionCache, c *
 	}
 
 	crds := []v1.CustomResourceDefinition{}
-	temp_crds := []string{}
+	temp_crd_names := []string{}
 
 	// get the crds from config if any
 	kubernetesConfig := GetConfig(c)
@@ -162,14 +162,14 @@ func listK8sDynamicCRDs(ctx context.Context, cn *connection.ConnectionCache, c *
 
 		for _, pattern := range filterCrds {
 			for _, item := range response.Items {
-				if helpers.StringSliceContains(temp_crds, item.Name) {
+				if helpers.StringSliceContains(temp_crd_names, item.Name) {
 					continue
 				} else if ok, _ := path.Match(pattern, item.Name); ok {
 					crds = append(crds, item)
-					temp_crds = append(temp_crds, item.Name)
+					temp_crd_names = append(temp_crd_names, item.Name)
 				} else if ok, _ := path.Match(pattern, item.Spec.Names.Singular); ok {
 					crds = append(crds, item)
-					temp_crds = append(temp_crds, item.Name)
+					temp_crd_names = append(temp_crd_names, item.Name)
 				}
 			}
 		}
