@@ -414,8 +414,19 @@ func tableKubernetesPod(ctx context.Context) *plugin.Table {
 				Description: ColumnDescriptionTags,
 				Transform:   transform.From(transformPodTags),
 			},
+			{
+				Name:        "manifest_file_path",
+				Type:        proto.ColumnType_STRING,
+				Description: "The path to the manifest file.",
+				Transform:   transform.FromField("ManifestFilePath").Transform(transform.NullIfZeroValue),
+			},
 		}),
 	}
+}
+
+type Pod struct {
+	v1.Pod
+	ManifestFilePath string
 }
 
 //// HYDRATE FUNCTIONS
@@ -427,6 +438,30 @@ func listK8sPods(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
+	}
+
+	//
+	// Check for manifest files
+	//
+	isManifestFilePathsConfigured := isManifestFilePathsConfigured(d.Connection)
+	if isManifestFilePathsConfigured {
+		parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "Pod")
+		if err != nil {
+			return nil, err
+		}
+
+		for _, content := range parsedContents {
+			pod := content.Data.(*v1.Pod)
+
+			d.StreamListItem(ctx, Pod{*pod, content.Path})
+
+			// Context can be cancelled due to manual cancellation or the limit has been hit
+			if d.RowsRemaining(ctx) == 0 {
+				return nil, nil
+			}
+		}
+
+		return nil, nil
 	}
 
 	input := metav1.ListOptions{
@@ -473,7 +508,7 @@ func listK8sPods(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 		}
 
 		for _, pod := range response.Items {
-			d.StreamListItem(ctx, pod)
+			d.StreamListItem(ctx, Pod{pod, ""})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -502,22 +537,40 @@ func getK8sPod(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) 
 		return nil, nil
 	}
 
+	isManifestFilePathsConfigured := isManifestFilePathsConfigured(d.Connection)
+	if isManifestFilePathsConfigured {
+		parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "Pod")
+		if err != nil {
+			return nil, err
+		}
+
+		for _, content := range parsedContents {
+			pod := content.Data.(*v1.Pod)
+
+			if pod.Name == name && pod.Namespace == namespace {
+				return Pod{*pod, content.Path}, nil
+			}
+		}
+
+		return nil, nil
+	}
+
 	pod, err := clientset.CoreV1().Pods(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
 		return nil, err
 	}
 
-	return *pod, nil
+	return Pod{*pod, ""}, nil
 }
 
 //// TRANSFORM FUNCTIONS
 
 func transformPodTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	obj := d.HydrateItem.(v1.Pod)
+	obj := d.HydrateItem.(Pod)
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }
 
-//// UTILITY FUNCTION
+// // UTILITY FUNCTION
 // Build kubernetes pod list call input field selector filter
 func buildKubernetsPodFieldSelectorFilter(ctx context.Context, d *plugin.QueryData) []string {
 

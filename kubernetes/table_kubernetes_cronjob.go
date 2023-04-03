@@ -102,8 +102,19 @@ func tableKubernetesCronJob(ctx context.Context) *plugin.Table {
 				Description: ColumnDescriptionTags,
 				Transform:   transform.From(transformCronJobTags),
 			},
+			{
+				Name:        "manifest_file_path",
+				Type:        proto.ColumnType_STRING,
+				Description: "The path to the manifest file.",
+				Transform:   transform.FromField("ManifestFilePath").Transform(transform.NullIfZeroValue),
+			},
 		}),
 	}
+}
+
+type CronJob struct {
+	v1.CronJob
+	ManifestFilePath string
 }
 
 //// HYDRATE FUNCTIONS
@@ -115,6 +126,30 @@ func listK8sCronJobs(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
+	}
+
+	//
+	// Check for manifest files
+	//
+	isManifestFilePathsConfigured := isManifestFilePathsConfigured(d.Connection)
+	if isManifestFilePathsConfigured {
+		parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "CronJob")
+		if err != nil {
+			return nil, err
+		}
+
+		for _, content := range parsedContents {
+			cronJob := content.Data.(*v1.CronJob)
+
+			d.StreamListItem(ctx, CronJob{*cronJob, content.Path})
+
+			// Context can be cancelled due to manual cancellation or the limit has been hit
+			if d.RowsRemaining(ctx) == 0 {
+				return nil, nil
+			}
+		}
+
+		return nil, nil
 	}
 
 	input := metav1.ListOptions{
@@ -155,7 +190,7 @@ func listK8sCronJobs(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 		}
 
 		for _, cronJob := range response.Items {
-			d.StreamListItem(ctx, cronJob)
+			d.StreamListItem(ctx, CronJob{cronJob, ""})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -184,18 +219,36 @@ func getK8sCronJob(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDa
 		return nil, nil
 	}
 
+	isManifestFilePathsConfigured := isManifestFilePathsConfigured(d.Connection)
+	if isManifestFilePathsConfigured {
+		parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "CronJob")
+		if err != nil {
+			return nil, err
+		}
+
+		for _, content := range parsedContents {
+			cronJob := content.Data.(*v1.CronJob)
+
+			if cronJob.Name == name && cronJob.Namespace == namespace {
+				return CronJob{*cronJob, content.Path}, nil
+			}
+		}
+
+		return nil, nil
+	}
+
 	cronJob, err := clientset.BatchV1().CronJobs(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
 		logger.Error("listK8sCronJobs", "get_err", err)
 		return nil, err
 	}
 
-	return *cronJob, nil
+	return CronJob{*cronJob, ""}, nil
 }
 
 //// TRANSFORM FUNCTIONS
 
 func transformCronJobTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	obj := d.HydrateItem.(v1.CronJob)
+	obj := d.HydrateItem.(CronJob)
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }

@@ -55,8 +55,19 @@ func tableKubernetesConfigMap(ctx context.Context) *plugin.Table {
 				Description: ColumnDescriptionTags,
 				Transform:   transform.From(transformConfigMapTags),
 			},
+			{
+				Name:        "manifest_file_path",
+				Type:        proto.ColumnType_STRING,
+				Description: "The path to the manifest file.",
+				Transform:   transform.FromField("ManifestFilePath").Transform(transform.NullIfZeroValue),
+			},
 		}),
 	}
+}
+
+type ConfigMap struct {
+	v1.ConfigMap
+	ManifestFilePath string
 }
 
 //// HYDRATE FUNCTIONS
@@ -68,6 +79,30 @@ func listK8sConfigMaps(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
+	}
+
+	//
+	// Check for manifest files
+	//
+	isManifestFilePathsConfigured := isManifestFilePathsConfigured(d.Connection)
+	if isManifestFilePathsConfigured {
+		parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "ConfigMap")
+		if err != nil {
+			return nil, err
+		}
+
+		for _, content := range parsedContents {
+			configMap := content.Data.(*v1.ConfigMap)
+
+			d.StreamListItem(ctx, ConfigMap{*configMap, content.Path})
+
+			// Context can be cancelled due to manual cancellation or the limit has been hit
+			if d.RowsRemaining(ctx) == 0 {
+				return nil, nil
+			}
+		}
+
+		return nil, nil
 	}
 
 	input := metav1.ListOptions{
@@ -108,7 +143,7 @@ func listK8sConfigMaps(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 		}
 
 		for _, configMap := range response.Items {
-			d.StreamListItem(ctx, configMap)
+			d.StreamListItem(ctx, ConfigMap{configMap, ""})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -137,17 +172,35 @@ func getK8sConfigMap(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 		return nil, nil
 	}
 
+	isManifestFilePathsConfigured := isManifestFilePathsConfigured(d.Connection)
+	if isManifestFilePathsConfigured {
+		parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "ConfigMap")
+		if err != nil {
+			return nil, err
+		}
+
+		for _, content := range parsedContents {
+			configMap := content.Data.(*v1.ConfigMap)
+
+			if configMap.Name == name && configMap.Namespace == namespace {
+				return ConfigMap{*configMap, content.Path}, nil
+			}
+		}
+
+		return nil, nil
+	}
+
 	configMap, err := clientset.CoreV1().ConfigMaps(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
 		return nil, err
 	}
 
-	return *configMap, nil
+	return ConfigMap{*configMap, ""}, nil
 }
 
 //// TRANSFORM FUNCTIONS
 
 func transformConfigMapTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	obj := d.HydrateItem.(v1.ConfigMap)
+	obj := d.HydrateItem.(ConfigMap)
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }

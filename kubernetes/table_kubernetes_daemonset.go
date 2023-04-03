@@ -139,8 +139,19 @@ func tableKubernetesDaemonset(ctx context.Context) *plugin.Table {
 				Description: ColumnDescriptionTags,
 				Transform:   transform.From(transformDaemonSetTags),
 			},
+			{
+				Name:        "manifest_file_path",
+				Type:        proto.ColumnType_STRING,
+				Description: "The path to the manifest file.",
+				Transform:   transform.FromField("ManifestFilePath").Transform(transform.NullIfZeroValue),
+			},
 		}),
 	}
+}
+
+type DaemonSet struct {
+	v1.DaemonSet
+	ManifestFilePath string
 }
 
 //// HYDRATE FUNCTIONS
@@ -152,6 +163,30 @@ func listK8sDaemonSets(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
+	}
+
+	//
+	// Check for manifest files
+	//
+	isManifestFilePathsConfigured := isManifestFilePathsConfigured(d.Connection)
+	if isManifestFilePathsConfigured {
+		parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "DaemonSet")
+		if err != nil {
+			return nil, err
+		}
+
+		for _, content := range parsedContents {
+			daemonSet := content.Data.(*v1.DaemonSet)
+
+			d.StreamListItem(ctx, DaemonSet{*daemonSet, content.Path})
+
+			// Context can be cancelled due to manual cancellation or the limit has been hit
+			if d.RowsRemaining(ctx) == 0 {
+				return nil, nil
+			}
+		}
+
+		return nil, nil
 	}
 
 	input := metav1.ListOptions{
@@ -192,7 +227,7 @@ func listK8sDaemonSets(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 		}
 
 		for _, daemonSet := range response.Items {
-			d.StreamListItem(ctx, daemonSet)
+			d.StreamListItem(ctx, DaemonSet{daemonSet, ""})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -221,17 +256,35 @@ func getK8sDaemonSet(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 		return nil, nil
 	}
 
+	isManifestFilePathsConfigured := isManifestFilePathsConfigured(d.Connection)
+	if isManifestFilePathsConfigured {
+		parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "DaemonSet")
+		if err != nil {
+			return nil, err
+		}
+
+		for _, content := range parsedContents {
+			daemonSet := content.Data.(*v1.DaemonSet)
+
+			if daemonSet.Name == name && daemonSet.Namespace == namespace {
+				return DaemonSet{*daemonSet, content.Path}, nil
+			}
+		}
+
+		return nil, nil
+	}
+
 	daemonSet, err := clientset.AppsV1().DaemonSets(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
 		return nil, err
 	}
 
-	return *daemonSet, nil
+	return DaemonSet{*daemonSet, ""}, nil
 }
 
 //// TRANSFORM FUNCTIONS
 
 func transformDaemonSetTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	obj := d.HydrateItem.(v1.DaemonSet)
+	obj := d.HydrateItem.(DaemonSet)
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }
