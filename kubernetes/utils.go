@@ -290,6 +290,11 @@ func getK8Config(ctx context.Context, d *plugin.QueryData) (clientcmd.ClientConf
 	// get kubernetes config info
 	kubernetesConfig := GetConfig(d.Connection)
 
+	if err := validateKubernetesConfig(d.Connection); err != nil {
+		plugin.Logger(ctx).Error("getK8Config", "connection_config_error", "connection", d.Connection.Name, "error", err)
+		return nil, err
+	}
+
 	// Set default loader and overriding rules
 	loader := &clientcmd.ClientConfigLoadingRules{}
 	overrides := &clientcmd.ConfigOverrides{}
@@ -352,6 +357,11 @@ func getK8ConfigRaw(ctx context.Context, cc *connection.ConnectionCache, c *plug
 
 	// get kubernetes config info
 	kubernetesConfig := GetConfig(c)
+
+	if err := validateKubernetesConfig(c); err != nil {
+		plugin.Logger(ctx).Error("getK8ConfigRaw", "connection_config_error", "connection", c.Name, "error", err)
+		return nil, err
+	}
 
 	// Set default loader and overriding rules
 	loader := &clientcmd.ClientConfigLoadingRules{}
@@ -423,6 +433,16 @@ func getKubectlContext(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 
 	// get kubernetes config info
 	kubernetesConfig := GetConfig(d.Connection)
+
+	if err := validateKubernetesConfig(d.Connection); err != nil {
+		plugin.Logger(ctx).Error("getKubectlContext", "connection_config_error", "connection", d.Connection.Name, "error", err)
+		return nil, err
+	}
+
+	// Return nil, if manifest file
+	if kubernetesConfig.ManifestFilePaths != nil {
+		return nil, nil
+	}
 
 	// If set in plugin's (~/.steampipe/config/kubernetes.spc) connection profile
 	if kubernetesConfig.ConfigContext != nil {
@@ -549,6 +569,7 @@ type filePath struct {
 	Path string
 }
 
+// Remove when all the manifest tables are merged with the existing one
 func listKubernetesManifestFiles(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
 	// #1 - Path via qual
 
@@ -600,21 +621,47 @@ func listKubernetesManifestFiles(ctx context.Context, d *plugin.QueryData, _ *pl
 // The plugin can list both live resources and the resources from the manifest file.
 // To avoid the conflict, a connection can only contains either config_path / config_paths to define the kube config files, or,
 // the manifest_file_paths to define the location to the manifest files.
-func validateKubernetesConfig(connection *plugin.Connection) (bool, error) {
+func validateKubernetesConfig(connection *plugin.Connection) error {
 	kubernetesConfig := GetConfig(connection)
 
 	if (kubernetesConfig.ConfigPath != nil || kubernetesConfig.ConfigPaths != nil) &&
 		kubernetesConfig.ManifestFilePaths != nil {
-		return false, fmt.Errorf("both config_path, config_paths and manifest_file_paths can not be passed in a single connection")
+		return fmt.Errorf("both config_path, config_paths and manifest_file_paths can not be passed in a single connection")
+	}
+	return nil
+}
+
+func isManifestFilePathsConfigured(connection *plugin.Connection) bool {
+	kubernetesConfig := GetConfig(connection)
+
+	return kubernetesConfig.ManifestFilePaths != nil
+}
+
+func fetchResourceFromManifestFileByKind(ctx context.Context, d *plugin.QueryData, kind string) ([]parsedContent, error) {
+
+	if kind == "" {
+		return nil, fmt.Errorf("missing required property: kind")
 	}
 
-	isManifestFilePathsConfigured := kubernetesConfig.ManifestFilePaths != nil
-	return isManifestFilePathsConfigured, nil
+	var data []parsedContent
+	parsedContents, err := getParsedManifestFileContent(ctx, d)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		if content.GroupVersionKind.Kind == kind {
+			data = append(data, content)
+		}
+	}
+
+	return data, nil
 }
 
 type parsedContent struct {
 	Data             runtime.Object
 	GroupVersionKind *schema.GroupVersionKind
+	Path             string
 }
 
 func getParsedManifestFileContent(ctx context.Context, d *plugin.QueryData) ([]parsedContent, error) {
@@ -680,6 +727,7 @@ func parsedManifestFileContentUncached(ctx context.Context, d *plugin.QueryData,
 			parsedContents = append(parsedContents, parsedContent{
 				Data:             obj,
 				GroupVersionKind: groupVersionKind,
+				Path:             path,
 			})
 		}
 	}

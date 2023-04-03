@@ -42,7 +42,7 @@ func tableKubernetesDeployment(ctx context.Context) *plugin.Table {
 			{
 				Name:        "selector",
 				Type:        proto.ColumnType_JSON,
-				Description: " Label selector for pods. A label selector is a label query over a set of resources.",
+				Description: "Label selector for pods. A label selector is a label query over a set of resources.",
 				Transform:   transform.FromField("Spec.Selector"),
 			},
 			{
@@ -145,8 +145,19 @@ func tableKubernetesDeployment(ctx context.Context) *plugin.Table {
 				Description: ColumnDescriptionTags,
 				Transform:   transform.From(transformDeploymentTags),
 			},
+			{
+				Name:        "manifest_file_path",
+				Type:        proto.ColumnType_STRING,
+				Description: "The path to the manifest file.",
+				Transform:   transform.FromField("ManifestFilePath").Transform(transform.NullIfZeroValue),
+			},
 		}),
 	}
+}
+
+type Deployment struct {
+	v1.Deployment
+	ManifestFilePath string
 }
 
 //// HYDRATE FUNCTIONS
@@ -155,38 +166,38 @@ func listK8sDeployments(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 	logger := plugin.Logger(ctx)
 	logger.Trace("listK8sDeployments")
 
-	isManifestFilePathsConfigured, err := validateKubernetesConfig(d.Connection)
+	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
 	}
 
+	//
+	// Check for manifest files
+	//
+	isManifestFilePathsConfigured := isManifestFilePathsConfigured(d.Connection)
 	if isManifestFilePathsConfigured {
-		parsedContents, err := getParsedManifestFileContent(ctx, d)
+		parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "Deployment")
 		if err != nil {
 			return nil, err
 		}
 
 		for _, content := range parsedContents {
-			if content.GroupVersionKind.Kind == "Deployment" {
-				deployment := content.Data.(*v1.Deployment)
+			deployment := content.Data.(*v1.Deployment)
 
-				d.StreamListItem(ctx, *deployment)
+			d.StreamListItem(ctx, Deployment{*deployment, content.Path})
 
-				// Context can be cancelled due to manual cancellation or the limit has been hit
-				if d.RowsRemaining(ctx) == 0 {
-					return nil, nil
-				}
+			// Context can be cancelled due to manual cancellation or the limit has been hit
+			if d.RowsRemaining(ctx) == 0 {
+				return nil, nil
 			}
 		}
 
 		return nil, nil
 	}
 
-	clientset, err := GetNewClientset(ctx, d)
-	if err != nil {
-		return nil, err
-	}
-
+	//
+	// Check for deployed resources
+	//
 	input := metav1.ListOptions{
 		Limit: 500,
 	}
@@ -226,7 +237,7 @@ func listK8sDeployments(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 		}
 
 		for _, item := range response.Items {
-			d.StreamListItem(ctx, item)
+			d.StreamListItem(ctx, Deployment{item, ""})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -255,17 +266,35 @@ func getK8sDeployment(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 		return nil, nil
 	}
 
+	isManifestFilePathsConfigured := isManifestFilePathsConfigured(d.Connection)
+	if isManifestFilePathsConfigured {
+		parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "Deployment")
+		if err != nil {
+			return nil, err
+		}
+
+		for _, content := range parsedContents {
+			deployment := content.Data.(*v1.Deployment)
+
+			if deployment.Name == name && deployment.Namespace == namespace {
+				return Deployment{*deployment, content.Path}, nil
+			}
+		}
+
+		return nil, nil
+	}
+
 	deployment, err := clientset.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
 		return nil, err
 	}
 
-	return *deployment, nil
+	return Deployment{*deployment, ""}, nil
 }
 
 //// TRANSFORM FUNCTIONS
 
 func transformDeploymentTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	obj := d.HydrateItem.(v1.Deployment)
+	obj := d.HydrateItem.(Deployment)
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }
