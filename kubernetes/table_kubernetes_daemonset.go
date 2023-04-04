@@ -160,6 +160,8 @@ func listK8sDaemonSets(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 	logger := plugin.Logger(ctx)
 	logger.Trace("listK8sDaemonSets")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
@@ -168,24 +170,26 @@ func listK8sDaemonSets(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 	//
 	// Check for manifest files
 	//
-	isManifestFilePathsConfigured := isManifestFilePathsConfigured(d.Connection)
-	if isManifestFilePathsConfigured {
-		parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "DaemonSet")
-		if err != nil {
-			return nil, err
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "DaemonSet")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		daemonSet := content.Data.(*v1.DaemonSet)
+
+		d.StreamListItem(ctx, DaemonSet{*daemonSet, content.Path})
+
+		// Context can be cancelled due to manual cancellation or the limit has been hit
+		if d.RowsRemaining(ctx) == 0 {
+			return nil, nil
 		}
+	}
 
-		for _, content := range parsedContents {
-			daemonSet := content.Data.(*v1.DaemonSet)
-
-			d.StreamListItem(ctx, DaemonSet{*daemonSet, content.Path})
-
-			// Context can be cancelled due to manual cancellation or the limit has been hit
-			if d.RowsRemaining(ctx) == 0 {
-				return nil, nil
-			}
-		}
-
+	//
+	// Check for deployed resources
+	//
+	if clientset == nil {
 		return nil, nil
 	}
 
@@ -243,6 +247,8 @@ func getK8sDaemonSet(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 	logger := plugin.Logger(ctx)
 	logger.Trace("getK8sDaemonSet")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
@@ -256,21 +262,26 @@ func getK8sDaemonSet(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 		return nil, nil
 	}
 
-	isManifestFilePathsConfigured := isManifestFilePathsConfigured(d.Connection)
-	if isManifestFilePathsConfigured {
-		parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "DaemonSet")
-		if err != nil {
-			return nil, err
+	//
+	// Get the manifest resource
+	//
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "DaemonSet")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		daemonSet := content.Data.(*v1.DaemonSet)
+
+		if daemonSet.Name == name && daemonSet.Namespace == namespace {
+			return DaemonSet{*daemonSet, content.Path}, nil
 		}
+	}
 
-		for _, content := range parsedContents {
-			daemonSet := content.Data.(*v1.DaemonSet)
-
-			if daemonSet.Name == name && daemonSet.Namespace == namespace {
-				return DaemonSet{*daemonSet, content.Path}, nil
-			}
-		}
-
+	//
+	// Get the deployed resource
+	//
+	if clientset == nil {
 		return nil, nil
 	}
 

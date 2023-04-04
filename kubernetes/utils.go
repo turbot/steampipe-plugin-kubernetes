@@ -47,6 +47,10 @@ func GetNewClientset(ctx context.Context, d *plugin.QueryData) (*kubernetes.Clie
 		return nil, err
 	}
 
+	if kubeconfig == nil {
+		return nil, nil
+	}
+
 	// Get a rest.Config from the kubeconfig file.
 	restconfig, err := kubeconfig.ClientConfig()
 	if err != nil {
@@ -109,6 +113,10 @@ func GetNewClientCRD(ctx context.Context, d *plugin.QueryData) (*apiextension.Cl
 		return nil, err
 	}
 
+	if kubeconfig == nil {
+		return nil, nil
+	}
+
 	// Get a rest.Config from the kubeconfig file.
 	restconfig, err := kubeconfig.ClientConfig()
 	if err != nil {
@@ -156,6 +164,10 @@ func GetNewClientCRDRaw(ctx context.Context, cc *connection.ConnectionCache, c *
 	if err != nil {
 		logger.Error("GetNewClientCRDRaw", "getK8ConfigRaw", err)
 		return nil, err
+	}
+
+	if kubeconfig == nil {
+		return nil, nil
 	}
 
 	// Get a rest.Config from the kubeconfig file.
@@ -227,6 +239,10 @@ func GetNewClientDynamic(ctx context.Context, d *plugin.QueryData) (dynamic.Inte
 		return nil, err
 	}
 
+	if kubeconfig == nil {
+		return nil, nil
+	}
+
 	// Get a rest.Config from the kubeconfig file.
 	restconfig, err := kubeconfig.ClientConfig()
 	if err != nil {
@@ -293,6 +309,9 @@ func getK8Config(ctx context.Context, d *plugin.QueryData) (clientcmd.ClientConf
 	if err := validateKubernetesConfig(d.Connection); err != nil {
 		plugin.Logger(ctx).Error("getK8Config", "connection_config_error", "connection", d.Connection.Name, "error", err)
 		return nil, err
+	}
+	if isManifestFilePathsConfigured := isManifestFilePathsConfigured(d.Connection); isManifestFilePathsConfigured {
+		return nil, nil
 	}
 
 	// Set default loader and overriding rules
@@ -362,6 +381,9 @@ func getK8ConfigRaw(ctx context.Context, cc *connection.ConnectionCache, c *plug
 		plugin.Logger(ctx).Error("getK8ConfigRaw", "connection_config_error", "connection", c.Name, "error", err)
 		return nil, err
 	}
+	if isManifestFilePathsConfigured := isManifestFilePathsConfigured(c); isManifestFilePathsConfigured {
+		return nil, nil
+	}
 
 	// Set default loader and overriding rules
 	loader := &clientcmd.ClientConfigLoadingRules{}
@@ -428,21 +450,15 @@ func getKubectlContext(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 		return nil, err
 	}
 
+	if kubeconfig == nil {
+		return nil, nil
+	}
+
 	rawConfig, _ := kubeconfig.RawConfig()
 	currentContext := rawConfig.CurrentContext
 
 	// get kubernetes config info
 	kubernetesConfig := GetConfig(d.Connection)
-
-	if err := validateKubernetesConfig(d.Connection); err != nil {
-		plugin.Logger(ctx).Error("getKubectlContext", "connection_config_error", "connection", d.Connection.Name, "error", err)
-		return nil, err
-	}
-
-	// Return nil, if manifest file
-	if kubernetesConfig.ManifestFilePaths != nil {
-		return nil, nil
-	}
 
 	// If set in plugin's (~/.steampipe/config/kubernetes.spc) connection profile
 	if kubernetesConfig.ConfigContext != nil {

@@ -112,8 +112,19 @@ func tableKubernetesPersistentVolume(ctx context.Context) *plugin.Table {
 				Description: ColumnDescriptionTags,
 				Transform:   transform.From(transformPVTags),
 			},
+			{
+				Name:        "manifest_file_path",
+				Type:        proto.ColumnType_STRING,
+				Description: "The path to the manifest file.",
+				Transform:   transform.FromField("ManifestFilePath").Transform(transform.NullIfZeroValue),
+			},
 		}),
 	}
+}
+
+type PersistentVolume struct {
+	v1.PersistentVolume
+	ManifestFilePath string
 }
 
 //// HYDRATE FUNCTIONS
@@ -122,9 +133,37 @@ func listK8sPVs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData)
 	logger := plugin.Logger(ctx)
 	logger.Trace("listK8sPVs")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
+	}
+
+	//
+	// Check for manifest files
+	//
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "PersistentVolume")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		persistentVolume := content.Data.(*v1.PersistentVolume)
+
+		d.StreamListItem(ctx, PersistentVolume{*persistentVolume, content.Path})
+
+		// Context can be cancelled due to manual cancellation or the limit has been hit
+		if d.RowsRemaining(ctx) == 0 {
+			return nil, nil
+		}
+	}
+
+	//
+	// Check for deployed resources
+	//
+	if clientset == nil {
+		return nil, nil
 	}
 
 	input := metav1.ListOptions{
@@ -159,7 +198,7 @@ func listK8sPVs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData)
 		}
 
 		for _, persistentVolume := range response.Items {
-			d.StreamListItem(ctx, persistentVolume)
+			d.StreamListItem(ctx, PersistentVolume{persistentVolume, ""})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -175,6 +214,8 @@ func getK8sPV(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (
 	logger := plugin.Logger(ctx)
 	logger.Trace("getK8sPV")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
@@ -187,17 +228,40 @@ func getK8sPV(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (
 		return nil, nil
 	}
 
+	//
+	// Get the manifest resource
+	//
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "PersistentVolume")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		persistentVolume := content.Data.(*v1.PersistentVolume)
+
+		if persistentVolume.Name == name {
+			return PersistentVolume{*persistentVolume, content.Path}, nil
+		}
+	}
+
+	//
+	// Get the deployed resource
+	//
+	if clientset == nil {
+		return nil, nil
+	}
+
 	persistentVolume, err := clientset.CoreV1().PersistentVolumes().Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
 		return nil, err
 	}
 
-	return *persistentVolume, nil
+	return PersistentVolume{*persistentVolume, ""}, nil
 }
 
 //// TRANSFORM FUNCTIONS
 
 func transformPVTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	obj := d.HydrateItem.(v1.PersistentVolume)
+	obj := d.HydrateItem.(PersistentVolume)
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }

@@ -435,6 +435,8 @@ func listK8sPods(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 	logger := plugin.Logger(ctx)
 	logger.Trace("listK8sPods")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
@@ -443,24 +445,26 @@ func listK8sPods(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 	//
 	// Check for manifest files
 	//
-	isManifestFilePathsConfigured := isManifestFilePathsConfigured(d.Connection)
-	if isManifestFilePathsConfigured {
-		parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "Pod")
-		if err != nil {
-			return nil, err
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "Pod")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		pod := content.Data.(*v1.Pod)
+
+		d.StreamListItem(ctx, Pod{*pod, content.Path})
+
+		// Context can be cancelled due to manual cancellation or the limit has been hit
+		if d.RowsRemaining(ctx) == 0 {
+			return nil, nil
 		}
+	}
 
-		for _, content := range parsedContents {
-			pod := content.Data.(*v1.Pod)
-
-			d.StreamListItem(ctx, Pod{*pod, content.Path})
-
-			// Context can be cancelled due to manual cancellation or the limit has been hit
-			if d.RowsRemaining(ctx) == 0 {
-				return nil, nil
-			}
-		}
-
+	//
+	// Check for deployed resources
+	//
+	if clientset == nil {
 		return nil, nil
 	}
 
@@ -524,6 +528,8 @@ func getK8sPod(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) 
 	logger := plugin.Logger(ctx)
 	logger.Trace("getK8sPod")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
@@ -537,21 +543,26 @@ func getK8sPod(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) 
 		return nil, nil
 	}
 
-	isManifestFilePathsConfigured := isManifestFilePathsConfigured(d.Connection)
-	if isManifestFilePathsConfigured {
-		parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "Pod")
-		if err != nil {
-			return nil, err
+	//
+	// Get the manifest resource
+	//
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "Pod")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		pod := content.Data.(*v1.Pod)
+
+		if pod.Name == name && pod.Namespace == namespace {
+			return Pod{*pod, content.Path}, nil
 		}
+	}
 
-		for _, content := range parsedContents {
-			pod := content.Data.(*v1.Pod)
-
-			if pod.Name == name && pod.Namespace == namespace {
-				return Pod{*pod, content.Path}, nil
-			}
-		}
-
+	//
+	// Get the deployed resource
+	//
+	if clientset == nil {
 		return nil, nil
 	}
 

@@ -166,6 +166,8 @@ func listK8sDeployments(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 	logger := plugin.Logger(ctx)
 	logger.Trace("listK8sDeployments")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
@@ -174,30 +176,29 @@ func listK8sDeployments(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 	//
 	// Check for manifest files
 	//
-	isManifestFilePathsConfigured := isManifestFilePathsConfigured(d.Connection)
-	if isManifestFilePathsConfigured {
-		parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "Deployment")
-		if err != nil {
-			return nil, err
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "Deployment")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		deployment := content.Data.(*v1.Deployment)
+
+		d.StreamListItem(ctx, Deployment{*deployment, content.Path})
+
+		// Context can be cancelled due to manual cancellation or the limit has been hit
+		if d.RowsRemaining(ctx) == 0 {
+			return nil, nil
 		}
-
-		for _, content := range parsedContents {
-			deployment := content.Data.(*v1.Deployment)
-
-			d.StreamListItem(ctx, Deployment{*deployment, content.Path})
-
-			// Context can be cancelled due to manual cancellation or the limit has been hit
-			if d.RowsRemaining(ctx) == 0 {
-				return nil, nil
-			}
-		}
-
-		return nil, nil
 	}
 
 	//
 	// Check for deployed resources
 	//
+	if clientset == nil {
+		return nil, nil
+	}
+
 	input := metav1.ListOptions{
 		Limit: 500,
 	}
@@ -253,6 +254,8 @@ func getK8sDeployment(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 	logger := plugin.Logger(ctx)
 	logger.Trace("getK8sDeployment")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
@@ -266,21 +269,26 @@ func getK8sDeployment(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 		return nil, nil
 	}
 
-	isManifestFilePathsConfigured := isManifestFilePathsConfigured(d.Connection)
-	if isManifestFilePathsConfigured {
-		parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "Deployment")
-		if err != nil {
-			return nil, err
+	//
+	// Get the manifest resource
+	//
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "Deployment")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		deployment := content.Data.(*v1.Deployment)
+
+		if deployment.Name == name && deployment.Namespace == namespace {
+			return Deployment{*deployment, content.Path}, nil
 		}
+	}
 
-		for _, content := range parsedContents {
-			deployment := content.Data.(*v1.Deployment)
-
-			if deployment.Name == name && deployment.Namespace == namespace {
-				return Deployment{*deployment, content.Path}, nil
-			}
-		}
-
+	//
+	// Get the deployed resource
+	//
+	if clientset == nil {
 		return nil, nil
 	}
 

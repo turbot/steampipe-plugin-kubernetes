@@ -56,8 +56,6 @@ func pluginTableDefinitions(ctx context.Context, d *plugin.TableMapData) (map[st
 		"kubernetes_ingress":                    tableKubernetesIngress(ctx),
 		"kubernetes_job":                        tableKubernetesJob(ctx),
 		"kubernetes_limit_range":                tableKubernetesLimitRange(ctx),
-		"kubernetes_manifest_job":               tableKubernetesManifestJob(ctx),
-		"kubernetes_manifest_service":           tableKubernetesManifestService(ctx),
 		"kubernetes_namespace":                  tableKubernetesNamespace(ctx),
 		"kubernetes_network_policy":             tableKubernetesNetworkPolicy(ctx),
 		"kubernetes_node":                       tableKubernetesNode(ctx),
@@ -82,7 +80,7 @@ func pluginTableDefinitions(ctx context.Context, d *plugin.TableMapData) (map[st
 	crds, err := listK8sDynamicCRDs(ctx, d.ConnectionCache, d.Connection)
 	if err != nil {
 		plugin.Logger(ctx).Error("listK8sDynamicCRDs", "crds", err)
-		return nil, err
+		return tables, nil
 	}
 
 	for _, crd := range crds {
@@ -121,6 +119,10 @@ func listK8sDynamicCRDs(ctx context.Context, cn *connection.ConnectionCache, c *
 	if err != nil {
 		plugin.Logger(ctx).Error("listK8sDynamicCRDs", "GetNewClientCRDRaw", err)
 		return nil, err
+	}
+
+	if clientset == nil {
+		return nil, nil
 	}
 
 	input := metav1.ListOptions{

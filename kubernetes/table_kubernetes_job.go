@@ -132,8 +132,19 @@ func tableKubernetesJob(ctx context.Context) *plugin.Table {
 				Description: ColumnDescriptionTags,
 				Transform:   transform.From(transformJobTags),
 			},
+			{
+				Name:        "manifest_file_path",
+				Type:        proto.ColumnType_STRING,
+				Description: "The path to the manifest file.",
+				Transform:   transform.FromField("ManifestFilePath").Transform(transform.NullIfZeroValue),
+			},
 		}),
 	}
+}
+
+type Job struct {
+	v1.Job
+	ManifestFilePath string
 }
 
 //// HYDRATE FUNCTIONS
@@ -142,9 +153,37 @@ func listK8sJobs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 	logger := plugin.Logger(ctx)
 	logger.Trace("listK8sJobs")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
+	}
+
+	//
+	// Check for manifest files
+	//
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "Job")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		job := content.Data.(*v1.Job)
+
+		d.StreamListItem(ctx, Job{*job, content.Path})
+
+		// Context can be cancelled due to manual cancellation or the limit has been hit
+		if d.RowsRemaining(ctx) == 0 {
+			return nil, nil
+		}
+	}
+
+	//
+	// Check for deployed resources
+	//
+	if clientset == nil {
+		return nil, nil
 	}
 
 	input := metav1.ListOptions{
@@ -185,7 +224,7 @@ func listK8sJobs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 		}
 
 		for _, job := range response.Items {
-			d.StreamListItem(ctx, job)
+			d.StreamListItem(ctx, Job{job, ""})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -201,6 +240,8 @@ func getK8sJob(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) 
 	logger := plugin.Logger(ctx)
 	logger.Trace("getK8sJob")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
@@ -214,17 +255,40 @@ func getK8sJob(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) 
 		return nil, nil
 	}
 
+	//
+	// Get the manifest resource
+	//
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "Job")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		job := content.Data.(*v1.Job)
+
+		if job.Name == name && job.Namespace == namespace {
+			return Job{*job, content.Path}, nil
+		}
+	}
+
+	//
+	// Get the deployed resource
+	//
+	if clientset == nil {
+		return nil, nil
+	}
+
 	job, err := clientset.BatchV1().Jobs(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
 		return nil, err
 	}
 
-	return *job, nil
+	return Job{*job, ""}, nil
 }
 
 //// TRANSFORM FUNCTIONS
 
 func transformJobTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	obj := d.HydrateItem.(v1.Job)
+	obj := d.HydrateItem.(Job)
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }
