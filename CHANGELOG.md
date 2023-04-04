@@ -2,7 +2,7 @@
 
 _What's new?_
 
-- Added a new config argument `custom_resource_tables` to allow filtering of which CRDs to create table for. For more information please check the [Configuration](https://hub.steampipe.io/plugins/turbot/kubernetes#configuration) section for more information. ([#121](https://github.com/turbot/steampipe-plugin-kubernetes/pull/121))
+- Added a new config argument `custom_resource_tables` to allow filtering of which CRDs to create table for. For more information please check the [Configuration](https://hub.steampipe.io/plugins/turbot/kubernetes#configuration) section. ([#121](https://github.com/turbot/steampipe-plugin-kubernetes/pull/121))
 
 _Enhancements_
 
