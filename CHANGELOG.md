@@ -1,3 +1,13 @@
+## v0.18.0 [2023-04-04]
+
+_What's new?_
+
+- Added a new config argument `custom_resource_tables` to allow filtering of which CRDs to create table for. For more information please check the [Configuration](https://hub.steampipe.io/plugins/turbot/kubernetes#configuration) section for more information. ([#121](https://github.com/turbot/steampipe-plugin-kubernetes/pull/121))
+
+_Enhancements_
+
+- Updated `docs/index.md` to include better and more detailed multiple context connection examples. ([#122](https://github.com/turbot/steampipe-plugin-kubernetes/pull/122))
+
 ## v0.17.0 [2023-03-09]
 
 _What's new?_
