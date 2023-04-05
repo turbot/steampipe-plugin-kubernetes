@@ -48,8 +48,19 @@ func tableKubernetesClusterRole(ctx context.Context) *plugin.Table {
 				Description: ColumnDescriptionTags,
 				Transform:   transform.From(transformClusterRoleTags),
 			},
+			{
+				Name:        "manifest_file_path",
+				Type:        proto.ColumnType_STRING,
+				Description: "The path to the manifest file.",
+				Transform:   transform.FromField("ManifestFilePath").Transform(transform.NullIfZeroValue),
+			},
 		}),
 	}
+}
+
+type ClusterRole struct {
+	v1.ClusterRole
+	ManifestFilePath string
 }
 
 //// HYDRATE FUNCTIONS
@@ -58,9 +69,37 @@ func listK8sClusterRoles(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 	logger := plugin.Logger(ctx)
 	logger.Trace("listK8sClusterRoles")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
+	}
+
+	//
+	// Check for manifest files
+	//
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "ClusterRole")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		clusterRole := content.Data.(*v1.ClusterRole)
+
+		d.StreamListItem(ctx, ClusterRole{*clusterRole, content.Path})
+
+		// Context can be cancelled due to manual cancellation or the limit has been hit
+		if d.RowsRemaining(ctx) == 0 {
+			return nil, nil
+		}
+	}
+
+	//
+	// Check for deployed resources
+	//
+	if clientset == nil {
+		return nil, nil
 	}
 
 	input := metav1.ListOptions{
@@ -94,7 +133,7 @@ func listK8sClusterRoles(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 		}
 
 		for _, clusterRole := range response.Items {
-			d.StreamListItem(ctx, clusterRole)
+			d.StreamListItem(ctx, ClusterRole{clusterRole, ""})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -110,6 +149,8 @@ func getK8sClusterRole(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 	logger := plugin.Logger(ctx)
 	logger.Trace("getK8sClusterRole")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
@@ -122,17 +163,40 @@ func getK8sClusterRole(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 		return nil, nil
 	}
 
+	//
+	// Get the manifest resource
+	//
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "ClusterRole")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		clusterRole := content.Data.(*v1.ClusterRole)
+
+		if clusterRole.Name == name {
+			return ClusterRole{*clusterRole, content.Path}, nil
+		}
+	}
+
+	//
+	// Get the deployed resource
+	//
+	if clientset == nil {
+		return nil, nil
+	}
+
 	clusterRole, err := clientset.RbacV1().ClusterRoles().Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
 		return nil, err
 	}
 
-	return *clusterRole, nil
+	return ClusterRole{*clusterRole, ""}, nil
 }
 
 //// TRANSFORM FUNCTIONS
 
 func transformClusterRoleTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	obj := d.HydrateItem.(v1.ClusterRole)
+	obj := d.HydrateItem.(ClusterRole)
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }

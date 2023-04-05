@@ -101,18 +101,57 @@ func tableKubernetesEvent(ctx context.Context) *plugin.Table {
 				Type:        proto.ColumnType_JSON,
 				Description: "The component reporting this event.",
 			},
+			{
+				Name:        "manifest_file_path",
+				Type:        proto.ColumnType_STRING,
+				Description: "The path to the manifest file.",
+				Transform:   transform.FromField("ManifestFilePath").Transform(transform.NullIfZeroValue),
+			},
 		}),
 	}
+}
+
+type Event struct {
+	v1.Event
+	ManifestFilePath string
 }
 
 //// HYDRATE FUNCTIONS
 
 func listK8sEvents(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		plugin.Logger(ctx).Error("listK8sEvents", "client_err", err)
 		return nil, err
+	}
+
+	//
+	// Check for manifest files
+	//
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "Event")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		event := content.Data.(*v1.Event)
+
+		d.StreamListItem(ctx, Event{*event, content.Path})
+
+		// Context can be cancelled due to manual cancellation or the limit has been hit
+		if d.RowsRemaining(ctx) == 0 {
+			return nil, nil
+		}
+	}
+
+	//
+	// Check for deployed resources
+	//
+	if clientset == nil {
+		return nil, nil
 	}
 
 	input := metav1.ListOptions{
@@ -154,7 +193,7 @@ func listK8sEvents(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDa
 		}
 
 		for _, event := range response.Items {
-			d.StreamListItem(ctx, event)
+			d.StreamListItem(ctx, Event{event, ""})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -168,6 +207,8 @@ func listK8sEvents(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDa
 
 func getK8sEvent(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		plugin.Logger(ctx).Error("getK8sEvent", "client_err", err)
@@ -182,11 +223,34 @@ func getK8sEvent(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 		return nil, nil
 	}
 
+	//
+	// Get the manifest resource
+	//
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "Event")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		event := content.Data.(*v1.Event)
+
+		if event.Name == name && event.Namespace == namespace {
+			return Event{*event, content.Path}, nil
+		}
+	}
+
+	//
+	// Get the deployed resource
+	//
+	if clientset == nil {
+		return nil, nil
+	}
+
 	event, err := clientset.CoreV1().Events(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
 		plugin.Logger(ctx).Error("getK8sEvent", "api_err", err)
 		return nil, err
 	}
 
-	return *event, nil
+	return Event{*event, ""}, nil
 }

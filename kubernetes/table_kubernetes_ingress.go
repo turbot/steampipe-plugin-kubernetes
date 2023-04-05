@@ -72,8 +72,19 @@ func tableKubernetesIngress(ctx context.Context) *plugin.Table {
 				Description: ColumnDescriptionTags,
 				Transform:   transform.From(transformIngressTags),
 			},
+			{
+				Name:        "manifest_file_path",
+				Type:        proto.ColumnType_STRING,
+				Description: "The path to the manifest file.",
+				Transform:   transform.FromField("ManifestFilePath").Transform(transform.NullIfZeroValue),
+			},
 		}),
 	}
+}
+
+type Ingress struct {
+	v1.Ingress
+	ManifestFilePath string
 }
 
 //// HYDRATE FUNCTIONS
@@ -82,9 +93,37 @@ func listK8sIngresses(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 	logger := plugin.Logger(ctx)
 	logger.Trace("listK8sIngresses")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
+	}
+
+	//
+	// Check for manifest files
+	//
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "Ingress")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		ingress := content.Data.(*v1.Ingress)
+
+		d.StreamListItem(ctx, Ingress{*ingress, content.Path})
+
+		// Context can be cancelled due to manual cancellation or the limit has been hit
+		if d.RowsRemaining(ctx) == 0 {
+			return nil, nil
+		}
+	}
+
+	//
+	// Check for deployed resources
+	//
+	if clientset == nil {
+		return nil, nil
 	}
 
 	input := metav1.ListOptions{
@@ -125,7 +164,7 @@ func listK8sIngresses(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 		}
 
 		for _, ingress := range response.Items {
-			d.StreamListItem(ctx, ingress)
+			d.StreamListItem(ctx, Ingress{ingress, ""})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -141,6 +180,8 @@ func getK8sIngress(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDa
 	logger := plugin.Logger(ctx)
 	logger.Trace("getK8sIngress")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
@@ -154,17 +195,40 @@ func getK8sIngress(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDa
 		return nil, nil
 	}
 
+	//
+	// Get the manifest resource
+	//
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "Ingress")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		ingress := content.Data.(*v1.Ingress)
+
+		if ingress.Name == name && ingress.Namespace == namespace {
+			return Ingress{*ingress, content.Path}, nil
+		}
+	}
+
+	//
+	// Get the deployed resource
+	//
+	if clientset == nil {
+		return nil, nil
+	}
+
 	ingress, err := clientset.NetworkingV1().Ingresses(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
 		return nil, err
 	}
 
-	return *ingress, nil
+	return Ingress{*ingress, ""}, nil
 }
 
 //// TRANSFORM FUNCTIONS
 
 func transformIngressTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	obj := d.HydrateItem.(v1.Ingress)
+	obj := d.HydrateItem.(Ingress)
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }

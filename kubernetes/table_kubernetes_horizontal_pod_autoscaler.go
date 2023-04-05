@@ -114,17 +114,56 @@ func tableKubernetesHorizontalPodAutoscaler(ctx context.Context) *plugin.Table {
 				Description: ColumnDescriptionTags,
 				Transform:   transform.From(transformHpaTags),
 			},
+			{
+				Name:        "manifest_file_path",
+				Type:        proto.ColumnType_STRING,
+				Description: "The path to the manifest file.",
+				Transform:   transform.FromField("ManifestFilePath").Transform(transform.NullIfZeroValue),
+			},
 		}),
 	}
+}
+
+type HorizontalPodAutoscaler struct {
+	v2beta2.HorizontalPodAutoscaler
+	ManifestFilePath string
 }
 
 //// HYDRATE FUNCTIONS
 
 func listK8sHPAs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		plugin.Logger(ctx).Error("listK8sHPAs", "clientset_err", err)
 		return nil, err
+	}
+
+	//
+	// Check for manifest files
+	//
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "HorizontalPodAutoscaler")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		hpa := content.Data.(*v2beta2.HorizontalPodAutoscaler)
+
+		d.StreamListItem(ctx, HorizontalPodAutoscaler{*hpa, content.Path})
+
+		// Context can be cancelled due to manual cancellation or the limit has been hit
+		if d.RowsRemaining(ctx) == 0 {
+			return nil, nil
+		}
+	}
+
+	//
+	// Check for deployed resources
+	//
+	if clientset == nil {
+		return nil, nil
 	}
 
 	input := metav1.ListOptions{
@@ -166,7 +205,7 @@ func listK8sHPAs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 		}
 
 		for _, hpa := range response.Items {
-			d.StreamListItem(ctx, hpa)
+			d.StreamListItem(ctx, HorizontalPodAutoscaler{hpa, ""})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -179,6 +218,8 @@ func listK8sHPAs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 }
 
 func getK8sHPA(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		plugin.Logger(ctx).Error("getK8sHPA", "clientset_err", err)
@@ -193,18 +234,41 @@ func getK8sHPA(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) 
 		return nil, nil
 	}
 
+	//
+	// Get the manifest resource
+	//
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "HorizontalPodAutoscaler")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		hpa := content.Data.(*v2beta2.HorizontalPodAutoscaler)
+
+		if hpa.Name == name && hpa.Namespace == namespace {
+			return HorizontalPodAutoscaler{*hpa, content.Path}, nil
+		}
+	}
+
+	//
+	// Get the deployed resource
+	//
+	if clientset == nil {
+		return nil, nil
+	}
+
 	hpa, err := clientset.AutoscalingV2beta2().HorizontalPodAutoscalers(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
 		plugin.Logger(ctx).Error("getK8sHPA", "api_err", err)
 		return nil, err
 	}
 
-	return *hpa, nil
+	return HorizontalPodAutoscaler{*hpa, ""}, nil
 }
 
 ////// TRANSFORM FUNCTIONS
 
 func transformHpaTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	obj := d.HydrateItem.(v2beta2.HorizontalPodAutoscaler)
+	obj := d.HydrateItem.(HorizontalPodAutoscaler)
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }
