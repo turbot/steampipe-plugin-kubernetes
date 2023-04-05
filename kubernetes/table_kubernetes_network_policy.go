@@ -64,8 +64,19 @@ func tableKubernetesNetworkPolicy(ctx context.Context) *plugin.Table {
 				Description: ColumnDescriptionTags,
 				Transform:   transform.From(transformNetworkPolicyTags),
 			},
+			{
+				Name:        "manifest_file_path",
+				Type:        proto.ColumnType_STRING,
+				Description: "The path to the manifest file.",
+				Transform:   transform.FromField("ManifestFilePath").Transform(transform.NullIfZeroValue),
+			},
 		}),
 	}
+}
+
+type NetworkPolicy struct {
+	v1.NetworkPolicy
+	ManifestFilePath string
 }
 
 //// HYDRATE FUNCTIONS
@@ -74,9 +85,37 @@ func listK8sNetworkPolicies(ctx context.Context, d *plugin.QueryData, _ *plugin.
 	logger := plugin.Logger(ctx)
 	logger.Trace("listK8sNetworkPolicies")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
+	}
+
+	//
+	// Check for manifest files
+	//
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "NetworkPolicy")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		networkPolicy := content.Data.(*v1.NetworkPolicy)
+
+		d.StreamListItem(ctx, NetworkPolicy{*networkPolicy, content.Path})
+
+		// Context can be cancelled due to manual cancellation or the limit has been hit
+		if d.RowsRemaining(ctx) == 0 {
+			return nil, nil
+		}
+	}
+
+	//
+	// Check for deployed resources
+	//
+	if clientset == nil {
+		return nil, nil
 	}
 
 	input := metav1.ListOptions{
@@ -117,7 +156,7 @@ func listK8sNetworkPolicies(ctx context.Context, d *plugin.QueryData, _ *plugin.
 		}
 
 		for _, networkPolicy := range response.Items {
-			d.StreamListItem(ctx, networkPolicy)
+			d.StreamListItem(ctx, NetworkPolicy{networkPolicy, ""})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -133,6 +172,8 @@ func getK8sNetworkPolicy(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 	logger := plugin.Logger(ctx)
 	logger.Trace("getK8sNetworkPolicy")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
@@ -146,17 +187,40 @@ func getK8sNetworkPolicy(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 		return nil, nil
 	}
 
+	//
+	// Get the manifest resource
+	//
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "NetworkPolicy")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		networkPolicy := content.Data.(*v1.NetworkPolicy)
+
+		if networkPolicy.Name == name && networkPolicy.Namespace == namespace {
+			return NetworkPolicy{*networkPolicy, content.Path}, nil
+		}
+	}
+
+	//
+	// Get the deployed resource
+	//
+	if clientset == nil {
+		return nil, nil
+	}
+
 	networkPolicy, err := clientset.NetworkingV1().NetworkPolicies(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
 		return nil, err
 	}
 
-	return *networkPolicy, nil
+	return NetworkPolicy{*networkPolicy, ""}, nil
 }
 
 //// TRANSFORM FUNCTIONS
 
 func transformNetworkPolicyTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	obj := d.HydrateItem.(v1.NetworkPolicy)
+	obj := d.HydrateItem.(NetworkPolicy)
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }

@@ -55,8 +55,19 @@ func tableKubernetesServiceAccount(ctx context.Context) *plugin.Table {
 				Description: ColumnDescriptionTags,
 				Transform:   transform.From(transformServiceAccountTags),
 			},
+			{
+				Name:        "manifest_file_path",
+				Type:        proto.ColumnType_STRING,
+				Description: "The path to the manifest file.",
+				Transform:   transform.FromField("ManifestFilePath").Transform(transform.NullIfZeroValue),
+			},
 		}),
 	}
+}
+
+type ServiceAccount struct {
+	v1.ServiceAccount
+	ManifestFilePath string
 }
 
 //// HYDRATE FUNCTIONS
@@ -65,9 +76,37 @@ func listK8sServiceAccounts(ctx context.Context, d *plugin.QueryData, _ *plugin.
 	logger := plugin.Logger(ctx)
 	logger.Trace("listK8sServiceAccounts")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
+	}
+
+	//
+	// Check for manifest files
+	//
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "ServiceAccount")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		serviceAccount := content.Data.(*v1.ServiceAccount)
+
+		d.StreamListItem(ctx, ServiceAccount{*serviceAccount, content.Path})
+
+		// Context can be cancelled due to manual cancellation or the limit has been hit
+		if d.RowsRemaining(ctx) == 0 {
+			return nil, nil
+		}
+	}
+
+	//
+	// Check for deployed resources
+	//
+	if clientset == nil {
+		return nil, nil
 	}
 
 	input := metav1.ListOptions{
@@ -108,7 +147,7 @@ func listK8sServiceAccounts(ctx context.Context, d *plugin.QueryData, _ *plugin.
 		}
 
 		for _, serviceAccount := range response.Items {
-			d.StreamListItem(ctx, serviceAccount)
+			d.StreamListItem(ctx, ServiceAccount{serviceAccount, ""})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -124,6 +163,8 @@ func getK8sServiceAccount(ctx context.Context, d *plugin.QueryData, _ *plugin.Hy
 	logger := plugin.Logger(ctx)
 	logger.Trace("getK8sServiceAccount")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
@@ -137,18 +178,41 @@ func getK8sServiceAccount(ctx context.Context, d *plugin.QueryData, _ *plugin.Hy
 		return nil, nil
 	}
 
+	//
+	// Get the manifest resource
+	//
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "ServiceAccount")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		serviceAccount := content.Data.(*v1.ServiceAccount)
+
+		if serviceAccount.Name == name && serviceAccount.Namespace == namespace {
+			return ServiceAccount{*serviceAccount, content.Path}, nil
+		}
+	}
+
+	//
+	// Get the deployed resource
+	//
+	if clientset == nil {
+		return nil, nil
+	}
+
 	serviceAccount, err := clientset.CoreV1().ServiceAccounts(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
 		logger.Debug("getK8sServiceAccount", "Error", err)
 		return nil, err
 	}
 
-	return *serviceAccount, nil
+	return ServiceAccount{*serviceAccount, ""}, nil
 }
 
 //// TRANSFORM FUNCTIONS
 
 func transformServiceAccountTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	obj := d.HydrateItem.(v1.ServiceAccount)
+	obj := d.HydrateItem.(ServiceAccount)
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }

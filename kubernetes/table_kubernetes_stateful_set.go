@@ -130,8 +130,19 @@ func tableKubernetesStatefulSet(ctx context.Context) *plugin.Table {
 				Description: ColumnDescriptionTags,
 				Transform:   transform.From(transformStatefulSetTags),
 			},
+			{
+				Name:        "manifest_file_path",
+				Type:        proto.ColumnType_STRING,
+				Description: "The path to the manifest file.",
+				Transform:   transform.FromField("ManifestFilePath").Transform(transform.NullIfZeroValue),
+			},
 		}),
 	}
+}
+
+type StatefulSet struct {
+	v1.StatefulSet
+	ManifestFilePath string
 }
 
 //// HYDRATE FUNCTIONS
@@ -140,9 +151,37 @@ func listK8sStatefulSets(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 	logger := plugin.Logger(ctx)
 	logger.Trace("listK8sStatefulSets")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
+	}
+
+	//
+	// Check for manifest files
+	//
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "StatefulSet")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		statefulSet := content.Data.(*v1.StatefulSet)
+
+		d.StreamListItem(ctx, StatefulSet{*statefulSet, content.Path})
+
+		// Context can be cancelled due to manual cancellation or the limit has been hit
+		if d.RowsRemaining(ctx) == 0 {
+			return nil, nil
+		}
+	}
+
+	//
+	// Check for deployed resources
+	//
+	if clientset == nil {
+		return nil, nil
 	}
 
 	input := metav1.ListOptions{
@@ -183,7 +222,7 @@ func listK8sStatefulSets(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 		}
 
 		for _, statefulSet := range response.Items {
-			d.StreamListItem(ctx, statefulSet)
+			d.StreamListItem(ctx, StatefulSet{statefulSet, ""})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -199,6 +238,8 @@ func getK8sStatefulSet(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 	logger := plugin.Logger(ctx)
 	logger.Trace("getK8sStatefulSet")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
@@ -212,18 +253,41 @@ func getK8sStatefulSet(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 		return nil, nil
 	}
 
+	//
+	// Get the manifest resource
+	//
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "StatefulSet")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		statefulSet := content.Data.(*v1.StatefulSet)
+
+		if statefulSet.Name == name && statefulSet.Namespace == namespace {
+			return StatefulSet{*statefulSet, content.Path}, nil
+		}
+	}
+
+	//
+	// Get the deployed resource
+	//
+	if clientset == nil {
+		return nil, nil
+	}
+
 	statefulSet, err := clientset.AppsV1().StatefulSets(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
 		logger.Debug("getK8sStatefulSet", "Error", err)
 		return nil, err
 	}
 
-	return *statefulSet, nil
+	return StatefulSet{*statefulSet, ""}, nil
 }
 
 //// TRANSFORM FUNCTIONS
 
 func transformStatefulSetTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	obj := d.HydrateItem.(v1.StatefulSet)
+	obj := d.HydrateItem.(StatefulSet)
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }

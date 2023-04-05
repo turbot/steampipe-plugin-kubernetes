@@ -181,8 +181,19 @@ func tableKubernetesPodSecurityPolicy(ctx context.Context) *plugin.Table {
 				Description: ColumnDescriptionTags,
 				Transform:   transform.From(transformPodSecurityPolicyTags),
 			},
+			{
+				Name:        "manifest_file_path",
+				Type:        proto.ColumnType_STRING,
+				Description: "The path to the manifest file.",
+				Transform:   transform.FromField("ManifestFilePath").Transform(transform.NullIfZeroValue),
+			},
 		}),
 	}
+}
+
+type PodSecurityPolicy struct {
+	v1beta1.PodSecurityPolicy
+	ManifestFilePath string
 }
 
 //// HYDRATE FUNCTIONS
@@ -191,9 +202,37 @@ func listPodSecurityPolicy(ctx context.Context, d *plugin.QueryData, _ *plugin.H
 	logger := plugin.Logger(ctx)
 	logger.Trace("listPodSecurityPolicy")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
+	}
+
+	//
+	// Check for manifest files
+	//
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "PodSecurityPolicy")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		podSecurityPolicy := content.Data.(*v1beta1.PodSecurityPolicy)
+
+		d.StreamListItem(ctx, PodSecurityPolicy{*podSecurityPolicy, content.Path})
+
+		// Context can be cancelled due to manual cancellation or the limit has been hit
+		if d.RowsRemaining(ctx) == 0 {
+			return nil, nil
+		}
+	}
+
+	//
+	// Check for deployed resources
+	//
+	if clientset == nil {
+		return nil, nil
 	}
 
 	input := metav1.ListOptions{
@@ -228,7 +267,7 @@ func listPodSecurityPolicy(ctx context.Context, d *plugin.QueryData, _ *plugin.H
 		}
 
 		for _, podSecurityPolicy := range response.Items {
-			d.StreamListItem(ctx, podSecurityPolicy)
+			d.StreamListItem(ctx, PodSecurityPolicy{podSecurityPolicy, ""})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -244,6 +283,8 @@ func getPodSecurityPolicy(ctx context.Context, d *plugin.QueryData, _ *plugin.Hy
 	logger := plugin.Logger(ctx)
 	logger.Trace("getPodSecurityPolicy")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
@@ -256,17 +297,40 @@ func getPodSecurityPolicy(ctx context.Context, d *plugin.QueryData, _ *plugin.Hy
 		return nil, nil
 	}
 
+	//
+	// Get the manifest resource
+	//
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "PodSecurityPolicy")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		podSecurityPolicy := content.Data.(*v1beta1.PodSecurityPolicy)
+
+		if podSecurityPolicy.Name == name {
+			return PodSecurityPolicy{*podSecurityPolicy, content.Path}, nil
+		}
+	}
+
+	//
+	// Get the deployed resource
+	//
+	if clientset == nil {
+		return nil, nil
+	}
+
 	podSecurityPolicy, err := clientset.PolicyV1beta1().PodSecurityPolicies().Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
 		return nil, err
 	}
 
-	return *podSecurityPolicy, nil
+	return PodSecurityPolicy{*podSecurityPolicy, ""}, nil
 }
 
 //// TRANSFORM FUNCTIONS
 
 func transformPodSecurityPolicyTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	obj := d.HydrateItem.(v1beta1.PodSecurityPolicy)
+	obj := d.HydrateItem.(PodSecurityPolicy)
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }

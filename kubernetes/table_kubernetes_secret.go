@@ -63,8 +63,19 @@ func tableKubernetesSecret(ctx context.Context) *plugin.Table {
 				Description: ColumnDescriptionTags,
 				Transform:   transform.From(transformSecretTags),
 			},
+			{
+				Name:        "manifest_file_path",
+				Type:        proto.ColumnType_STRING,
+				Description: "The path to the manifest file.",
+				Transform:   transform.FromField("ManifestFilePath").Transform(transform.NullIfZeroValue),
+			},
 		}),
 	}
+}
+
+type Secret struct {
+	v1.Secret
+	ManifestFilePath string
 }
 
 //// HYDRATE FUNCTIONS
@@ -73,9 +84,37 @@ func listK8sSecrets(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateD
 	logger := plugin.Logger(ctx)
 	logger.Trace("listK8sSecrets")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
+	}
+
+	//
+	// Check for manifest files
+	//
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "Secret")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		secret := content.Data.(*v1.Secret)
+
+		d.StreamListItem(ctx, Secret{*secret, content.Path})
+
+		// Context can be cancelled due to manual cancellation or the limit has been hit
+		if d.RowsRemaining(ctx) == 0 {
+			return nil, nil
+		}
+	}
+
+	//
+	// Check for deployed resources
+	//
+	if clientset == nil {
+		return nil, nil
 	}
 
 	input := metav1.ListOptions{
@@ -120,7 +159,7 @@ func listK8sSecrets(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateD
 		}
 
 		for _, secret := range response.Items {
-			d.StreamListItem(ctx, secret)
+			d.StreamListItem(ctx, Secret{secret, ""})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -136,6 +175,8 @@ func getK8sSecret(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 	logger := plugin.Logger(ctx)
 	logger.Trace("getK8sSecret")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
@@ -149,17 +190,40 @@ func getK8sSecret(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 		return nil, nil
 	}
 
+	//
+	// Get the manifest resource
+	//
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "Secret")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		secret := content.Data.(*v1.Secret)
+
+		if secret.Name == name && secret.Namespace == namespace {
+			return Secret{*secret, content.Path}, nil
+		}
+	}
+
+	//
+	// Get the deployed resource
+	//
+	if clientset == nil {
+		return nil, nil
+	}
+
 	secret, err := clientset.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
 		return nil, err
 	}
 
-	return *secret, nil
+	return Secret{*secret, ""}, nil
 }
 
 //// TRANSFORM FUNCTIONS
 
 func transformSecretTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	obj := d.HydrateItem.(v1.Secret)
+	obj := d.HydrateItem.(Secret)
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }

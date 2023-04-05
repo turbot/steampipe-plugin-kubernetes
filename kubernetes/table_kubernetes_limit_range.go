@@ -47,8 +47,19 @@ func tableKubernetesLimitRange(ctx context.Context) *plugin.Table {
 				Description: ColumnDescriptionTags,
 				Transform:   transform.From(transformLimitRangeTags),
 			},
+			{
+				Name:        "manifest_file_path",
+				Type:        proto.ColumnType_STRING,
+				Description: "The path to the manifest file.",
+				Transform:   transform.FromField("ManifestFilePath").Transform(transform.NullIfZeroValue),
+			},
 		}),
 	}
+}
+
+type LimitRange struct {
+	v1.LimitRange
+	ManifestFilePath string
 }
 
 //// HYDRATE FUNCTIONS
@@ -56,9 +67,37 @@ func tableKubernetesLimitRange(ctx context.Context) *plugin.Table {
 func listK8sLimitRanges(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 	plugin.Logger(ctx).Trace("listK8sLimitRanges")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
+	}
+
+	//
+	// Check for manifest files
+	//
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "LimitRange")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		limitRange := content.Data.(*v1.LimitRange)
+
+		d.StreamListItem(ctx, LimitRange{*limitRange, content.Path})
+
+		// Context can be cancelled due to manual cancellation or the limit has been hit
+		if d.RowsRemaining(ctx) == 0 {
+			return nil, nil
+		}
+	}
+
+	//
+	// Check for deployed resources
+	//
+	if clientset == nil {
+		return nil, nil
 	}
 
 	input := metav1.ListOptions{
@@ -99,7 +138,7 @@ func listK8sLimitRanges(ctx context.Context, d *plugin.QueryData, h *plugin.Hydr
 		}
 
 		for _, limitRange := range response.Items {
-			d.StreamListItem(ctx, limitRange)
+			d.StreamListItem(ctx, LimitRange{limitRange, ""})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -114,6 +153,8 @@ func listK8sLimitRanges(ctx context.Context, d *plugin.QueryData, h *plugin.Hydr
 func getK8sLimitRange(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
 	plugin.Logger(ctx).Trace("getK8sLimitRange")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
@@ -127,17 +168,40 @@ func getK8sLimitRange(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 		return nil, nil
 	}
 
+	//
+	// Get the manifest resource
+	//
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "LimitRange")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		limitRange := content.Data.(*v1.LimitRange)
+
+		if limitRange.Name == name && limitRange.Namespace == namespace {
+			return LimitRange{*limitRange, content.Path}, nil
+		}
+	}
+
+	//
+	// Get the deployed resource
+	//
+	if clientset == nil {
+		return nil, nil
+	}
+
 	limitRange, err := clientset.CoreV1().LimitRanges(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
 		return nil, err
 	}
 
-	return *limitRange, nil
+	return LimitRange{*limitRange, ""}, nil
 }
 
 //// TRANSFORM FUNCTIONS
 
 func transformLimitRangeTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	obj := d.HydrateItem.(v1.LimitRange)
+	obj := d.HydrateItem.(LimitRange)
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }
