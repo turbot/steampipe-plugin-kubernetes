@@ -20,7 +20,7 @@ order by
    name;
 ```
 
-### List deployments and their matching PDB 
+### List deployments and their matching PDB
 
 ```sql
 select
@@ -36,5 +36,5 @@ from
     and d.namespace = pdb.namespace 
 order by
   d.namespace,
-  d.name
+  d.name;
 ```

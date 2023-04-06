@@ -21,7 +21,6 @@ from
 ### Endpoint Slice IP Information
 
 ```sql
-
 select
   name,
   namespace,
@@ -34,4 +33,3 @@ from
     jsonb_array_elements(ep -> 'addresses') as addr,
     jsonb_array_elements(ports) as port;
 ```
-

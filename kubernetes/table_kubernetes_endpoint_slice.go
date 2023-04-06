@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"k8s.io/api/discovery/v1beta1"
+	v1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
@@ -91,11 +91,11 @@ func listK8sEnpointSlices(ctx context.Context, d *plugin.QueryData, _ *plugin.Hy
 		input.FieldSelector = strings.Join(commonFieldSelectorValue, ",")
 	}
 
-	var response *v1beta1.EndpointSliceList
+	var response *v1.EndpointSliceList
 	pageLeft := true
 
 	for pageLeft {
-		response, err = clientset.DiscoveryV1beta1().EndpointSlices("").List(ctx, input)
+		response, err = clientset.DiscoveryV1().EndpointSlices("").List(ctx, input)
 		if err != nil {
 			return nil, err
 		}
@@ -136,7 +136,7 @@ func getK8sEnpointSlice(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 		return nil, nil
 	}
 
-	endpointSlice, err := clientset.DiscoveryV1beta1().EndpointSlices(namespace).Get(ctx, name, metav1.GetOptions{})
+	endpointSlice, err := clientset.DiscoveryV1().EndpointSlices(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
 		return nil, err
 	}
@@ -147,6 +147,6 @@ func getK8sEnpointSlice(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 //// TRANSFORM FUNCTIONS
 
 func transformEndpointSliceTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	obj := d.HydrateItem.(v1beta1.EndpointSlice)
+	obj := d.HydrateItem.(v1.EndpointSlice)
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }
