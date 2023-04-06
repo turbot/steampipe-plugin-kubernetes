@@ -49,3 +49,26 @@ from
 where
   privileged;
 ```
+
+### List manifest resources
+
+```sql
+select
+  name,
+  allow_privilege_escalation,
+  default_allow_privilege_escalation,
+  host_network,
+  host_ports,
+  host_pid,
+  host_ipc,
+  privileged,
+  read_only_root_filesystem,
+  allowed_csi_drivers,
+  allowed_host_paths
+from
+  kubernetes_pod_security_policy
+where
+  manifest_file_path is not null
+order by
+  name;
+```

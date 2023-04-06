@@ -129,3 +129,24 @@ group by
   namespace,
   name;
 ```
+
+### List manifest resources
+
+```sql
+select
+  namespace,
+  name,
+  phase,
+  pod_ip,
+  node_name,
+  jsonb_array_length(containers) as container_count,
+  jsonb_array_length(init_containers) as init_container_count,
+  jsonb_array_length(ephemeral_containers) as ephemeral_container_count
+from
+  kubernetes_pod
+where
+  manifest_file_path is not null
+order by
+  namespace,
+  name;
+```

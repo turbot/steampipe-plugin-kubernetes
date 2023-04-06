@@ -1,6 +1,6 @@
 # Table: kubernetes_daemonset
 
-A DaemonSet ensures that all (or some) Nodes run a copy of a Pod.<br />
+A DaemonSet ensures that all (or some) Nodes run a copy of a Pod.
 
 Some typical uses of a DaemonSet are:
 
@@ -52,4 +52,20 @@ select
   update_strategy -> 'type' as type
 from
   kubernetes_daemonset;
+```
+
+### List manifest resources
+
+```sql
+select
+  name,
+  namespace,
+  desired_number_scheduled as desired,
+  current_number_scheduled as current,
+  number_available as available,
+  selector
+from
+  kubernetes_daemonset
+where
+  manifest_file_path is not null;
 ```

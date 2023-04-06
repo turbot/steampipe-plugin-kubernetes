@@ -31,3 +31,20 @@ select
 from
   kubernetes_persistent_volume;
 ```
+
+### List manifest resources
+
+```sql
+select
+  name,
+  access_modes,
+  storage_class,
+  capacity ->> 'storage' as storage_capacity,
+  persistent_volume_reclaim_policy,
+  phase as status,
+  volume_mode
+from
+  kubernetes_persistent_volume
+where
+  manifest_file_path is not null;
+```

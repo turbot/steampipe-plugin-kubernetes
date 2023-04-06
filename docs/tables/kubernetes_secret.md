@@ -21,8 +21,8 @@ order by
   name;
 ```
 
-
 ### List and base64 decode secret values
+
 ```sql
 select
   name,
@@ -33,6 +33,24 @@ select
 from
   kubernetes_secret,
   jsonb_each_text(data) as data
+order by
+  namespace,
+  name;
+```
+
+### List manifest resources
+
+```sql
+select
+  name,
+  namespace,
+  data.key,
+  data.value
+from
+  kubernetes_secret,
+  jsonb_each(data) as data
+where
+  manifest_file_path is not null
 order by
   namespace,
   name;

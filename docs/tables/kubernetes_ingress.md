@@ -29,3 +29,19 @@ select
 from
   kubernetes_ingress;
 ```
+
+### List manifest resources
+
+```sql
+select
+  name,
+  namespace,
+  ingress_class_name as class
+from
+  kubernetes_ingress
+where
+  manifest_file_path is not null
+order by
+  namespace,
+  name;
+```

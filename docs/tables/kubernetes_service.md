@@ -19,3 +19,20 @@ order by
   namespace,
   name;
 ```
+
+### List manifest resources
+
+```sql
+select
+  name,
+  namespace,
+  type,
+  cluster_ip
+from
+  kubernetes_service
+where
+  manifest_file_path is not null
+order by
+  namespace,
+  name;
+```

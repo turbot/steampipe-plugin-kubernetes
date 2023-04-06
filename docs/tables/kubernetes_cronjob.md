@@ -33,3 +33,19 @@ group by
   name, 
   namespace;
 ```
+
+### List manifest resources
+
+```sql
+select
+  name,
+  namespace,
+  uid,
+  failed_jobs_history_limit,
+  schedule,
+  suspend
+from
+  kubernetes_cronjob
+where
+  manifest_file_path is not null;
+```

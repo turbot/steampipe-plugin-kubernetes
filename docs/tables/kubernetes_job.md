@@ -73,3 +73,23 @@ group by
   name, 
   namespace;
 ```
+
+### List manifest resources
+
+```sql
+select
+  name,
+  namespace,
+  active,
+  succeeded,
+  failed,
+  completions,
+  parallelism,
+  selector,
+  labels,
+  annotations
+from
+  kubernetes_job
+where
+  manifest_file_path is not null;
+```

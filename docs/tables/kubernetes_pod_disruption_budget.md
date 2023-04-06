@@ -20,7 +20,7 @@ order by
    name;
 ```
 
-### List deployments and their matching PDB 
+### List deployments and their matching PDB
 
 ```sql
 select
@@ -37,4 +37,22 @@ from
 order by
   d.namespace,
   d.name
+```
+
+### List manifest resources
+
+```sql
+select
+   name,
+   namespace,
+   min_available,
+   max_unavailable,
+   selector 
+from
+   kubernetes_pod_disruption_budget
+where
+  manifest_file_path is not null
+order by
+   namespace,
+   name;
 ```

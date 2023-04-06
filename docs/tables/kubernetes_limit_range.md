@@ -37,3 +37,19 @@ from
   kubernetes_limit_range,
   jsonb_array_elements(spec_limits) as limits;
 ```
+
+### List manifest resources
+
+```sql
+select
+  name,
+  namespace,
+  resource_version,
+  jsonb_pretty(spec_limits) as spec_limits
+from
+  kubernetes_limit_range
+where
+  manifest_file_path is not null
+order by
+  namespace;
+```

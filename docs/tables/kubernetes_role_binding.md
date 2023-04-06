@@ -51,3 +51,20 @@ from
 group by
   role_name;
 ```
+
+### List manifest resources
+
+```sql
+select
+  name,
+  namespace,
+  role_name,
+  role_kind,
+  jsonb_pretty(subjects) as subjects
+from
+  kubernetes_role_binding
+where
+  manifest_file_path is not null
+order by
+  name;
+```

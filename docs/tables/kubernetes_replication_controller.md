@@ -30,7 +30,21 @@ select
 from
   kubernetes_replication_controller,
   jsonb_array_elements(template -> 'spec' -> 'containers') as container
-group by 
+group by
   name,
   namespace;
+```
+
+### List manifest resources
+
+```sql
+select
+  name,
+  namespace,
+  replicas as desired,
+  selector
+from
+  kubernetes_replication_controller
+where
+  manifest_file_path is not null;
 ```

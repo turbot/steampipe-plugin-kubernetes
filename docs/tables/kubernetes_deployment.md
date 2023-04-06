@@ -2,7 +2,7 @@
 
 A Deployment provides declarative updates for Pods and ReplicaSets.
 
-You describe a desired state in a Deployment, and the Deployment Controller changes the actual state to the desired state at a controlled rate. You can define Deployments to create new ReplicaSets, or to remove existing Deployments and adopt all their resources with new Deployments. 
+You describe a desired state in a Deployment, and the Deployment Controller changes the actual state to the desired state at a controlled rate. You can define Deployments to create new ReplicaSets, or to remove existing Deployments and adopt all their resources with new Deployments.
 
 ## Examples
 
@@ -25,8 +25,8 @@ order by
   name;
 ```
 
-
 ### Configuration Info
+
 ```sql
 select
   name,
@@ -41,8 +41,8 @@ from
   kubernetes_deployment;
 ```
 
-
 ### Container Images used in Deployments
+
 ```sql
 select 
   name as deployment_name,
@@ -57,8 +57,8 @@ order by
   name;
 ```
 
-
 ### List pods for a deployment
+
 ```sql
 select
   pod.namespace,
@@ -87,9 +87,7 @@ order by
   pod.name;
 ```
 
-
-
-### List Pods with access to the to the host process ID, IPC, or network namespace 
+### List Pods with access to the to the host process ID, IPC, or network namespace
 
 ```sql
 select 
@@ -104,4 +102,20 @@ where
   template -> 'spec' ->> 'hostPID' = 'true' or
   template -> 'spec' ->> 'hostIPC' = 'true' or
   template -> 'spec' ->> 'hostNetwork' = 'true';
+```
+
+### List manifest resources
+
+```sql
+select
+  name,
+  namespace,
+  replicas
+from
+  kubernetes_deployment
+where
+  manifest_file_path is not null
+order by
+  namespace,
+  name;
 ```

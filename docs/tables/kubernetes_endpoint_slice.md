@@ -35,3 +35,18 @@ from
     jsonb_array_elements(ports) as port;
 ```
 
+### List manifest resources
+
+```sql
+select
+  name,
+  namespace,
+  generate_name as endpoint_name,
+  address_type,
+  endpoints,
+  ports
+from
+  kubernetes_endpoint_slice
+where
+  manifest_file_path is not null;
+```

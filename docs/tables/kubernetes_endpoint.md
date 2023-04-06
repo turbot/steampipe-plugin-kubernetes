@@ -32,3 +32,16 @@ from
   left join jsonb_array_elements(subset -> 'notReadyAddresses') as nr_addr on true
   left join jsonb_array_elements(subset -> 'ports') as port on true;
 ```
+
+### List manifest resources
+
+```sql
+select
+  name,
+  namespace,
+  subsets
+from
+  kubernetes_endpoint
+where
+  manifest_file_path is not null;
+```

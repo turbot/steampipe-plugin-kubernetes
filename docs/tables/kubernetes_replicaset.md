@@ -36,8 +36,8 @@ order by
   name;
 ```
 
-
 ### List pods for a replicaset (by name)
+
 ```sql
 select
   pod.namespace,
@@ -59,4 +59,21 @@ order by
   pod.namespace,
   rs.name,
   pod.name;
+```
+
+### List manifest resources
+
+```sql
+select
+  name,
+  namespace,
+  replicas as desired,
+  ready_replicas as ready,
+  available_replicas as available,
+  selector,
+  fully_labeled_replicas
+from
+  kubernetes_replicaset
+where
+  manifest_file_path is not null;
 ```

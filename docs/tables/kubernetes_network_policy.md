@@ -21,6 +21,7 @@ from
 ```
 
 ### List policies that allow all egress
+
 ```sql
 select
   name,
@@ -36,8 +37,8 @@ where
   and egress @> '[{}]';
 ```
 
-
 ### List default deny egress policies
+
 ```sql
 select
   name,
@@ -51,9 +52,10 @@ where
   policy_types @> '["Egress"]'
   and pod_selector = '{}'
   and egress is null;
-
 ```
+
 ### List policies that allow all ingress
+
 ```sql
 select
   name,
@@ -70,6 +72,7 @@ where
 ```
 
 ### List default deny ingress policies
+
 ```sql
 select
   name,
@@ -85,7 +88,6 @@ where
   and ingress is null;
 ```
 
-
 ### View rules for a specific network policy
 
 ```sql
@@ -100,4 +102,22 @@ from
 where
   name = 'test-network-policy'
   and namespace = 'default';
+```
+
+### List manifest resources
+
+```sql
+select
+  name,
+  namespace,
+  policy_types,
+  ingress,
+  egress,
+  pod_selector,
+  labels,
+  annotations
+from
+  kubernetes_network_policy
+where
+  manifest_file_path is not null;
 ```
