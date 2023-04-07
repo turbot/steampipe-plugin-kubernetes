@@ -43,7 +43,7 @@ func tableKubernetesReplicaController(ctx context.Context) *plugin.Table {
 				Name:        "selector_query",
 				Type:        proto.ColumnType_STRING,
 				Description: "A query string representation of the selector.",
-				Transform:   transform.FromField("Spec.Selector").Transform(labelSelectorToString),
+				Transform:   transform.FromField("Spec.Selector").Transform(selectorMapToString),
 			},
 			{
 				Name:        "selector",
