@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	v2 "k8s.io/api/autoscaling/v2"
+	v1 "k8s.io/api/autoscaling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
@@ -149,11 +149,11 @@ func listK8sHPAs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 		input.FieldSelector = strings.Join(commonFieldSelectorValue, ",")
 	}
 
-	var response *v2.HorizontalPodAutoscalerList
+	var response *v1.HorizontalPodAutoscalerList
 	pageLeft := true
 
 	for pageLeft {
-		response, err = clientset.AutoscalingV2().HorizontalPodAutoscalers("").List(ctx, input)
+		response, err = clientset.AutoscalingV1().HorizontalPodAutoscalers("").List(ctx, input)
 		if err != nil {
 			plugin.Logger(ctx).Error("listK8sHPAs", "api_err", err)
 			return nil, err
@@ -193,7 +193,7 @@ func getK8sHPA(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) 
 		return nil, nil
 	}
 
-	hpa, err := clientset.AutoscalingV2().HorizontalPodAutoscalers(namespace).Get(ctx, name, metav1.GetOptions{})
+	hpa, err := clientset.AutoscalingV1().HorizontalPodAutoscalers(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
 		plugin.Logger(ctx).Error("getK8sHPA", "api_err", err)
 		return nil, err
@@ -205,6 +205,6 @@ func getK8sHPA(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) 
 ////// TRANSFORM FUNCTIONS
 
 func transformHpaTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	obj := d.HydrateItem.(v2.HorizontalPodAutoscaler)
+	obj := d.HydrateItem.(v1.HorizontalPodAutoscaler)
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }
