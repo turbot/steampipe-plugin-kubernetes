@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	v1beta1 "k8s.io/api/policy/v1beta1"
+	v1 "k8s.io/api/policy/v1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -97,11 +97,11 @@ func listPDBs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (
 		input.FieldSelector = strings.Join(commonFieldSelectorValue, ",")
 	}
 
-	var response *v1beta1.PodDisruptionBudgetList
+	var response *v1.PodDisruptionBudgetList
 	pageLeft := true
 
 	for pageLeft {
-		response, err = clientset.PolicyV1beta1().PodDisruptionBudgets("").List(ctx, input)
+		response, err = clientset.PolicyV1().PodDisruptionBudgets("").List(ctx, input)
 		if err != nil {
 			return nil, err
 		}
@@ -142,7 +142,7 @@ func getPDB(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (in
 		return nil, nil
 	}
 
-	pdb, err := clientset.PolicyV1beta1().PodDisruptionBudgets(namespace).Get(ctx, name, metav1.GetOptions{})
+	pdb, err := clientset.PolicyV1().PodDisruptionBudgets(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
 		return nil, err
 	}
@@ -153,6 +153,6 @@ func getPDB(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (in
 //// TRANSFORM FUNCTIONS
 
 func transformPDBTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	obj := d.HydrateItem.(v1beta1.PodDisruptionBudget)
+	obj := d.HydrateItem.(v1.PodDisruptionBudget)
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }
