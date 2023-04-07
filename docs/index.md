@@ -73,9 +73,9 @@ connection "kubernetes" {
   # Specify a context other than the current one.
   # config_context = "minikube"
 
-  # List of custom resources that will be created as dynamic tables
-  # No dynamic tables will be created if this arg is empty or not set
-  # Wildcard based searches are supported
+  # List of custom resources that will be created as dynamic tables.
+  # No dynamic tables will be created if this arg is empty or not set.
+  # Wildcard based searches are supported.
 
   # For example:
   #  - "*" matches all custom resources available
@@ -88,6 +88,24 @@ connection "kubernetes" {
 
   # If no kubeconfig file can be found, the plugin will attempt to use the service account Kubernetes gives to pods.
   # This authentication method is intended for clients that expect to be running inside a pod running on Kubernetes.
+
+  # Paths is a list of locations to search for Kubernetes manifest files
+  # Wildcard based searches are supported, including recursive searches
+  # Local paths are resolved relative to the current working directory (CWD)
+
+  # For example:
+  #  - "*.yml" matches all Kubernetes manifest files in the CWD
+  #  - "**/*.yml" matches all Kubernetes manifest files in the CWD and all sub-directories
+  #  - "../*.yml" matches all Kubernetes manifest files in the CWD's parent directory
+  #  - "steampipe*.yml" matches all Kubernetes manifest files starting with "steampipe" in the CWD
+  #  - "/path/to/dir/*.yml" matches all Kubernetes manifest files in a specific directory
+  #  - "/path/to/dir/main.yml" matches a specific file
+
+  # If paths includes "*", all files (including non-kubernetes manifest files) in
+  # the CWD will be matched, which may cause errors if incompatible file types exist
+
+  # Defaults to CWD
+  manifest_file_paths = [ "*.yml", "*.yaml" ]
 }
 ```
 
