@@ -9,14 +9,16 @@ import (
 	"strings"
 
 	filehelpers "github.com/turbot/go-kit/files"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextension "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/scheme"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/azure"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
@@ -673,7 +675,7 @@ func parsedManifestFileContentUncached(ctx context.Context, d *plugin.QueryData,
 			plugin.Logger(ctx).Error("parseManifestFileContent", "failed to read file", err, "path", path)
 			return nil, err
 		}
-		decoder := scheme.Codecs.UniversalDeserializer()
+		decoder := clientgoscheme.Codecs.UniversalDeserializer()
 
 		// Check for the start of the document
 		for _, resource := range strings.Split(string(content), "---") {
@@ -683,7 +685,7 @@ func parsedManifestFileContentUncached(ctx context.Context, d *plugin.QueryData,
 			}
 
 			// Decode the file content
-			obj, groupVersionKind, err := decoder.Decode([]byte(resource), nil, nil)
+			obj, groupVersionKind, err := decodeFileContent(decoder, resource)
 			if err != nil {
 				plugin.Logger(ctx).Error("parseManifestFileContent", "failed to decode the file", err, "path", path)
 				return nil, err
@@ -697,4 +699,25 @@ func parsedManifestFileContentUncached(ctx context.Context, d *plugin.QueryData,
 	}
 
 	return parsedContents, nil
+}
+
+func decodeFileContent(decoder runtime.Decoder, resource string) (runtime.Object, *schema.GroupVersionKind, error) {
+	// Decode the file content
+	obj, groupVersionKind, err := decoder.Decode([]byte(resource), nil, nil)
+	if err != nil {
+		// The resource kind CustomResourceDefinition is not valid.
+		// For the CustomResourceDefinition it needed to add the scheme.
+		if strings.HasPrefix(err.Error(), "no kind \"CustomResourceDefinition\"") {
+			sch := runtime.NewScheme()
+			_ = clientgoscheme.AddToScheme(sch)
+			_ = apiextensionsv1.AddToScheme(sch)
+
+			decoder := serializer.NewCodecFactory(sch).UniversalDeserializer()
+
+			return decodeFileContent(decoder, resource)
+		}
+		return nil, nil, err
+	}
+
+	return obj, groupVersionKind, nil
 }
