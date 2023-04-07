@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	v1beta1 "k8s.io/api/policy/v1beta1"
+	v1 "k8s.io/api/policy/v1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -71,7 +71,7 @@ func tableKubernetesPDB(ctx context.Context) *plugin.Table {
 }
 
 type PodDisruptionBudget struct {
-	v1beta1.PodDisruptionBudget
+	v1.PodDisruptionBudget
 	ManifestFilePath string
 }
 
@@ -97,7 +97,7 @@ func listPDBs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (
 	}
 
 	for _, content := range parsedContents {
-		pdb := content.Data.(*v1beta1.PodDisruptionBudget)
+		pdb := content.Data.(*v1.PodDisruptionBudget)
 
 		d.StreamListItem(ctx, PodDisruptionBudget{*pdb, content.Path})
 
@@ -136,11 +136,11 @@ func listPDBs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (
 		input.FieldSelector = strings.Join(commonFieldSelectorValue, ",")
 	}
 
-	var response *v1beta1.PodDisruptionBudgetList
+	var response *v1.PodDisruptionBudgetList
 	pageLeft := true
 
 	for pageLeft {
-		response, err = clientset.PolicyV1beta1().PodDisruptionBudgets("").List(ctx, input)
+		response, err = clientset.PolicyV1().PodDisruptionBudgets("").List(ctx, input)
 		if err != nil {
 			return nil, err
 		}
@@ -192,7 +192,7 @@ func getPDB(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (in
 	}
 
 	for _, content := range parsedContents {
-		pdb := content.Data.(*v1beta1.PodDisruptionBudget)
+		pdb := content.Data.(*v1.PodDisruptionBudget)
 
 		if pdb.Name == name && pdb.Namespace == namespace {
 			return PodDisruptionBudget{*pdb, content.Path}, nil
@@ -206,7 +206,7 @@ func getPDB(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (in
 		return nil, nil
 	}
 
-	pdb, err := clientset.PolicyV1beta1().PodDisruptionBudgets(namespace).Get(ctx, name, metav1.GetOptions{})
+	pdb, err := clientset.PolicyV1().PodDisruptionBudgets(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
 		return nil, err
 	}

@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"k8s.io/api/discovery/v1beta1"
+	v1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
@@ -65,7 +65,7 @@ func tableKubernetesEndpointSlice(ctx context.Context) *plugin.Table {
 }
 
 type EndpointSlice struct {
-	v1beta1.EndpointSlice
+	v1.EndpointSlice
 	ManifestFilePath string
 }
 
@@ -91,7 +91,7 @@ func listK8sEnpointSlices(ctx context.Context, d *plugin.QueryData, _ *plugin.Hy
 	}
 
 	for _, content := range parsedContents {
-		endpointSlice := content.Data.(*v1beta1.EndpointSlice)
+		endpointSlice := content.Data.(*v1.EndpointSlice)
 
 		d.StreamListItem(ctx, EndpointSlice{*endpointSlice, content.Path})
 
@@ -130,11 +130,11 @@ func listK8sEnpointSlices(ctx context.Context, d *plugin.QueryData, _ *plugin.Hy
 		input.FieldSelector = strings.Join(commonFieldSelectorValue, ",")
 	}
 
-	var response *v1beta1.EndpointSliceList
+	var response *v1.EndpointSliceList
 	pageLeft := true
 
 	for pageLeft {
-		response, err = clientset.DiscoveryV1beta1().EndpointSlices("").List(ctx, input)
+		response, err = clientset.DiscoveryV1().EndpointSlices("").List(ctx, input)
 		if err != nil {
 			return nil, err
 		}
@@ -186,7 +186,7 @@ func getK8sEnpointSlice(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 	}
 
 	for _, content := range parsedContents {
-		endpointSlice := content.Data.(*v1beta1.EndpointSlice)
+		endpointSlice := content.Data.(*v1.EndpointSlice)
 
 		if endpointSlice.Name == name && endpointSlice.Namespace == namespace {
 			return EndpointSlice{*endpointSlice, content.Path}, nil
@@ -200,7 +200,7 @@ func getK8sEnpointSlice(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 		return nil, nil
 	}
 
-	endpointSlice, err := clientset.DiscoveryV1beta1().EndpointSlices(namespace).Get(ctx, name, metav1.GetOptions{})
+	endpointSlice, err := clientset.DiscoveryV1().EndpointSlices(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
 		return nil, err
 	}

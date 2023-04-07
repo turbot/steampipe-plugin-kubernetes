@@ -36,7 +36,7 @@ from
     and d.namespace = pdb.namespace 
 order by
   d.namespace,
-  d.name
+  d.name;
 ```
 
 ### List manifest resources

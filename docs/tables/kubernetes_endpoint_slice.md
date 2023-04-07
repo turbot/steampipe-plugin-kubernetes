@@ -21,7 +21,6 @@ from
 ### Endpoint Slice IP Information
 
 ```sql
-
 select
   name,
   namespace,

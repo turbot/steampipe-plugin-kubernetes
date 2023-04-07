@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"k8s.io/api/autoscaling/v2beta2"
+	v1 "k8s.io/api/autoscaling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
@@ -125,7 +125,7 @@ func tableKubernetesHorizontalPodAutoscaler(ctx context.Context) *plugin.Table {
 }
 
 type HorizontalPodAutoscaler struct {
-	v2beta2.HorizontalPodAutoscaler
+	v1.HorizontalPodAutoscaler
 	ManifestFilePath string
 }
 
@@ -149,7 +149,7 @@ func listK8sHPAs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 	}
 
 	for _, content := range parsedContents {
-		hpa := content.Data.(*v2beta2.HorizontalPodAutoscaler)
+		hpa := content.Data.(*v1.HorizontalPodAutoscaler)
 
 		d.StreamListItem(ctx, HorizontalPodAutoscaler{*hpa, content.Path})
 
@@ -188,11 +188,11 @@ func listK8sHPAs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 		input.FieldSelector = strings.Join(commonFieldSelectorValue, ",")
 	}
 
-	var response *v2beta2.HorizontalPodAutoscalerList
+	var response *v1.HorizontalPodAutoscalerList
 	pageLeft := true
 
 	for pageLeft {
-		response, err = clientset.AutoscalingV2beta2().HorizontalPodAutoscalers("").List(ctx, input)
+		response, err = clientset.AutoscalingV1().HorizontalPodAutoscalers("").List(ctx, input)
 		if err != nil {
 			plugin.Logger(ctx).Error("listK8sHPAs", "api_err", err)
 			return nil, err
@@ -243,7 +243,7 @@ func getK8sHPA(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) 
 	}
 
 	for _, content := range parsedContents {
-		hpa := content.Data.(*v2beta2.HorizontalPodAutoscaler)
+		hpa := content.Data.(*v1.HorizontalPodAutoscaler)
 
 		if hpa.Name == name && hpa.Namespace == namespace {
 			return HorizontalPodAutoscaler{*hpa, content.Path}, nil
@@ -257,7 +257,7 @@ func getK8sHPA(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) 
 		return nil, nil
 	}
 
-	hpa, err := clientset.AutoscalingV2beta2().HorizontalPodAutoscalers(namespace).Get(ctx, name, metav1.GetOptions{})
+	hpa, err := clientset.AutoscalingV1().HorizontalPodAutoscalers(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
 		plugin.Logger(ctx).Error("getK8sHPA", "api_err", err)
 		return nil, err
