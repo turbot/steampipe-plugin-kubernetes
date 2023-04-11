@@ -586,13 +586,13 @@ func mergeTags(labels map[string]string, annotations map[string]string) map[stri
 // Check whether the config file is configured correctly.
 // The plugin can list both live resources and the resources from the manifest file.
 // To avoid the conflict, a connection can only contains either config_path / config_paths to define the kube config files, or,
-// the manifest_file_paths to define the location to the manifest files.
+// the paths to define the location to the manifest files.
 func validateKubernetesConfig(connection *plugin.Connection) error {
 	kubernetesConfig := GetConfig(connection)
 
 	if (kubernetesConfig.ConfigPath != nil || kubernetesConfig.ConfigPaths != nil) &&
 		kubernetesConfig.ManifestFilePaths != nil {
-		return fmt.Errorf("both config_path, config_paths and manifest_file_paths can not be passed in a single connection")
+		return fmt.Errorf("both config_path, config_paths and paths can not be passed in a single connection")
 	}
 	return nil
 }
@@ -705,6 +705,11 @@ func parsedManifestFileContentUncached(ctx context.Context, d *plugin.QueryData,
 		for _, resource := range strings.Split(string(content), "---") {
 			// skip empty documents, `Decode` will fail on them
 			if len(resource) == 0 {
+				continue
+			}
+
+			// skip if no kind defined
+			if !strings.Contains(resource, "kind:") {
 				continue
 			}
 

@@ -53,6 +53,8 @@ connection "kubernetes" {
   # This authentication method is intended for clients that expect to be running inside a pod running on Kubernetes.
 
   # Paths is a list of locations to search for Kubernetes manifest files
+  # Paths can be configured with a local directory, a remote Git repository URL, or an S3 bucket URL
+  # Refer https://hub.steampipe.io/plugins/turbot/kubernetes#supported-path-formats for more information
   # Wildcard based searches are supported, including recursive searches
   # Local paths are resolved relative to the current working directory (CWD)
 
