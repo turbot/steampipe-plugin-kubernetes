@@ -69,8 +69,8 @@ select
 from
   kubernetes_job,
   jsonb_array_elements(template -> 'spec' -> 'containers') as elems
-group by 
-  name, 
+group by
+  name,
   namespace;
 ```
 
@@ -87,9 +87,10 @@ select
   parallelism,
   selector,
   labels,
-  annotations
+  annotations,
+  path
 from
   kubernetes_job
 where
-  manifest_file_path is not null;
+  path is not null;
 ```

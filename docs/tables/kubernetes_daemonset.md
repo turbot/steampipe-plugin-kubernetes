@@ -63,9 +63,10 @@ select
   desired_number_scheduled as desired,
   current_number_scheduled as current,
   number_available as available,
-  selector
+  selector,
+  path
 from
   kubernetes_daemonset
 where
-  manifest_file_path is not null;
+  path is not null;
 ```

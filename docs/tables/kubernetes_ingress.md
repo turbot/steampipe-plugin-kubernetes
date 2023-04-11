@@ -36,11 +36,12 @@ from
 select
   name,
   namespace,
-  ingress_class_name as class
+  ingress_class_name as class,
+  path
 from
   kubernetes_ingress
 where
-  manifest_file_path is not null
+  path is not null
 order by
   namespace,
   name;

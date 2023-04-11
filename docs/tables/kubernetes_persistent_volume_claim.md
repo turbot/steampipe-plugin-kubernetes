@@ -37,9 +37,10 @@ select
   capacity ->> 'storage' as capacity,
   data_source,
   selector,
-  resources
+  resources,
+  path
 from
   kubernetes_persistent_volume_claim
 where
-  manifest_file_path is not null;
+  path is not null;
 ```

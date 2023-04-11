@@ -59,11 +59,11 @@ select
   name,
   rules,
   aggregation_rule,
-  manifest_file_path
+  path
 from
   kubernetes_cluster_role
 where
-  manifest_file_path is not null
+  path is not null
 order by
   name;
 ```

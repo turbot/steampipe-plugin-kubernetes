@@ -42,9 +42,10 @@ select
   capacity ->> 'storage' as storage_capacity,
   persistent_volume_reclaim_policy,
   phase as status,
-  volume_mode
+  volume_mode,
+  path
 from
   kubernetes_persistent_volume
 where
-  manifest_file_path is not null;
+  path is not null;
 ```

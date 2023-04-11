@@ -45,11 +45,12 @@ select
   name,
   namespace,
   resource_version,
-  jsonb_pretty(spec_limits) as spec_limits
+  jsonb_pretty(spec_limits) as spec_limits,
+  path
 from
   kubernetes_limit_range
 where
-  manifest_file_path is not null
+  path is not null
 order by
   namespace;
 ```

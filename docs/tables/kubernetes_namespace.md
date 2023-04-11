@@ -25,9 +25,10 @@ select
   name,
   phase as status,
   annotations,
-  labels
+  labels,
+  path
 from
   kubernetes_namespace
 where
-  manifest_file_path is not null;
+  path is not null;
 ```

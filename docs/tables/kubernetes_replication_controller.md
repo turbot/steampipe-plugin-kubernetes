@@ -42,9 +42,10 @@ select
   name,
   namespace,
   replicas as desired,
-  selector
+  selector,
+  path
 from
   kubernetes_replication_controller
 where
-  manifest_file_path is not null;
+  path is not null;
 ```

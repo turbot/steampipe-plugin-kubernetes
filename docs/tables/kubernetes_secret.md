@@ -45,12 +45,13 @@ select
   name,
   namespace,
   data.key,
-  data.value
+  data.value,
+  path
 from
   kubernetes_secret,
   jsonb_each(data) as data
 where
-  manifest_file_path is not null
+  path is not null
 order by
   namespace,
   name;

@@ -160,20 +160,14 @@ func tableKubernetesService(ctx context.Context) *plugin.Table {
 				Description: ColumnDescriptionTags,
 				Transform:   transform.From(transformServiceTags),
 			},
-			{
-				Name:        "manifest_file_path",
-				Type:        proto.ColumnType_STRING,
-				Description: "The path to the manifest file.",
-				Transform:   transform.FromField("ManifestFilePath").Transform(transform.NullIfZeroValue),
-			},
 		}),
 	}
 }
 
 type Service struct {
 	v1.Service
-	ManifestFilePath string
-	StartLine        int
+	Path      string
+	StartLine int
 }
 
 //// HYDRATE FUNCTIONS

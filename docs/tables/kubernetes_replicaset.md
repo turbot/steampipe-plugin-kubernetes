@@ -47,11 +47,11 @@ select
   age(current_timestamp, pod.creation_timestamp),
   pod.pod_ip,
   pod.node_name
-from 
+from
   kubernetes_pod as pod,
   jsonb_array_elements(pod.owner_references) as pod_owner,
   kubernetes_replicaset as rs
-where 
+where
   pod_owner ->> 'kind' = 'ReplicaSet'
   and rs.uid = pod_owner ->> 'uid'
   and rs.name = 'frontend-56fc5b6b47'
@@ -71,9 +71,10 @@ select
   ready_replicas as ready,
   available_replicas as available,
   selector,
-  fully_labeled_replicas
+  fully_labeled_replicas,
+  path
 from
   kubernetes_replicaset
 where
-  manifest_file_path is not null;
+  path is not null;
 ```

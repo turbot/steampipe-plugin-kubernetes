@@ -69,20 +69,14 @@ func tableKubernetesStorageClass(ctx context.Context) *plugin.Table {
 				Description: ColumnDescriptionTitle,
 				Transform:   transform.FromField("Name"),
 			},
-			{
-				Name:        "manifest_file_path",
-				Type:        proto.ColumnType_STRING,
-				Description: "The path to the manifest file.",
-				Transform:   transform.FromField("ManifestFilePath").Transform(transform.NullIfZeroValue),
-			},
 		}),
 	}
 }
 
 type StorageClass struct {
 	v1.StorageClass
-	ManifestFilePath string
-	StartLine        int
+	Path      string
+	StartLine int
 }
 
 //// HYDRATE FUNCTIONS

@@ -91,9 +91,10 @@ select
   pod_cidrs,
   provider_id,
   addresses,
-  capacity
+  capacity,
+  path
 from
   kubernetes_node
 where
-  manifest_file_path is not null;
+  path is not null;
 ```

@@ -12,8 +12,14 @@ const (
 	ColumnDescriptionTags  = "A map of tags for the resource. This includes both labels and annotations."
 )
 
-func objectLineNumber() []*plugin.Column {
+func manifestResourceColumns() []*plugin.Column {
 	return []*plugin.Column{
+		{
+			Name:        "path",
+			Type:        proto.ColumnType_STRING,
+			Description: "The path to the manifest file.",
+			Transform:   transform.FromField("Path").Transform(transform.NullIfZeroValue),
+		},
 		{
 			Name:        "start_line",
 			Type:        proto.ColumnType_INT,
@@ -87,8 +93,7 @@ func k8sCommonColumns(columns []*plugin.Column) []*plugin.Column {
 	//allColumns = append(allColumns, specStatusColumns...)
 	allColumns = append(allColumns, objectMetadataSecondaryColumns()...)
 	allColumns = append(allColumns, kubectlConfigColumns()...)
-
-	allColumns = append(allColumns, objectLineNumber()...)
+	allColumns = append(allColumns, manifestResourceColumns()...)
 
 	return allColumns
 }
@@ -117,6 +122,7 @@ func k8sCommonGlobalColumns(columns []*plugin.Column) []*plugin.Column {
 	//allColumns = append(allColumns, specStatusColumns...)
 	allColumns = append(allColumns, objectMetadataSecondaryColumns()...)
 	allColumns = append(allColumns, kubectlConfigColumns()...)
+	allColumns = append(allColumns, manifestResourceColumns()...)
 
 	return allColumns
 }

@@ -8,7 +8,6 @@ import (
 
 	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
-	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
 )
 
 func tableKubernetesCustomResourceDefinition(ctx context.Context) *plugin.Table {
@@ -34,20 +33,14 @@ func tableKubernetesCustomResourceDefinition(ctx context.Context) *plugin.Table 
 				Description: "Status indicates the actual state of the CustomResourceDefinition.",
 				Type:        proto.ColumnType_JSON,
 			},
-			{
-				Name:        "manifest_file_path",
-				Type:        proto.ColumnType_STRING,
-				Description: "The path to the manifest file.",
-				Transform:   transform.FromField("ManifestFilePath").Transform(transform.NullIfZeroValue),
-			},
 		}),
 	}
 }
 
 type CustomResourceDefinition struct {
 	v1.CustomResourceDefinition
-	ManifestFilePath string
-	StartLine        int
+	Path      string
+	StartLine int
 }
 
 //// HYDRATE FUNCTIONS

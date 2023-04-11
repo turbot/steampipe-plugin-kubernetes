@@ -10,7 +10,7 @@ type kubernetesConfig struct {
 	ConfigPath           *string  `cty:"config_path"`
 	ConfigContext        *string  `cty:"config_context"`
 	CustomResourceTables []string `cty:"custom_resource_tables"`
-	ManifestFilePaths    []string `cty:"manifest_file_paths" steampipe:"watch"`
+	ManifestFilePaths    []string `cty:"paths" steampipe:"watch"`
 }
 
 var ConfigSchema = map[string]*schema.Attribute{
@@ -28,7 +28,7 @@ var ConfigSchema = map[string]*schema.Attribute{
 		Type: schema.TypeList,
 		Elem: &schema.Attribute{Type: schema.TypeString},
 	},
-	"manifest_file_paths": {
+	"paths": {
 		Type: schema.TypeList,
 		Elem: &schema.Attribute{Type: schema.TypeString},
 	},

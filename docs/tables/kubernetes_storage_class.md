@@ -56,9 +56,10 @@ select
   provisioner,
   reclaim_policy,
   parameters,
-  mount_options
+  mount_options,
+  path
 from
   kubernetes_storage_class
 where
-  manifest_file_path is not null;
+  path is not null;
 ```

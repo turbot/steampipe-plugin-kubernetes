@@ -64,11 +64,12 @@ select
   privileged,
   read_only_root_filesystem,
   allowed_csi_drivers,
-  allowed_host_paths
+  allowed_host_paths,
+  path
 from
   kubernetes_pod_security_policy
 where
-  manifest_file_path is not null
+  path is not null
 order by
   name;
 ```

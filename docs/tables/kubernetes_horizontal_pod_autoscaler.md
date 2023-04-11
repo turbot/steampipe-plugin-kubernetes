@@ -44,9 +44,10 @@ select
   min_replicas,
   max_replicas,
   current_replicas,
-  desired_replicas
+  desired_replicas,
+  path
 from
   kubernetes_horizontal_pod_autoscaler
 where
-  manifest_file_path is not null;
+  path is not null;
 ```

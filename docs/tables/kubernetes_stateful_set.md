@@ -41,11 +41,12 @@ select
   name,
   namespace,
   service_name,
-  replicas
+  replicas,
+  path
 from
   kubernetes_stateful_set
 where
-  manifest_file_path is not null
+  path is not null
 order by
   namespace,
   name;

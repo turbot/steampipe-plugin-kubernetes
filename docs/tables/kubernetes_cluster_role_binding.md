@@ -57,11 +57,11 @@ select
   role_name,
   role_kind,
   jsonb_pretty(subjects) as subjects,
-  manifest_file_path
+  path
 from
   kubernetes_cluster_role_binding
 where
-  manifest_file_path is not null
+  path is not null
 order by
   name;
 ```

@@ -60,11 +60,12 @@ select
   namespace,
   role_name,
   role_kind,
-  jsonb_pretty(subjects) as subjects
+  jsonb_pretty(subjects) as subjects,
+  path
 from
   kubernetes_role_binding
 where
-  manifest_file_path is not null
+  path is not null
 order by
   name;
 ```

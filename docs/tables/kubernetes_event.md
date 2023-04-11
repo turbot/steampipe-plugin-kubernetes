@@ -45,9 +45,10 @@ select
   type,
   reason,
   concat(involved_object ->> 'kind', '/', involved_object ->> 'name') as object,
-  message
+  message,
+  path
 from
   kubernetes_event
 where
-  manifest_file_path is not null;
+  path is not null;
 ```

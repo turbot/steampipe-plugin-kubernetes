@@ -29,8 +29,8 @@ select
 from
   kubernetes_cronjob,
   jsonb_array_elements(job_template -> 'spec' -> 'template' -> 'spec' -> 'containers') as elems
-group by 
-  name, 
+group by
+  name,
   namespace;
 ```
 
@@ -43,9 +43,10 @@ select
   uid,
   failed_jobs_history_limit,
   schedule,
-  suspend
+  suspend,
+  path
 from
   kubernetes_cronjob
 where
-  manifest_file_path is not null;
+  path is not null;
 ```

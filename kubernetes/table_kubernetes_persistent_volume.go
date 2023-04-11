@@ -112,20 +112,14 @@ func tableKubernetesPersistentVolume(ctx context.Context) *plugin.Table {
 				Description: ColumnDescriptionTags,
 				Transform:   transform.From(transformPVTags),
 			},
-			{
-				Name:        "manifest_file_path",
-				Type:        proto.ColumnType_STRING,
-				Description: "The path to the manifest file.",
-				Transform:   transform.FromField("ManifestFilePath").Transform(transform.NullIfZeroValue),
-			},
 		}),
 	}
 }
 
 type PersistentVolume struct {
 	v1.PersistentVolume
-	ManifestFilePath string
-	StartLine        int
+	Path      string
+	StartLine int
 }
 
 //// HYDRATE FUNCTIONS

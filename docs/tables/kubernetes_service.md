@@ -27,11 +27,12 @@ select
   name,
   namespace,
   type,
-  cluster_ip
+  cluster_ip,
+  path
 from
   kubernetes_service
 where
-  manifest_file_path is not null
+  path is not null
 order by
   namespace,
   name;

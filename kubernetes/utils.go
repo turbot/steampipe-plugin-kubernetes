@@ -642,7 +642,9 @@ func getParsedManifestFileContent(ctx context.Context, d *plugin.QueryData) ([]p
 var parsedManifestFileContentCached = plugin.HydrateFunc(parsedManifestFileContentUncached).Memoize()
 
 func parsedManifestFileContentUncached(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (any, error) {
+	plugin.Logger(ctx).Debug("parsedManifestFileContentUncached", "Parsing file content...", "connection", d.Connection.Name)
 
+	// Read the config
 	k8sConfig := GetConfig(d.Connection)
 
 	// Gather file path matches for the glob
@@ -673,7 +675,7 @@ func parsedManifestFileContentUncached(ctx context.Context, d *plugin.QueryData,
 		// Load the file into a buffer
 		content, err := os.ReadFile(path)
 		if err != nil {
-			plugin.Logger(ctx).Error("parseManifestFileContent", "failed to read file", err, "path", path)
+			plugin.Logger(ctx).Error("parsedManifestFileContentUncached", "failed to read file", err, "path", path)
 			return nil, err
 		}
 		decoder := clientgoscheme.Codecs.UniversalDeserializer()
@@ -681,12 +683,12 @@ func parsedManifestFileContentUncached(ctx context.Context, d *plugin.QueryData,
 		// Get the start lines for all resource specified in the file
 		temp := strings.Split(string(content), "\n")
 		resourceLocationMap := map[string][]int{}
-		
+
 		// Initialize the line with 0
 		line := 0
 		for _, item := range temp {
 			item = strings.ReplaceAll(item, " ", "")
-			
+
 			// Extract the starting position of the resource defined in a file.
 			// If the file has multiple resource configuration defined, store the position based on the occurrence.
 			if strings.Contains(item, "kind") {
@@ -709,10 +711,10 @@ func parsedManifestFileContentUncached(ctx context.Context, d *plugin.QueryData,
 			// Decode the file content
 			obj, groupVersionKind, err := decodeFileContent(decoder, resource)
 			if err != nil {
-				plugin.Logger(ctx).Error("parseManifestFileContent", "failed to decode the file", err, "path", path)
+				plugin.Logger(ctx).Error("parsedManifestFileContentUncached", "failed to decode the file", err, "path", path)
 				return nil, err
 			}
-			
+
 			// Extract the start line number based on the resource kind
 			// If the file has multiple resource configuration defined,
 			// location of the resource will be fetched as per FIFO basis

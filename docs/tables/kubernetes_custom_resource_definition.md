@@ -109,3 +109,17 @@ select
 from
   kubernetes_custom_resource_definition;
 ```
+
+### List manifest resources
+
+```sql
+select
+  name,
+  namespace,
+  resource_version,
+  path
+from
+  kubernetes_custom_resource_definition
+where
+  path is not null;
+```

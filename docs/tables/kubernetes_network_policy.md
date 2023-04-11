@@ -28,7 +28,7 @@ select
   namespace,
   policy_types,
   pod_selector,
-  egress 
+  egress
 from
   kubernetes_network_policy
 where
@@ -45,7 +45,7 @@ select
   namespace,
   policy_types,
   pod_selector,
-  egress 
+  egress
 from
   kubernetes_network_policy
 where
@@ -62,7 +62,7 @@ select
   namespace,
   policy_types,
   pod_selector,
-  ingress 
+  ingress
 from
   kubernetes_network_policy
 where
@@ -79,7 +79,7 @@ select
   namespace,
   policy_types,
   pod_selector,
-  ingress 
+  ingress
 from
   kubernetes_network_policy
 where
@@ -115,9 +115,10 @@ select
   egress,
   pod_selector,
   labels,
-  annotations
+  annotations,
+  path
 from
   kubernetes_network_policy
 where
-  manifest_file_path is not null;
+  path is not null;
 ```

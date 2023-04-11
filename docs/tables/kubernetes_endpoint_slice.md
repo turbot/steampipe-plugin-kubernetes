@@ -43,9 +43,10 @@ select
   generate_name as endpoint_name,
   address_type,
   endpoints,
-  ports
+  ports,
+  path
 from
   kubernetes_endpoint_slice
 where
-  manifest_file_path is not null;
+  path is not null;
 ```

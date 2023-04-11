@@ -39,9 +39,10 @@ from
 select
   name,
   namespace,
-  subsets
+  subsets,
+  path
 from
   kubernetes_endpoint
 where
-  manifest_file_path is not null;
+  path is not null;
 ```

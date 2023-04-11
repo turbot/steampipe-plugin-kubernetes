@@ -12,9 +12,9 @@ select
    namespace,
    min_available,
    max_unavailable,
-   selector 
+   selector
 from
-   kubernetes_pod_disruption_budget 
+   kubernetes_pod_disruption_budget
 order by
    namespace,
    name;
@@ -27,13 +27,13 @@ select
   d.namespace,
   d.name,
   min_available,
-  replicas 
+  replicas
 from
-  kubernetes_pod_disruption_budget pdb 
+  kubernetes_pod_disruption_budget pdb
   inner join
-    kubernetes_deployment d 
-    on d.selector = pdb.selector 
-    and d.namespace = pdb.namespace 
+   kubernetes_deployment d
+   on d.selector = pdb.selector
+   and d.namespace = pdb.namespace
 order by
   d.namespace,
   d.name;
@@ -43,15 +43,16 @@ order by
 
 ```sql
 select
-   name,
-   namespace,
-   min_available,
-   max_unavailable,
-   selector 
+  name,
+  namespace,
+  min_available,
+  max_unavailable,
+  selector,
+  path
 from
    kubernetes_pod_disruption_budget
 where
-  manifest_file_path is not null
+  path is not null
 order by
    namespace,
    name;

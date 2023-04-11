@@ -101,20 +101,14 @@ func tableKubernetesEvent(ctx context.Context) *plugin.Table {
 				Type:        proto.ColumnType_JSON,
 				Description: "The component reporting this event.",
 			},
-			{
-				Name:        "manifest_file_path",
-				Type:        proto.ColumnType_STRING,
-				Description: "The path to the manifest file.",
-				Transform:   transform.FromField("ManifestFilePath").Transform(transform.NullIfZeroValue),
-			},
 		}),
 	}
 }
 
 type Event struct {
 	v1.Event
-	ManifestFilePath string
-	StartLine        int
+	Path      string
+	StartLine int
 }
 
 //// HYDRATE FUNCTIONS

@@ -63,11 +63,12 @@ where
 select
   name,
   namespace,
-  jsonb_array_length(secrets) as secrets
+  jsonb_array_length(secrets) as secrets,
+  path
 from
   kubernetes_service_account
 where
-  manifest_file_path is not null
+  path is not null
 order by
   namespace,
   name;

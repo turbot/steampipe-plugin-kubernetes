@@ -42,11 +42,12 @@ order by
 select
   name,
   namespace,
-  rules
+  rules,
+  path
 from
   kubernetes_role
 where
-  manifest_file_path is not null
+  path is not null
 order by
   name;
 ```
