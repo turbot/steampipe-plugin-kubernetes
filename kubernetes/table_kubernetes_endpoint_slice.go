@@ -67,6 +67,7 @@ func tableKubernetesEndpointSlice(ctx context.Context) *plugin.Table {
 type EndpointSlice struct {
 	v1.EndpointSlice
 	ManifestFilePath string
+	StartLine        int
 }
 
 //// HYDRATE FUNCTIONS
@@ -93,7 +94,7 @@ func listK8sEnpointSlices(ctx context.Context, d *plugin.QueryData, _ *plugin.Hy
 	for _, content := range parsedContents {
 		endpointSlice := content.Data.(*v1.EndpointSlice)
 
-		d.StreamListItem(ctx, EndpointSlice{*endpointSlice, content.Path})
+		d.StreamListItem(ctx, EndpointSlice{*endpointSlice, content.Path, content.Line})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -146,7 +147,7 @@ func listK8sEnpointSlices(ctx context.Context, d *plugin.QueryData, _ *plugin.Hy
 		}
 
 		for _, endpointSlice := range response.Items {
-			d.StreamListItem(ctx, EndpointSlice{endpointSlice, ""})
+			d.StreamListItem(ctx, EndpointSlice{endpointSlice, "", 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -189,7 +190,7 @@ func getK8sEnpointSlice(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 		endpointSlice := content.Data.(*v1.EndpointSlice)
 
 		if endpointSlice.Name == name && endpointSlice.Namespace == namespace {
-			return EndpointSlice{*endpointSlice, content.Path}, nil
+			return EndpointSlice{*endpointSlice, content.Path, content.Line}, nil
 		}
 	}
 
@@ -205,7 +206,7 @@ func getK8sEnpointSlice(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 		return nil, err
 	}
 
-	return EndpointSlice{*endpointSlice, ""}, nil
+	return EndpointSlice{*endpointSlice, "", 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS

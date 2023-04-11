@@ -114,6 +114,7 @@ func tableKubernetesEvent(ctx context.Context) *plugin.Table {
 type Event struct {
 	v1.Event
 	ManifestFilePath string
+	StartLine        int
 }
 
 //// HYDRATE FUNCTIONS
@@ -139,7 +140,7 @@ func listK8sEvents(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDa
 	for _, content := range parsedContents {
 		event := content.Data.(*v1.Event)
 
-		d.StreamListItem(ctx, Event{*event, content.Path})
+		d.StreamListItem(ctx, Event{*event, content.Path, content.Line})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -193,7 +194,7 @@ func listK8sEvents(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDa
 		}
 
 		for _, event := range response.Items {
-			d.StreamListItem(ctx, Event{event, ""})
+			d.StreamListItem(ctx, Event{event, "", 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -235,7 +236,7 @@ func getK8sEvent(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 		event := content.Data.(*v1.Event)
 
 		if event.Name == name && event.Namespace == namespace {
-			return Event{*event, content.Path}, nil
+			return Event{*event, content.Path, content.Line}, nil
 		}
 	}
 
@@ -252,5 +253,5 @@ func getK8sEvent(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 		return nil, err
 	}
 
-	return Event{*event, ""}, nil
+	return Event{*event, "", 0}, nil
 }

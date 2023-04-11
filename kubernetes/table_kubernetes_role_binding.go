@@ -77,6 +77,7 @@ func tableKubernetesRoleBinding(ctx context.Context) *plugin.Table {
 type RoleBinding struct {
 	v1.RoleBinding
 	ManifestFilePath string
+	StartLine        int
 }
 
 //// HYDRATE FUNCTIONS
@@ -103,7 +104,7 @@ func listK8sRoleBindings(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 	for _, content := range parsedContents {
 		roleBinding := content.Data.(*v1.RoleBinding)
 
-		d.StreamListItem(ctx, RoleBinding{*roleBinding, content.Path})
+		d.StreamListItem(ctx, RoleBinding{*roleBinding, content.Path, content.Line})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -156,7 +157,7 @@ func listK8sRoleBindings(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 		}
 
 		for _, roleBinding := range response.Items {
-			d.StreamListItem(ctx, RoleBinding{roleBinding, ""})
+			d.StreamListItem(ctx, RoleBinding{roleBinding, "", 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -199,7 +200,7 @@ func getK8sRoleBinding(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 		roleBinding := content.Data.(*v1.RoleBinding)
 
 		if roleBinding.Name == name && roleBinding.Namespace == namespace {
-			return RoleBinding{*roleBinding, content.Path}, nil
+			return RoleBinding{*roleBinding, content.Path, content.Line}, nil
 		}
 	}
 
@@ -215,7 +216,7 @@ func getK8sRoleBinding(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 		return nil, err
 	}
 
-	return RoleBinding{*roleBinding, ""}, nil
+	return RoleBinding{*roleBinding, "", 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS

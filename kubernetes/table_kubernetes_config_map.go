@@ -68,6 +68,7 @@ func tableKubernetesConfigMap(ctx context.Context) *plugin.Table {
 type ConfigMap struct {
 	v1.ConfigMap
 	ManifestFilePath string
+	StartLine        int
 }
 
 //// HYDRATE FUNCTIONS
@@ -94,7 +95,7 @@ func listK8sConfigMaps(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 	for _, content := range parsedContents {
 		configMap := content.Data.(*v1.ConfigMap)
 
-		d.StreamListItem(ctx, ConfigMap{*configMap, content.Path})
+		d.StreamListItem(ctx, ConfigMap{*configMap, content.Path, content.Line})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -147,7 +148,7 @@ func listK8sConfigMaps(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 		}
 
 		for _, configMap := range response.Items {
-			d.StreamListItem(ctx, ConfigMap{configMap, ""})
+			d.StreamListItem(ctx, ConfigMap{configMap, "", 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -190,7 +191,7 @@ func getK8sConfigMap(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 		configMap := content.Data.(*v1.ConfigMap)
 
 		if configMap.Name == name && configMap.Namespace == namespace {
-			return ConfigMap{*configMap, content.Path}, nil
+			return ConfigMap{*configMap, content.Path, content.Line}, nil
 		}
 	}
 
@@ -206,7 +207,7 @@ func getK8sConfigMap(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 		return nil, err
 	}
 
-	return ConfigMap{*configMap, ""}, nil
+	return ConfigMap{*configMap, "", 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS

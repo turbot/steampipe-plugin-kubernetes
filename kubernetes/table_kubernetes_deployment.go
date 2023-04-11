@@ -158,6 +158,7 @@ func tableKubernetesDeployment(ctx context.Context) *plugin.Table {
 type Deployment struct {
 	v1.Deployment
 	ManifestFilePath string
+	StartLine        int
 }
 
 //// HYDRATE FUNCTIONS
@@ -184,7 +185,7 @@ func listK8sDeployments(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 	for _, content := range parsedContents {
 		deployment := content.Data.(*v1.Deployment)
 
-		d.StreamListItem(ctx, Deployment{*deployment, content.Path})
+		d.StreamListItem(ctx, Deployment{*deployment, content.Path, content.Line})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -238,7 +239,7 @@ func listK8sDeployments(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 		}
 
 		for _, item := range response.Items {
-			d.StreamListItem(ctx, Deployment{item, ""})
+			d.StreamListItem(ctx, Deployment{item, "", 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -281,7 +282,7 @@ func getK8sDeployment(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 		deployment := content.Data.(*v1.Deployment)
 
 		if deployment.Name == name && deployment.Namespace == namespace {
-			return Deployment{*deployment, content.Path}, nil
+			return Deployment{*deployment, content.Path, content.Line}, nil
 		}
 	}
 
@@ -297,7 +298,7 @@ func getK8sDeployment(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 		return nil, err
 	}
 
-	return Deployment{*deployment, ""}, nil
+	return Deployment{*deployment, "", 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS

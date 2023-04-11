@@ -152,6 +152,7 @@ func tableKubernetesDaemonset(ctx context.Context) *plugin.Table {
 type DaemonSet struct {
 	v1.DaemonSet
 	ManifestFilePath string
+	StartLine        int
 }
 
 //// HYDRATE FUNCTIONS
@@ -178,7 +179,7 @@ func listK8sDaemonSets(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 	for _, content := range parsedContents {
 		daemonSet := content.Data.(*v1.DaemonSet)
 
-		d.StreamListItem(ctx, DaemonSet{*daemonSet, content.Path})
+		d.StreamListItem(ctx, DaemonSet{*daemonSet, content.Path, content.Line})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -231,7 +232,7 @@ func listK8sDaemonSets(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 		}
 
 		for _, daemonSet := range response.Items {
-			d.StreamListItem(ctx, DaemonSet{daemonSet, ""})
+			d.StreamListItem(ctx, DaemonSet{daemonSet, "", 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -274,7 +275,7 @@ func getK8sDaemonSet(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 		daemonSet := content.Data.(*v1.DaemonSet)
 
 		if daemonSet.Name == name && daemonSet.Namespace == namespace {
-			return DaemonSet{*daemonSet, content.Path}, nil
+			return DaemonSet{*daemonSet, content.Path, content.Line}, nil
 		}
 	}
 
@@ -290,7 +291,7 @@ func getK8sDaemonSet(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 		return nil, err
 	}
 
-	return DaemonSet{*daemonSet, ""}, nil
+	return DaemonSet{*daemonSet, "", 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS

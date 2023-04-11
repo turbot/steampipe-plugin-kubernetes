@@ -68,6 +68,7 @@ func tableKubernetesServiceAccount(ctx context.Context) *plugin.Table {
 type ServiceAccount struct {
 	v1.ServiceAccount
 	ManifestFilePath string
+	StartLine        int
 }
 
 //// HYDRATE FUNCTIONS
@@ -94,7 +95,7 @@ func listK8sServiceAccounts(ctx context.Context, d *plugin.QueryData, _ *plugin.
 	for _, content := range parsedContents {
 		serviceAccount := content.Data.(*v1.ServiceAccount)
 
-		d.StreamListItem(ctx, ServiceAccount{*serviceAccount, content.Path})
+		d.StreamListItem(ctx, ServiceAccount{*serviceAccount, content.Path, content.Line})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -147,7 +148,7 @@ func listK8sServiceAccounts(ctx context.Context, d *plugin.QueryData, _ *plugin.
 		}
 
 		for _, serviceAccount := range response.Items {
-			d.StreamListItem(ctx, ServiceAccount{serviceAccount, ""})
+			d.StreamListItem(ctx, ServiceAccount{serviceAccount, "", 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -190,7 +191,7 @@ func getK8sServiceAccount(ctx context.Context, d *plugin.QueryData, _ *plugin.Hy
 		serviceAccount := content.Data.(*v1.ServiceAccount)
 
 		if serviceAccount.Name == name && serviceAccount.Namespace == namespace {
-			return ServiceAccount{*serviceAccount, content.Path}, nil
+			return ServiceAccount{*serviceAccount, content.Path, content.Line}, nil
 		}
 	}
 
@@ -207,7 +208,7 @@ func getK8sServiceAccount(ctx context.Context, d *plugin.QueryData, _ *plugin.Hy
 		return nil, err
 	}
 
-	return ServiceAccount{*serviceAccount, ""}, nil
+	return ServiceAccount{*serviceAccount, "", 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS

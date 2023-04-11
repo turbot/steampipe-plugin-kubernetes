@@ -115,6 +115,7 @@ func tableKubernetesCronJob(ctx context.Context) *plugin.Table {
 type CronJob struct {
 	v1.CronJob
 	ManifestFilePath string
+	StartLine        int
 }
 
 //// HYDRATE FUNCTIONS
@@ -141,7 +142,7 @@ func listK8sCronJobs(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 	for _, content := range parsedContents {
 		cronJob := content.Data.(*v1.CronJob)
 
-		d.StreamListItem(ctx, CronJob{*cronJob, content.Path})
+		d.StreamListItem(ctx, CronJob{*cronJob, content.Path, content.Line})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -194,7 +195,7 @@ func listK8sCronJobs(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 		}
 
 		for _, cronJob := range response.Items {
-			d.StreamListItem(ctx, CronJob{cronJob, ""})
+			d.StreamListItem(ctx, CronJob{cronJob, "", 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -237,7 +238,7 @@ func getK8sCronJob(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDa
 		cronJob := content.Data.(*v1.CronJob)
 
 		if cronJob.Name == name && cronJob.Namespace == namespace {
-			return CronJob{*cronJob, content.Path}, nil
+			return CronJob{*cronJob, content.Path, content.Line}, nil
 		}
 	}
 
@@ -254,7 +255,7 @@ func getK8sCronJob(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDa
 		return nil, err
 	}
 
-	return CronJob{*cronJob, ""}, nil
+	return CronJob{*cronJob, "", 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS

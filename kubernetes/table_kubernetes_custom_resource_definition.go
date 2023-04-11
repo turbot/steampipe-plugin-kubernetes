@@ -47,6 +47,7 @@ func tableKubernetesCustomResourceDefinition(ctx context.Context) *plugin.Table 
 type CustomResourceDefinition struct {
 	v1.CustomResourceDefinition
 	ManifestFilePath string
+	StartLine        int
 }
 
 //// HYDRATE FUNCTIONS
@@ -69,7 +70,7 @@ func listK8sCustomResourceDefinitions(ctx context.Context, d *plugin.QueryData, 
 	for _, content := range parsedContents {
 		crd := content.Data.(*v1.CustomResourceDefinition)
 
-		d.StreamListItem(ctx, CustomResourceDefinition{*crd, content.Path})
+		d.StreamListItem(ctx, CustomResourceDefinition{*crd, content.Path, content.Line})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -115,7 +116,7 @@ func listK8sCustomResourceDefinitions(ctx context.Context, d *plugin.QueryData, 
 		}
 
 		for _, crd := range response.Items {
-			d.StreamListItem(ctx, CustomResourceDefinition{crd, ""})
+			d.StreamListItem(ctx, CustomResourceDefinition{crd, "", 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -153,7 +154,7 @@ func getK8sCustomResourceDefinition(ctx context.Context, d *plugin.QueryData, _ 
 		crd := content.Data.(*v1.CustomResourceDefinition)
 
 		if crd.Name == name {
-			return CustomResourceDefinition{*crd, content.Path}, nil
+			return CustomResourceDefinition{*crd, content.Path, content.Line}, nil
 		}
 	}
 
@@ -170,5 +171,5 @@ func getK8sCustomResourceDefinition(ctx context.Context, d *plugin.QueryData, _ 
 		return nil, err
 	}
 
-	return CustomResourceDefinition{*response, ""}, nil
+	return CustomResourceDefinition{*response, "", 0}, nil
 }

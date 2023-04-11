@@ -75,6 +75,7 @@ func tableKubernetesClusterRoleBinding(ctx context.Context) *plugin.Table {
 type ClusterRoleBinding struct {
 	v1.ClusterRoleBinding
 	ManifestFilePath string
+	StartLine        int
 }
 
 //// HYDRATE FUNCTIONS
@@ -101,7 +102,7 @@ func listK8sClusterRoleBindings(ctx context.Context, d *plugin.QueryData, _ *plu
 	for _, content := range parsedContents {
 		clusterRoleBinding := content.Data.(*v1.ClusterRoleBinding)
 
-		d.StreamListItem(ctx, ClusterRoleBinding{*clusterRoleBinding, content.Path})
+		d.StreamListItem(ctx, ClusterRoleBinding{*clusterRoleBinding, content.Path, content.Line})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -148,7 +149,7 @@ func listK8sClusterRoleBindings(ctx context.Context, d *plugin.QueryData, _ *plu
 		}
 
 		for _, clusterRoleBinding := range response.Items {
-			d.StreamListItem(ctx, ClusterRoleBinding{clusterRoleBinding, ""})
+			d.StreamListItem(ctx, ClusterRoleBinding{clusterRoleBinding, "", 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -190,7 +191,7 @@ func getK8sClusterRoleBinding(ctx context.Context, d *plugin.QueryData, _ *plugi
 		clusterRoleBinding := content.Data.(*v1.ClusterRoleBinding)
 
 		if clusterRoleBinding.Name == name {
-			return ClusterRoleBinding{*clusterRoleBinding, content.Path}, nil
+			return ClusterRoleBinding{*clusterRoleBinding, content.Path, content.Line}, nil
 		}
 	}
 
@@ -206,7 +207,7 @@ func getK8sClusterRoleBinding(ctx context.Context, d *plugin.QueryData, _ *plugi
 		return nil, err
 	}
 
-	return ClusterRoleBinding{*clusterRoleBinding, ""}, nil
+	return ClusterRoleBinding{*clusterRoleBinding, "", 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS

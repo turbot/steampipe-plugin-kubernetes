@@ -82,6 +82,7 @@ func tableKubernetesStorageClass(ctx context.Context) *plugin.Table {
 type StorageClass struct {
 	v1.StorageClass
 	ManifestFilePath string
+	StartLine        int
 }
 
 //// HYDRATE FUNCTIONS
@@ -106,7 +107,7 @@ func listK8sStorageClasses(ctx context.Context, d *plugin.QueryData, _ *plugin.H
 	for _, content := range parsedContents {
 		storageClass := content.Data.(*v1.StorageClass)
 
-		d.StreamListItem(ctx, StorageClass{*storageClass, content.Path})
+		d.StreamListItem(ctx, StorageClass{*storageClass, content.Path, content.Line})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -156,7 +157,7 @@ func listK8sStorageClasses(ctx context.Context, d *plugin.QueryData, _ *plugin.H
 		}
 
 		for _, item := range response.Items {
-			d.StreamListItem(ctx, StorageClass{item, ""})
+			d.StreamListItem(ctx, StorageClass{item, "", 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -196,7 +197,7 @@ func getK8sStorageClass(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 		storageClass := content.Data.(*v1.StorageClass)
 
 		if storageClass.Name == name {
-			return StorageClass{*storageClass, content.Path}, nil
+			return StorageClass{*storageClass, content.Path, content.Line}, nil
 		}
 	}
 
@@ -213,5 +214,5 @@ func getK8sStorageClass(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 		return nil, err
 	}
 
-	return StorageClass{*rs, ""}, nil
+	return StorageClass{*rs, "", 0}, nil
 }

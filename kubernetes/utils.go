@@ -628,6 +628,7 @@ type parsedContent struct {
 	Data             runtime.Object
 	GroupVersionKind *schema.GroupVersionKind
 	Path             string
+	Line             int
 }
 
 func getParsedManifestFileContent(ctx context.Context, d *plugin.QueryData) ([]parsedContent, error) {
@@ -677,6 +678,27 @@ func parsedManifestFileContentUncached(ctx context.Context, d *plugin.QueryData,
 		}
 		decoder := clientgoscheme.Codecs.UniversalDeserializer()
 
+		// Get the start lines for all resource specified in the file
+		temp := strings.Split(string(content), "\n")
+		resourceLocationMap := map[string][]int{}
+		
+		// Initialize the line with 0
+		line := 0
+		for _, item := range temp {
+			item = strings.ReplaceAll(item, " ", "")
+			
+			// Extract the starting position of the resource defined in a file.
+			// If the file has multiple resource configuration defined, store the position based on the occurrence.
+			if strings.Contains(item, "kind") {
+				splitStr := strings.Split(item, "kind:")
+				if len(splitStr) == 2 {
+					resourceLocationMap[splitStr[1]] = append(resourceLocationMap[splitStr[1]], line)
+				}
+			}
+			line++
+		}
+		plugin.Logger(ctx).Debug("parsedManifestFileContentUncached", "file", path, "resource locations", resourceLocationMap)
+
 		// Check for the start of the document
 		for _, resource := range strings.Split(string(content), "---") {
 			// skip empty documents, `Decode` will fail on them
@@ -690,10 +712,35 @@ func parsedManifestFileContentUncached(ctx context.Context, d *plugin.QueryData,
 				plugin.Logger(ctx).Error("parseManifestFileContent", "failed to decode the file", err, "path", path)
 				return nil, err
 			}
+			
+			// Extract the start line number based on the resource kind
+			// If the file has multiple resource configuration defined,
+			// location of the resource will be fetched as per FIFO basis
+			//
+			// For example if a file content is
+			// ---
+			// kind: Deployment
+			// ...
+			// ---
+			// kind: Pod
+			// ...
+			// ---
+			// Kind: Deployment
+			//
+			// The value of resourceLocationMap will be map[Deployment:[2 8] Pod:[5]]
+			line := 0
+			if resourceLocationMap[groupVersionKind.Kind] != nil {
+				arr := resourceLocationMap[groupVersionKind.Kind]
+				if len(arr) > 0 {
+					line = arr[0]
+					resourceLocationMap[groupVersionKind.Kind] = arr[1:]
+				}
+			}
 			parsedContents = append(parsedContents, parsedContent{
 				Data:             obj,
 				GroupVersionKind: groupVersionKind,
 				Path:             path,
+				Line:             line + 1, // Since starts from 0
 			})
 		}
 	}

@@ -427,6 +427,7 @@ func tableKubernetesPod(ctx context.Context) *plugin.Table {
 type Pod struct {
 	v1.Pod
 	ManifestFilePath string
+	StartLine        int
 }
 
 //// HYDRATE FUNCTIONS
@@ -453,7 +454,7 @@ func listK8sPods(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 	for _, content := range parsedContents {
 		pod := content.Data.(*v1.Pod)
 
-		d.StreamListItem(ctx, Pod{*pod, content.Path})
+		d.StreamListItem(ctx, Pod{*pod, content.Path, content.Line})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -512,7 +513,7 @@ func listK8sPods(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 		}
 
 		for _, pod := range response.Items {
-			d.StreamListItem(ctx, Pod{pod, ""})
+			d.StreamListItem(ctx, Pod{pod, "", 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -555,7 +556,7 @@ func getK8sPod(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) 
 		pod := content.Data.(*v1.Pod)
 
 		if pod.Name == name && pod.Namespace == namespace {
-			return Pod{*pod, content.Path}, nil
+			return Pod{*pod, content.Path, content.Line}, nil
 		}
 	}
 
@@ -571,7 +572,7 @@ func getK8sPod(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) 
 		return nil, err
 	}
 
-	return Pod{*pod, ""}, nil
+	return Pod{*pod, "", 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS

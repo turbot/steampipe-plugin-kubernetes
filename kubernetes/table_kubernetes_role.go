@@ -57,6 +57,7 @@ func tableKubernetesRole(ctx context.Context) *plugin.Table {
 type Role struct {
 	v1.Role
 	ManifestFilePath string
+	StartLine        int
 }
 
 //// HYDRATE FUNCTIONS
@@ -83,7 +84,7 @@ func listK8sRoles(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 	for _, content := range parsedContents {
 		role := content.Data.(*v1.Role)
 
-		d.StreamListItem(ctx, Role{*role, content.Path})
+		d.StreamListItem(ctx, Role{*role, content.Path, content.Line})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -136,7 +137,7 @@ func listK8sRoles(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 		}
 
 		for _, role := range response.Items {
-			d.StreamListItem(ctx, Role{role, ""})
+			d.StreamListItem(ctx, Role{role, "", 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -179,7 +180,7 @@ func getK8sRole(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData)
 		role := content.Data.(*v1.Role)
 
 		if role.Name == name && role.Namespace == namespace {
-			return Role{*role, content.Path}, nil
+			return Role{*role, content.Path, content.Line}, nil
 		}
 	}
 
@@ -195,7 +196,7 @@ func getK8sRole(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData)
 		return nil, err
 	}
 
-	return Role{*role, ""}, nil
+	return Role{*role, "", 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS

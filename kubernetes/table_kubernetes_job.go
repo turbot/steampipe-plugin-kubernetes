@@ -145,6 +145,7 @@ func tableKubernetesJob(ctx context.Context) *plugin.Table {
 type Job struct {
 	v1.Job
 	ManifestFilePath string
+	StartLine        int
 }
 
 //// HYDRATE FUNCTIONS
@@ -171,7 +172,7 @@ func listK8sJobs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 	for _, content := range parsedContents {
 		job := content.Data.(*v1.Job)
 
-		d.StreamListItem(ctx, Job{*job, content.Path})
+		d.StreamListItem(ctx, Job{*job, content.Path, content.Line})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -224,7 +225,7 @@ func listK8sJobs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 		}
 
 		for _, job := range response.Items {
-			d.StreamListItem(ctx, Job{job, ""})
+			d.StreamListItem(ctx, Job{job, "", 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -267,7 +268,7 @@ func getK8sJob(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) 
 		job := content.Data.(*v1.Job)
 
 		if job.Name == name && job.Namespace == namespace {
-			return Job{*job, content.Path}, nil
+			return Job{*job, content.Path, content.Line}, nil
 		}
 	}
 
@@ -283,7 +284,7 @@ func getK8sJob(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) 
 		return nil, err
 	}
 
-	return Job{*job, ""}, nil
+	return Job{*job, "", 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS

@@ -121,6 +121,7 @@ func tableKubernetesPersistentVolumeClaim(ctx context.Context) *plugin.Table {
 type PersistentVolumeClaim struct {
 	v1.PersistentVolumeClaim
 	ManifestFilePath string
+	StartLine        int
 }
 
 //// HYDRATE FUNCTIONS
@@ -147,7 +148,7 @@ func listK8sPVCs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 	for _, content := range parsedContents {
 		persistentVolumeClaim := content.Data.(*v1.PersistentVolumeClaim)
 
-		d.StreamListItem(ctx, PersistentVolumeClaim{*persistentVolumeClaim, content.Path})
+		d.StreamListItem(ctx, PersistentVolumeClaim{*persistentVolumeClaim, content.Path, content.Line})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -200,7 +201,7 @@ func listK8sPVCs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 		}
 
 		for _, persistentVolumeClaim := range response.Items {
-			d.StreamListItem(ctx, PersistentVolumeClaim{persistentVolumeClaim, ""})
+			d.StreamListItem(ctx, PersistentVolumeClaim{persistentVolumeClaim, "", 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -243,7 +244,7 @@ func getK8sPVC(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) 
 		persistentVolumeClaim := content.Data.(*v1.PersistentVolumeClaim)
 
 		if persistentVolumeClaim.Name == name && persistentVolumeClaim.Namespace == namespace {
-			return PersistentVolumeClaim{*persistentVolumeClaim, content.Path}, nil
+			return PersistentVolumeClaim{*persistentVolumeClaim, content.Path, content.Line}, nil
 		}
 	}
 
@@ -259,7 +260,7 @@ func getK8sPVC(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) 
 		return nil, err
 	}
 
-	return PersistentVolumeClaim{*persistentVolumeClaim, ""}, nil
+	return PersistentVolumeClaim{*persistentVolumeClaim, "", 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS

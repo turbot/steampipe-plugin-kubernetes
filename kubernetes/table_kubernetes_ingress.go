@@ -85,6 +85,7 @@ func tableKubernetesIngress(ctx context.Context) *plugin.Table {
 type Ingress struct {
 	v1.Ingress
 	ManifestFilePath string
+	StartLine        int
 }
 
 //// HYDRATE FUNCTIONS
@@ -111,7 +112,7 @@ func listK8sIngresses(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 	for _, content := range parsedContents {
 		ingress := content.Data.(*v1.Ingress)
 
-		d.StreamListItem(ctx, Ingress{*ingress, content.Path})
+		d.StreamListItem(ctx, Ingress{*ingress, content.Path, content.Line})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -164,7 +165,7 @@ func listK8sIngresses(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 		}
 
 		for _, ingress := range response.Items {
-			d.StreamListItem(ctx, Ingress{ingress, ""})
+			d.StreamListItem(ctx, Ingress{ingress, "", 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -207,7 +208,7 @@ func getK8sIngress(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDa
 		ingress := content.Data.(*v1.Ingress)
 
 		if ingress.Name == name && ingress.Namespace == namespace {
-			return Ingress{*ingress, content.Path}, nil
+			return Ingress{*ingress, content.Path, content.Line}, nil
 		}
 	}
 
@@ -223,7 +224,7 @@ func getK8sIngress(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDa
 		return nil, err
 	}
 
-	return Ingress{*ingress, ""}, nil
+	return Ingress{*ingress, "", 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS

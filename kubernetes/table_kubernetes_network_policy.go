@@ -77,6 +77,7 @@ func tableKubernetesNetworkPolicy(ctx context.Context) *plugin.Table {
 type NetworkPolicy struct {
 	v1.NetworkPolicy
 	ManifestFilePath string
+	StartLine        int
 }
 
 //// HYDRATE FUNCTIONS
@@ -103,7 +104,7 @@ func listK8sNetworkPolicies(ctx context.Context, d *plugin.QueryData, _ *plugin.
 	for _, content := range parsedContents {
 		networkPolicy := content.Data.(*v1.NetworkPolicy)
 
-		d.StreamListItem(ctx, NetworkPolicy{*networkPolicy, content.Path})
+		d.StreamListItem(ctx, NetworkPolicy{*networkPolicy, content.Path, content.Line})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -156,7 +157,7 @@ func listK8sNetworkPolicies(ctx context.Context, d *plugin.QueryData, _ *plugin.
 		}
 
 		for _, networkPolicy := range response.Items {
-			d.StreamListItem(ctx, NetworkPolicy{networkPolicy, ""})
+			d.StreamListItem(ctx, NetworkPolicy{networkPolicy, "", 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -199,7 +200,7 @@ func getK8sNetworkPolicy(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 		networkPolicy := content.Data.(*v1.NetworkPolicy)
 
 		if networkPolicy.Name == name && networkPolicy.Namespace == namespace {
-			return NetworkPolicy{*networkPolicy, content.Path}, nil
+			return NetworkPolicy{*networkPolicy, content.Path, content.Line}, nil
 		}
 	}
 
@@ -215,7 +216,7 @@ func getK8sNetworkPolicy(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 		return nil, err
 	}
 
-	return NetworkPolicy{*networkPolicy, ""}, nil
+	return NetworkPolicy{*networkPolicy, "", 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS

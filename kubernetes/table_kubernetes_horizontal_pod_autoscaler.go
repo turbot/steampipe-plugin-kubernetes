@@ -127,6 +127,7 @@ func tableKubernetesHorizontalPodAutoscaler(ctx context.Context) *plugin.Table {
 type HorizontalPodAutoscaler struct {
 	v1.HorizontalPodAutoscaler
 	ManifestFilePath string
+	StartLine        int
 }
 
 //// HYDRATE FUNCTIONS
@@ -151,7 +152,7 @@ func listK8sHPAs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 	for _, content := range parsedContents {
 		hpa := content.Data.(*v1.HorizontalPodAutoscaler)
 
-		d.StreamListItem(ctx, HorizontalPodAutoscaler{*hpa, content.Path})
+		d.StreamListItem(ctx, HorizontalPodAutoscaler{*hpa, content.Path, content.Line})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -205,7 +206,7 @@ func listK8sHPAs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 		}
 
 		for _, hpa := range response.Items {
-			d.StreamListItem(ctx, HorizontalPodAutoscaler{hpa, ""})
+			d.StreamListItem(ctx, HorizontalPodAutoscaler{hpa, "", 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -246,7 +247,7 @@ func getK8sHPA(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) 
 		hpa := content.Data.(*v1.HorizontalPodAutoscaler)
 
 		if hpa.Name == name && hpa.Namespace == namespace {
-			return HorizontalPodAutoscaler{*hpa, content.Path}, nil
+			return HorizontalPodAutoscaler{*hpa, content.Path, content.Line}, nil
 		}
 	}
 
@@ -263,7 +264,7 @@ func getK8sHPA(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) 
 		return nil, err
 	}
 
-	return HorizontalPodAutoscaler{*hpa, ""}, nil
+	return HorizontalPodAutoscaler{*hpa, "", 0}, nil
 }
 
 ////// TRANSFORM FUNCTIONS

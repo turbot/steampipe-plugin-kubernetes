@@ -76,6 +76,7 @@ func tableKubernetesSecret(ctx context.Context) *plugin.Table {
 type Secret struct {
 	v1.Secret
 	ManifestFilePath string
+	StartLine        int
 }
 
 //// HYDRATE FUNCTIONS
@@ -102,7 +103,7 @@ func listK8sSecrets(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateD
 	for _, content := range parsedContents {
 		secret := content.Data.(*v1.Secret)
 
-		d.StreamListItem(ctx, Secret{*secret, content.Path})
+		d.StreamListItem(ctx, Secret{*secret, content.Path, content.Line})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -159,7 +160,7 @@ func listK8sSecrets(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateD
 		}
 
 		for _, secret := range response.Items {
-			d.StreamListItem(ctx, Secret{secret, ""})
+			d.StreamListItem(ctx, Secret{secret, "", 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -202,7 +203,7 @@ func getK8sSecret(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 		secret := content.Data.(*v1.Secret)
 
 		if secret.Name == name && secret.Namespace == namespace {
-			return Secret{*secret, content.Path}, nil
+			return Secret{*secret, content.Path, content.Line}, nil
 		}
 	}
 
@@ -218,7 +219,7 @@ func getK8sSecret(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 		return nil, err
 	}
 
-	return Secret{*secret, ""}, nil
+	return Secret{*secret, "", 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS

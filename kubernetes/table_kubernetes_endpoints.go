@@ -57,6 +57,7 @@ func tableKubernetesEndpoints(ctx context.Context) *plugin.Table {
 type Endpoints struct {
 	v1.Endpoints
 	ManifestFilePath string
+	StartLine        int
 }
 
 //// HYDRATE FUNCTIONS
@@ -83,7 +84,7 @@ func listK8sEnpoints(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 	for _, content := range parsedContents {
 		endpoints := content.Data.(*v1.Endpoints)
 
-		d.StreamListItem(ctx, Endpoints{*endpoints, content.Path})
+		d.StreamListItem(ctx, Endpoints{*endpoints, content.Path, content.Line})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -136,7 +137,7 @@ func listK8sEnpoints(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 		}
 
 		for _, endpoint := range response.Items {
-			d.StreamListItem(ctx, Endpoints{endpoint, ""})
+			d.StreamListItem(ctx, Endpoints{endpoint, "", 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -179,7 +180,7 @@ func getK8sEndpoint(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateD
 		endpoints := content.Data.(*v1.Endpoints)
 
 		if endpoints.Name == name && endpoints.Namespace == namespace {
-			return Endpoints{*endpoints, content.Path}, nil
+			return Endpoints{*endpoints, content.Path, content.Line}, nil
 		}
 	}
 
@@ -195,7 +196,7 @@ func getK8sEndpoint(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateD
 		return nil, err
 	}
 
-	return Endpoints{*endpoint, ""}, nil
+	return Endpoints{*endpoint, "", 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS

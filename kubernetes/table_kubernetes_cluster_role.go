@@ -61,6 +61,7 @@ func tableKubernetesClusterRole(ctx context.Context) *plugin.Table {
 type ClusterRole struct {
 	v1.ClusterRole
 	ManifestFilePath string
+	StartLine        int
 }
 
 //// HYDRATE FUNCTIONS
@@ -87,7 +88,7 @@ func listK8sClusterRoles(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 	for _, content := range parsedContents {
 		clusterRole := content.Data.(*v1.ClusterRole)
 
-		d.StreamListItem(ctx, ClusterRole{*clusterRole, content.Path})
+		d.StreamListItem(ctx, ClusterRole{*clusterRole, content.Path, content.Line})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -133,7 +134,7 @@ func listK8sClusterRoles(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 		}
 
 		for _, clusterRole := range response.Items {
-			d.StreamListItem(ctx, ClusterRole{clusterRole, ""})
+			d.StreamListItem(ctx, ClusterRole{clusterRole, "", 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -175,7 +176,7 @@ func getK8sClusterRole(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 		clusterRole := content.Data.(*v1.ClusterRole)
 
 		if clusterRole.Name == name {
-			return ClusterRole{*clusterRole, content.Path}, nil
+			return ClusterRole{*clusterRole, content.Path, content.Line}, nil
 		}
 	}
 
@@ -191,7 +192,7 @@ func getK8sClusterRole(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 		return nil, err
 	}
 
-	return ClusterRole{*clusterRole, ""}, nil
+	return ClusterRole{*clusterRole, "", 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS

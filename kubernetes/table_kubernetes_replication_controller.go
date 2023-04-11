@@ -122,6 +122,7 @@ func tableKubernetesReplicaController(ctx context.Context) *plugin.Table {
 type ReplicationController struct {
 	v1.ReplicationController
 	ManifestFilePath string
+	StartLine        int
 }
 
 //// HYDRATE FUNCTIONS
@@ -148,7 +149,7 @@ func listK8sReplicaControllers(ctx context.Context, d *plugin.QueryData, _ *plug
 	for _, content := range parsedContents {
 		replicationController := content.Data.(*v1.ReplicationController)
 
-		d.StreamListItem(ctx, ReplicationController{*replicationController, content.Path})
+		d.StreamListItem(ctx, ReplicationController{*replicationController, content.Path, content.Line})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -201,7 +202,7 @@ func listK8sReplicaControllers(ctx context.Context, d *plugin.QueryData, _ *plug
 		}
 
 		for _, replicaController := range response.Items {
-			d.StreamListItem(ctx, ReplicationController{replicaController, ""})
+			d.StreamListItem(ctx, ReplicationController{replicaController, "", 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -244,7 +245,7 @@ func getK8sReplicaController(ctx context.Context, d *plugin.QueryData, _ *plugin
 		replicationController := content.Data.(*v1.ReplicationController)
 
 		if replicationController.Name == name && replicationController.Namespace == namespace {
-			return ReplicationController{*replicationController, content.Path}, nil
+			return ReplicationController{*replicationController, content.Path, content.Line}, nil
 		}
 	}
 
@@ -260,7 +261,7 @@ func getK8sReplicaController(ctx context.Context, d *plugin.QueryData, _ *plugin
 		return nil, err
 	}
 
-	return ReplicationController{*replicaController, ""}, nil
+	return ReplicationController{*replicaController, "", 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS

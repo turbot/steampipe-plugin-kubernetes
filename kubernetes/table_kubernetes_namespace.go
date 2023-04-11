@@ -76,6 +76,7 @@ func tableKubernetesNamespace(ctx context.Context) *plugin.Table {
 type Namespace struct {
 	v1.Namespace
 	ManifestFilePath string
+	StartLine        int
 }
 
 //// HYDRATE FUNCTIONS
@@ -102,7 +103,7 @@ func listK8sNamespaces(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 	for _, content := range parsedContents {
 		namespace := content.Data.(*v1.Namespace)
 
-		d.StreamListItem(ctx, Namespace{*namespace, content.Path})
+		d.StreamListItem(ctx, Namespace{*namespace, content.Path, content.Line})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -153,7 +154,7 @@ func listK8sNamespaces(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 		}
 
 		for _, namespace := range response.Items {
-			d.StreamListItem(ctx, Namespace{namespace, ""})
+			d.StreamListItem(ctx, Namespace{namespace, "", 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -195,7 +196,7 @@ func getK8sNamespace(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 		namespace := content.Data.(*v1.Namespace)
 
 		if namespace.Name == name {
-			return Namespace{*namespace, content.Path}, nil
+			return Namespace{*namespace, content.Path, content.Line}, nil
 		}
 	}
 
@@ -211,7 +212,7 @@ func getK8sNamespace(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 		return nil, err
 	}
 
-	return Namespace{*namespace, ""}, nil
+	return Namespace{*namespace, "", 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS

@@ -122,6 +122,7 @@ func tableKubernetesReplicaSet(ctx context.Context) *plugin.Table {
 type ReplicaSet struct {
 	v1.ReplicaSet
 	ManifestFilePath string
+	StartLine        int
 }
 
 //// HYDRATE FUNCTIONS
@@ -148,7 +149,7 @@ func listK8sReplicaSets(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 	for _, content := range parsedContents {
 		replicaSet := content.Data.(*v1.ReplicaSet)
 
-		d.StreamListItem(ctx, ReplicaSet{*replicaSet, content.Path})
+		d.StreamListItem(ctx, ReplicaSet{*replicaSet, content.Path, content.Line})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -201,7 +202,7 @@ func listK8sReplicaSets(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 		}
 
 		for _, item := range response.Items {
-			d.StreamListItem(ctx, ReplicaSet{item, ""})
+			d.StreamListItem(ctx, ReplicaSet{item, "", 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -244,7 +245,7 @@ func getK8sReplicaSet(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 		replicaSet := content.Data.(*v1.ReplicaSet)
 
 		if replicaSet.Name == name && replicaSet.Namespace == namespace {
-			return ReplicaSet{*replicaSet, content.Path}, nil
+			return ReplicaSet{*replicaSet, content.Path, content.Line}, nil
 		}
 	}
 
@@ -260,7 +261,7 @@ func getK8sReplicaSet(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 		return nil, err
 	}
 
-	return ReplicaSet{*rs, ""}, nil
+	return ReplicaSet{*rs, "", 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS

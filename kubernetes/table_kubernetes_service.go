@@ -173,6 +173,7 @@ func tableKubernetesService(ctx context.Context) *plugin.Table {
 type Service struct {
 	v1.Service
 	ManifestFilePath string
+	StartLine        int
 }
 
 //// HYDRATE FUNCTIONS
@@ -199,7 +200,7 @@ func listK8sServices(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 	for _, content := range parsedContents {
 		service := content.Data.(*v1.Service)
 
-		d.StreamListItem(ctx, Service{*service, content.Path})
+		d.StreamListItem(ctx, Service{*service, content.Path, content.Line})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -252,7 +253,7 @@ func listK8sServices(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 		}
 
 		for _, service := range response.Items {
-			d.StreamListItem(ctx, Service{service, ""})
+			d.StreamListItem(ctx, Service{service, "", 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -294,7 +295,7 @@ func getK8sService(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDa
 		service := content.Data.(*v1.Service)
 
 		if service.Name == name && service.Namespace == namespace {
-			return Service{*service, content.Path}, nil
+			return Service{*service, content.Path, content.Line}, nil
 		}
 	}
 
@@ -311,7 +312,7 @@ func getK8sService(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDa
 		return nil, err
 	}
 
-	return Service{*service, ""}, nil
+	return Service{*service, "", 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS

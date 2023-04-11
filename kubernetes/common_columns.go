@@ -12,6 +12,17 @@ const (
 	ColumnDescriptionTags  = "A map of tags for the resource. This includes both labels and annotations."
 )
 
+func objectLineNumber() []*plugin.Column {
+	return []*plugin.Column{
+		{
+			Name:        "start_line",
+			Type:        proto.ColumnType_INT,
+			Description: "The path to the manifest file.",
+			Transform:   transform.FromField("StartLine").NullIfZero(),
+		},
+	}
+}
+
 func objectMetadataPrimaryColumnsWithoutNamespace() []*plugin.Column {
 	return []*plugin.Column{
 		//{Name: "raw", Type: proto.ColumnType_JSON, Transform: transform.FromValue()},
@@ -76,6 +87,8 @@ func k8sCommonColumns(columns []*plugin.Column) []*plugin.Column {
 	//allColumns = append(allColumns, specStatusColumns...)
 	allColumns = append(allColumns, objectMetadataSecondaryColumns()...)
 	allColumns = append(allColumns, kubectlConfigColumns()...)
+
+	allColumns = append(allColumns, objectLineNumber()...)
 
 	return allColumns
 }

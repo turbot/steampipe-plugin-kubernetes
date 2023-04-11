@@ -156,6 +156,7 @@ func tableKubernetesNode(ctx context.Context) *plugin.Table {
 type Node struct {
 	v1.Node
 	ManifestFilePath string
+	StartLine        int
 }
 
 //// HYDRATE FUNCTIONS
@@ -182,7 +183,7 @@ func listK8sNodes(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 	for _, content := range parsedContents {
 		node := content.Data.(*v1.Node)
 
-		d.StreamListItem(ctx, Node{*node, content.Path})
+		d.StreamListItem(ctx, Node{*node, content.Path, content.Line})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -229,7 +230,7 @@ func listK8sNodes(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 		}
 
 		for _, node := range response.Items {
-			d.StreamListItem(ctx, Node{node, ""})
+			d.StreamListItem(ctx, Node{node, "", 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -271,7 +272,7 @@ func getK8sNode(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData)
 		node := content.Data.(*v1.Node)
 
 		if node.Name == name {
-			return Node{*node, content.Path}, nil
+			return Node{*node, content.Path, content.Line}, nil
 		}
 	}
 
@@ -287,7 +288,7 @@ func getK8sNode(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData)
 		return nil, err
 	}
 
-	return Node{*node, ""}, nil
+	return Node{*node, "", 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS

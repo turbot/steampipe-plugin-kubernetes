@@ -73,6 +73,7 @@ func tableKubernetesPDB(ctx context.Context) *plugin.Table {
 type PodDisruptionBudget struct {
 	v1.PodDisruptionBudget
 	ManifestFilePath string
+	StartLine        int
 }
 
 //// HYDRATE FUNCTIONS
@@ -99,7 +100,7 @@ func listPDBs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (
 	for _, content := range parsedContents {
 		pdb := content.Data.(*v1.PodDisruptionBudget)
 
-		d.StreamListItem(ctx, PodDisruptionBudget{*pdb, content.Path})
+		d.StreamListItem(ctx, PodDisruptionBudget{*pdb, content.Path, content.Line})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -152,7 +153,7 @@ func listPDBs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (
 		}
 
 		for _, item := range response.Items {
-			d.StreamListItem(ctx, PodDisruptionBudget{item, ""})
+			d.StreamListItem(ctx, PodDisruptionBudget{item, "", 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -195,7 +196,7 @@ func getPDB(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (in
 		pdb := content.Data.(*v1.PodDisruptionBudget)
 
 		if pdb.Name == name && pdb.Namespace == namespace {
-			return PodDisruptionBudget{*pdb, content.Path}, nil
+			return PodDisruptionBudget{*pdb, content.Path, content.Line}, nil
 		}
 	}
 
@@ -211,7 +212,7 @@ func getPDB(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (in
 		return nil, err
 	}
 
-	return PodDisruptionBudget{*pdb, ""}, nil
+	return PodDisruptionBudget{*pdb, "", 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS

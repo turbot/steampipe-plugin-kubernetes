@@ -125,6 +125,7 @@ func tableKubernetesPersistentVolume(ctx context.Context) *plugin.Table {
 type PersistentVolume struct {
 	v1.PersistentVolume
 	ManifestFilePath string
+	StartLine        int
 }
 
 //// HYDRATE FUNCTIONS
@@ -151,7 +152,7 @@ func listK8sPVs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData)
 	for _, content := range parsedContents {
 		persistentVolume := content.Data.(*v1.PersistentVolume)
 
-		d.StreamListItem(ctx, PersistentVolume{*persistentVolume, content.Path})
+		d.StreamListItem(ctx, PersistentVolume{*persistentVolume, content.Path, content.Line})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -198,7 +199,7 @@ func listK8sPVs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData)
 		}
 
 		for _, persistentVolume := range response.Items {
-			d.StreamListItem(ctx, PersistentVolume{persistentVolume, ""})
+			d.StreamListItem(ctx, PersistentVolume{persistentVolume, "", 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -240,7 +241,7 @@ func getK8sPV(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (
 		persistentVolume := content.Data.(*v1.PersistentVolume)
 
 		if persistentVolume.Name == name {
-			return PersistentVolume{*persistentVolume, content.Path}, nil
+			return PersistentVolume{*persistentVolume, content.Path, content.Line}, nil
 		}
 	}
 
@@ -256,7 +257,7 @@ func getK8sPV(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (
 		return nil, err
 	}
 
-	return PersistentVolume{*persistentVolume, ""}, nil
+	return PersistentVolume{*persistentVolume, "", 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS

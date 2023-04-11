@@ -143,6 +143,7 @@ func tableKubernetesStatefulSet(ctx context.Context) *plugin.Table {
 type StatefulSet struct {
 	v1.StatefulSet
 	ManifestFilePath string
+	StartLine        int
 }
 
 //// HYDRATE FUNCTIONS
@@ -169,7 +170,7 @@ func listK8sStatefulSets(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 	for _, content := range parsedContents {
 		statefulSet := content.Data.(*v1.StatefulSet)
 
-		d.StreamListItem(ctx, StatefulSet{*statefulSet, content.Path})
+		d.StreamListItem(ctx, StatefulSet{*statefulSet, content.Path, content.Line})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -222,7 +223,7 @@ func listK8sStatefulSets(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 		}
 
 		for _, statefulSet := range response.Items {
-			d.StreamListItem(ctx, StatefulSet{statefulSet, ""})
+			d.StreamListItem(ctx, StatefulSet{statefulSet, "", 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -265,7 +266,7 @@ func getK8sStatefulSet(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 		statefulSet := content.Data.(*v1.StatefulSet)
 
 		if statefulSet.Name == name && statefulSet.Namespace == namespace {
-			return StatefulSet{*statefulSet, content.Path}, nil
+			return StatefulSet{*statefulSet, content.Path, content.Line}, nil
 		}
 	}
 
@@ -282,7 +283,7 @@ func getK8sStatefulSet(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 		return nil, err
 	}
 
-	return StatefulSet{*statefulSet, ""}, nil
+	return StatefulSet{*statefulSet, "", 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS

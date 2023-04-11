@@ -60,6 +60,7 @@ func tableKubernetesLimitRange(ctx context.Context) *plugin.Table {
 type LimitRange struct {
 	v1.LimitRange
 	ManifestFilePath string
+	StartLine        int
 }
 
 //// HYDRATE FUNCTIONS
@@ -85,7 +86,7 @@ func listK8sLimitRanges(ctx context.Context, d *plugin.QueryData, h *plugin.Hydr
 	for _, content := range parsedContents {
 		limitRange := content.Data.(*v1.LimitRange)
 
-		d.StreamListItem(ctx, LimitRange{*limitRange, content.Path})
+		d.StreamListItem(ctx, LimitRange{*limitRange, content.Path, content.Line})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -138,7 +139,7 @@ func listK8sLimitRanges(ctx context.Context, d *plugin.QueryData, h *plugin.Hydr
 		}
 
 		for _, limitRange := range response.Items {
-			d.StreamListItem(ctx, LimitRange{limitRange, ""})
+			d.StreamListItem(ctx, LimitRange{limitRange, "", 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -180,7 +181,7 @@ func getK8sLimitRange(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 		limitRange := content.Data.(*v1.LimitRange)
 
 		if limitRange.Name == name && limitRange.Namespace == namespace {
-			return LimitRange{*limitRange, content.Path}, nil
+			return LimitRange{*limitRange, content.Path, content.Line}, nil
 		}
 	}
 
@@ -196,7 +197,7 @@ func getK8sLimitRange(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 		return nil, err
 	}
 
-	return LimitRange{*limitRange, ""}, nil
+	return LimitRange{*limitRange, "", 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS

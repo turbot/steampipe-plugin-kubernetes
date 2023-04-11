@@ -86,6 +86,7 @@ func tableKubernetesResourceQuota(ctx context.Context) *plugin.Table {
 type ResourceQuota struct {
 	v1.ResourceQuota
 	ManifestFilePath string
+	StartLine        int
 }
 
 //// HYDRATE FUNCTIONS
@@ -111,7 +112,7 @@ func listK8sResourceQuotas(ctx context.Context, d *plugin.QueryData, h *plugin.H
 	for _, content := range parsedContents {
 		resourceQuota := content.Data.(*v1.ResourceQuota)
 
-		d.StreamListItem(ctx, ResourceQuota{*resourceQuota, content.Path})
+		d.StreamListItem(ctx, ResourceQuota{*resourceQuota, content.Path, content.Line})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -164,7 +165,7 @@ func listK8sResourceQuotas(ctx context.Context, d *plugin.QueryData, h *plugin.H
 		}
 
 		for _, resourceQuota := range response.Items {
-			d.StreamListItem(ctx, ResourceQuota{resourceQuota, ""})
+			d.StreamListItem(ctx, ResourceQuota{resourceQuota, "", 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -206,7 +207,7 @@ func getK8sResourceQuota(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 		resourceQuota := content.Data.(*v1.ResourceQuota)
 
 		if resourceQuota.Name == name && resourceQuota.Namespace == namespace {
-			return ResourceQuota{*resourceQuota, content.Path}, nil
+			return ResourceQuota{*resourceQuota, content.Path, content.Line}, nil
 		}
 	}
 
@@ -222,7 +223,7 @@ func getK8sResourceQuota(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 		return nil, err
 	}
 
-	return ResourceQuota{*resourceQuota, ""}, nil
+	return ResourceQuota{*resourceQuota, "", 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS

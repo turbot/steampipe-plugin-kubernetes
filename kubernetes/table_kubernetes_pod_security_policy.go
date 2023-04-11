@@ -194,6 +194,7 @@ func tableKubernetesPodSecurityPolicy(ctx context.Context) *plugin.Table {
 type PodSecurityPolicy struct {
 	v1beta1.PodSecurityPolicy
 	ManifestFilePath string
+	StartLine        int
 }
 
 //// HYDRATE FUNCTIONS
@@ -220,7 +221,7 @@ func listPodSecurityPolicy(ctx context.Context, d *plugin.QueryData, _ *plugin.H
 	for _, content := range parsedContents {
 		podSecurityPolicy := content.Data.(*v1beta1.PodSecurityPolicy)
 
-		d.StreamListItem(ctx, PodSecurityPolicy{*podSecurityPolicy, content.Path})
+		d.StreamListItem(ctx, PodSecurityPolicy{*podSecurityPolicy, content.Path, content.Line})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -267,7 +268,7 @@ func listPodSecurityPolicy(ctx context.Context, d *plugin.QueryData, _ *plugin.H
 		}
 
 		for _, podSecurityPolicy := range response.Items {
-			d.StreamListItem(ctx, PodSecurityPolicy{podSecurityPolicy, ""})
+			d.StreamListItem(ctx, PodSecurityPolicy{podSecurityPolicy, "", 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -309,7 +310,7 @@ func getPodSecurityPolicy(ctx context.Context, d *plugin.QueryData, _ *plugin.Hy
 		podSecurityPolicy := content.Data.(*v1beta1.PodSecurityPolicy)
 
 		if podSecurityPolicy.Name == name {
-			return PodSecurityPolicy{*podSecurityPolicy, content.Path}, nil
+			return PodSecurityPolicy{*podSecurityPolicy, content.Path, content.Line}, nil
 		}
 	}
 
@@ -325,7 +326,7 @@ func getPodSecurityPolicy(ctx context.Context, d *plugin.QueryData, _ *plugin.Hy
 		return nil, err
 	}
 
-	return PodSecurityPolicy{*podSecurityPolicy, ""}, nil
+	return PodSecurityPolicy{*podSecurityPolicy, "", 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS
