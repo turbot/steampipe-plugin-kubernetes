@@ -50,6 +50,12 @@ func tableKubernetesRoleBinding(ctx context.Context) *plugin.Table {
 				Description: "Type of the role referenced.",
 				Transform:   transform.FromField("RoleRef.Kind"),
 			},
+			{
+				Name:        "source",
+				Type:        proto.ColumnType_STRING,
+				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
+				Transform:   transform.From(roleBindingResourceSource),
+			},
 
 			//// Steampipe Standard Columns
 			{
@@ -72,6 +78,7 @@ type RoleBinding struct {
 	v1.RoleBinding
 	Path      string
 	StartLine int
+	EndLine   int
 }
 
 //// HYDRATE FUNCTIONS
@@ -98,7 +105,7 @@ func listK8sRoleBindings(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 	for _, content := range parsedContents {
 		roleBinding := content.Data.(*v1.RoleBinding)
 
-		d.StreamListItem(ctx, RoleBinding{*roleBinding, content.Path, content.Line})
+		d.StreamListItem(ctx, RoleBinding{*roleBinding, content.Path, content.StartLine, content.EndLine})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -151,7 +158,7 @@ func listK8sRoleBindings(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 		}
 
 		for _, roleBinding := range response.Items {
-			d.StreamListItem(ctx, RoleBinding{roleBinding, "", 0})
+			d.StreamListItem(ctx, RoleBinding{roleBinding, "", 0, 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -194,7 +201,7 @@ func getK8sRoleBinding(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 		roleBinding := content.Data.(*v1.RoleBinding)
 
 		if roleBinding.Name == name && roleBinding.Namespace == namespace {
-			return RoleBinding{*roleBinding, content.Path, content.Line}, nil
+			return RoleBinding{*roleBinding, content.Path, content.StartLine, content.EndLine}, nil
 		}
 	}
 
@@ -210,7 +217,7 @@ func getK8sRoleBinding(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 		return nil, err
 	}
 
-	return RoleBinding{*roleBinding, "", 0}, nil
+	return RoleBinding{*roleBinding, "", 0, 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS
@@ -218,4 +225,13 @@ func getK8sRoleBinding(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 func transformRoleBindingTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(RoleBinding)
 	return mergeTags(obj.Labels, obj.Annotations), nil
+}
+
+func roleBindingResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+	obj := d.HydrateItem.(RoleBinding)
+
+	if obj.Path != "" {
+		return "manifest", nil
+	}
+	return "deployed", nil
 }

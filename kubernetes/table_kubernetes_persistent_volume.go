@@ -98,6 +98,12 @@ func tableKubernetesPersistentVolume(ctx context.Context) *plugin.Table {
 				Description: "Reason is a brief CamelCase string that describes any failure and is meant for machine parsing and tidy display in the CLI.",
 				Transform:   transform.FromField("Status.Reason"),
 			},
+			{
+				Name:        "source",
+				Type:        proto.ColumnType_STRING,
+				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
+				Transform:   transform.From(persistentVolumeResourceSource),
+			},
 
 			//// Steampipe Standard Columns
 			{
@@ -120,6 +126,7 @@ type PersistentVolume struct {
 	v1.PersistentVolume
 	Path      string
 	StartLine int
+	EndLine   int
 }
 
 //// HYDRATE FUNCTIONS
@@ -146,7 +153,7 @@ func listK8sPVs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData)
 	for _, content := range parsedContents {
 		persistentVolume := content.Data.(*v1.PersistentVolume)
 
-		d.StreamListItem(ctx, PersistentVolume{*persistentVolume, content.Path, content.Line})
+		d.StreamListItem(ctx, PersistentVolume{*persistentVolume, content.Path, content.StartLine, content.EndLine})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -193,7 +200,7 @@ func listK8sPVs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData)
 		}
 
 		for _, persistentVolume := range response.Items {
-			d.StreamListItem(ctx, PersistentVolume{persistentVolume, "", 0})
+			d.StreamListItem(ctx, PersistentVolume{persistentVolume, "", 0, 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -235,7 +242,7 @@ func getK8sPV(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (
 		persistentVolume := content.Data.(*v1.PersistentVolume)
 
 		if persistentVolume.Name == name {
-			return PersistentVolume{*persistentVolume, content.Path, content.Line}, nil
+			return PersistentVolume{*persistentVolume, content.Path, content.StartLine, content.EndLine}, nil
 		}
 	}
 
@@ -251,7 +258,7 @@ func getK8sPV(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (
 		return nil, err
 	}
 
-	return PersistentVolume{*persistentVolume, "", 0}, nil
+	return PersistentVolume{*persistentVolume, "", 0, 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS
@@ -259,4 +266,13 @@ func getK8sPV(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (
 func transformPVTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(PersistentVolume)
 	return mergeTags(obj.Labels, obj.Annotations), nil
+}
+
+func persistentVolumeResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+	obj := d.HydrateItem.(PersistentVolume)
+
+	if obj.Path != "" {
+		return "manifest", nil
+	}
+	return "deployed", nil
 }

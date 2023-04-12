@@ -30,6 +30,12 @@ func tableKubernetesEndpoints(ctx context.Context) *plugin.Table {
 				Type:        proto.ColumnType_JSON,
 				Description: "List of addresses and ports that comprise a service.",
 			},
+			{
+				Name:        "source",
+				Type:        proto.ColumnType_STRING,
+				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
+				Transform:   transform.From(endpointResourceSource),
+			},
 
 			//// Steampipe Standard Columns
 			{
@@ -52,6 +58,7 @@ type Endpoints struct {
 	v1.Endpoints
 	Path      string
 	StartLine int
+	EndLine   int
 }
 
 //// HYDRATE FUNCTIONS
@@ -78,7 +85,7 @@ func listK8sEnpoints(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 	for _, content := range parsedContents {
 		endpoints := content.Data.(*v1.Endpoints)
 
-		d.StreamListItem(ctx, Endpoints{*endpoints, content.Path, content.Line})
+		d.StreamListItem(ctx, Endpoints{*endpoints, content.Path, content.StartLine, content.EndLine})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -131,7 +138,7 @@ func listK8sEnpoints(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 		}
 
 		for _, endpoint := range response.Items {
-			d.StreamListItem(ctx, Endpoints{endpoint, "", 0})
+			d.StreamListItem(ctx, Endpoints{endpoint, "", 0, 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -174,7 +181,7 @@ func getK8sEndpoint(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateD
 		endpoints := content.Data.(*v1.Endpoints)
 
 		if endpoints.Name == name && endpoints.Namespace == namespace {
-			return Endpoints{*endpoints, content.Path, content.Line}, nil
+			return Endpoints{*endpoints, content.Path, content.StartLine, content.EndLine}, nil
 		}
 	}
 
@@ -190,7 +197,7 @@ func getK8sEndpoint(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateD
 		return nil, err
 	}
 
-	return Endpoints{*endpoint, "", 0}, nil
+	return Endpoints{*endpoint, "", 0, 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS
@@ -198,4 +205,13 @@ func getK8sEndpoint(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateD
 func transformEndpointTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(Endpoints)
 	return mergeTags(obj.Labels, obj.Annotations), nil
+}
+
+func endpointResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+	obj := d.HydrateItem.(Endpoints)
+
+	if obj.Path != "" {
+		return "manifest", nil
+	}
+	return "deployed", nil
 }

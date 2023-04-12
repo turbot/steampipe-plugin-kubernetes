@@ -628,7 +628,8 @@ type parsedContent struct {
 	Data             runtime.Object
 	GroupVersionKind *schema.GroupVersionKind
 	Path             string
-	Line             int
+	StartLine        int
+	EndLine          int
 }
 
 func getParsedManifestFileContent(ctx context.Context, d *plugin.QueryData) ([]parsedContent, error) {
@@ -702,14 +703,29 @@ func parsedManifestFileContentUncached(ctx context.Context, d *plugin.QueryData,
 		plugin.Logger(ctx).Debug("parsedManifestFileContentUncached", "file", path, "resource locations", resourceLocationMap)
 
 		// Check for the start of the document
+		pos := 0
 		for _, resource := range strings.Split(string(content), "---") {
-			// skip empty documents, `Decode` will fail on them
+			plugin.Logger(ctx).Debug("parsedManifestFileContentUncached", "Starting Position", pos)
+
+			// Skip empty documents, `Decode` will fail on them
+			// Also, increment the pos to include the separator position (e.g. ---)
 			if len(resource) == 0 {
+				pos++
 				continue
+			}
+
+			// Calculate the length of the YAML resource block
+			blockLength := strings.Split(strings.ReplaceAll(resource, " ", ""), "\n")
+
+			// Remove the extra lines added during the split operation based on the separator
+			blockLength = blockLength[:len(blockLength)-1]
+			if blockLength[0] == "" {
+				blockLength = blockLength[1:]
 			}
 
 			// skip if no kind defined
 			if !strings.Contains(resource, "kind:") {
+				pos = pos + len(blockLength) + 1
 				continue
 			}
 
@@ -720,35 +736,17 @@ func parsedManifestFileContentUncached(ctx context.Context, d *plugin.QueryData,
 				return nil, err
 			}
 
-			// Extract the start line number based on the resource kind
-			// If the file has multiple resource configuration defined,
-			// location of the resource will be fetched as per FIFO basis
-			//
-			// For example if a file content is
-			// ---
-			// kind: Deployment
-			// ...
-			// ---
-			// kind: Pod
-			// ...
-			// ---
-			// Kind: Deployment
-			//
-			// The value of resourceLocationMap will be map[Deployment:[2 8] Pod:[5]]
-			line := 0
-			if resourceLocationMap[groupVersionKind.Kind] != nil {
-				arr := resourceLocationMap[groupVersionKind.Kind]
-				if len(arr) > 0 {
-					line = arr[0]
-					resourceLocationMap[groupVersionKind.Kind] = arr[1:]
-				}
-			}
 			parsedContents = append(parsedContents, parsedContent{
 				Data:             obj,
 				GroupVersionKind: groupVersionKind,
 				Path:             path,
-				Line:             line + 1, // Since starts from 0
+				StartLine:        pos + 1, // Since starts from 0
+				EndLine:          pos + len(blockLength),
 			})
+
+			// Increment the position by the length of the block
+			// the value is added with 1 to include the separator
+			pos = pos + len(blockLength) + 1
 		}
 	}
 

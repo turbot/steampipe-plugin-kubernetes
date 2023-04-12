@@ -50,6 +50,12 @@ func tableKubernetesNetworkPolicy(ctx context.Context) *plugin.Table {
 				Description: "List of rule types that the NetworkPolicy relates to. Valid options are \"Ingress\", \"Egress\", or \"Ingress,Egress\". If this field is not specified, it will default based on the existence of Ingress or Egress rules.",
 				Transform:   transform.FromField("Spec.PolicyTypes"),
 			},
+			{
+				Name:        "source",
+				Type:        proto.ColumnType_STRING,
+				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
+				Transform:   transform.From(networkPolicyResourceSource),
+			},
 
 			//// Steampipe Standard Columns
 			{
@@ -72,6 +78,7 @@ type NetworkPolicy struct {
 	v1.NetworkPolicy
 	Path      string
 	StartLine int
+	EndLine   int
 }
 
 //// HYDRATE FUNCTIONS
@@ -98,7 +105,7 @@ func listK8sNetworkPolicies(ctx context.Context, d *plugin.QueryData, _ *plugin.
 	for _, content := range parsedContents {
 		networkPolicy := content.Data.(*v1.NetworkPolicy)
 
-		d.StreamListItem(ctx, NetworkPolicy{*networkPolicy, content.Path, content.Line})
+		d.StreamListItem(ctx, NetworkPolicy{*networkPolicy, content.Path, content.StartLine, content.EndLine})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -151,7 +158,7 @@ func listK8sNetworkPolicies(ctx context.Context, d *plugin.QueryData, _ *plugin.
 		}
 
 		for _, networkPolicy := range response.Items {
-			d.StreamListItem(ctx, NetworkPolicy{networkPolicy, "", 0})
+			d.StreamListItem(ctx, NetworkPolicy{networkPolicy, "", 0, 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -194,7 +201,7 @@ func getK8sNetworkPolicy(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 		networkPolicy := content.Data.(*v1.NetworkPolicy)
 
 		if networkPolicy.Name == name && networkPolicy.Namespace == namespace {
-			return NetworkPolicy{*networkPolicy, content.Path, content.Line}, nil
+			return NetworkPolicy{*networkPolicy, content.Path, content.StartLine, content.EndLine}, nil
 		}
 	}
 
@@ -210,7 +217,7 @@ func getK8sNetworkPolicy(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 		return nil, err
 	}
 
-	return NetworkPolicy{*networkPolicy, "", 0}, nil
+	return NetworkPolicy{*networkPolicy, "", 0, 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS
@@ -218,4 +225,13 @@ func getK8sNetworkPolicy(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 func transformNetworkPolicyTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(NetworkPolicy)
 	return mergeTags(obj.Labels, obj.Annotations), nil
+}
+
+func networkPolicyResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+	obj := d.HydrateItem.(NetworkPolicy)
+
+	if obj.Path != "" {
+		return "manifest", nil
+	}
+	return "deployed", nil
 }

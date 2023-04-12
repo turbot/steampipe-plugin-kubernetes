@@ -167,6 +167,12 @@ func tableKubernetesPodSecurityPolicy(ctx context.Context) *plugin.Table {
 				Description: "An allowlist of volume plugins. Empty indicates that no volumes may be used.",
 				Transform:   transform.FromField("Spec.Volumes"),
 			},
+			{
+				Name:        "source",
+				Type:        proto.ColumnType_STRING,
+				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
+				Transform:   transform.From(podSecurityPolicyResourceSource),
+			},
 
 			//// Steampipe Standard Columns
 			{
@@ -189,6 +195,7 @@ type PodSecurityPolicy struct {
 	v1beta1.PodSecurityPolicy
 	Path      string
 	StartLine int
+	EndLine   int
 }
 
 //// HYDRATE FUNCTIONS
@@ -215,7 +222,7 @@ func listPodSecurityPolicy(ctx context.Context, d *plugin.QueryData, _ *plugin.H
 	for _, content := range parsedContents {
 		podSecurityPolicy := content.Data.(*v1beta1.PodSecurityPolicy)
 
-		d.StreamListItem(ctx, PodSecurityPolicy{*podSecurityPolicy, content.Path, content.Line})
+		d.StreamListItem(ctx, PodSecurityPolicy{*podSecurityPolicy, content.Path, content.StartLine, content.EndLine})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -262,7 +269,7 @@ func listPodSecurityPolicy(ctx context.Context, d *plugin.QueryData, _ *plugin.H
 		}
 
 		for _, podSecurityPolicy := range response.Items {
-			d.StreamListItem(ctx, PodSecurityPolicy{podSecurityPolicy, "", 0})
+			d.StreamListItem(ctx, PodSecurityPolicy{podSecurityPolicy, "", 0, 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -304,7 +311,7 @@ func getPodSecurityPolicy(ctx context.Context, d *plugin.QueryData, _ *plugin.Hy
 		podSecurityPolicy := content.Data.(*v1beta1.PodSecurityPolicy)
 
 		if podSecurityPolicy.Name == name {
-			return PodSecurityPolicy{*podSecurityPolicy, content.Path, content.Line}, nil
+			return PodSecurityPolicy{*podSecurityPolicy, content.Path, content.StartLine, content.EndLine}, nil
 		}
 	}
 
@@ -320,7 +327,7 @@ func getPodSecurityPolicy(ctx context.Context, d *plugin.QueryData, _ *plugin.Hy
 		return nil, err
 	}
 
-	return PodSecurityPolicy{*podSecurityPolicy, "", 0}, nil
+	return PodSecurityPolicy{*podSecurityPolicy, "", 0, 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS
@@ -328,4 +335,13 @@ func getPodSecurityPolicy(ctx context.Context, d *plugin.QueryData, _ *plugin.Hy
 func transformPodSecurityPolicyTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(PodSecurityPolicy)
 	return mergeTags(obj.Labels, obj.Annotations), nil
+}
+
+func podSecurityPolicyResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+	obj := d.HydrateItem.(PodSecurityPolicy)
+
+	if obj.Path != "" {
+		return "manifest", nil
+	}
+	return "deployed", nil
 }

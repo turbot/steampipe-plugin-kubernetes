@@ -34,6 +34,12 @@ func tableKubernetesClusterRole(ctx context.Context) *plugin.Table {
 				Type:        proto.ColumnType_JSON,
 				Description: "An optional field that describes how to build the Rules for this ClusterRole",
 			},
+			{
+				Name:        "source",
+				Type:        proto.ColumnType_STRING,
+				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
+				Transform:   transform.From(clusterRoleResourceSource),
+			},
 
 			//// Steampipe Standard Columns
 			{
@@ -56,6 +62,7 @@ type ClusterRole struct {
 	v1.ClusterRole
 	Path      string
 	StartLine int
+	EndLine   int
 }
 
 //// HYDRATE FUNCTIONS
@@ -82,7 +89,7 @@ func listK8sClusterRoles(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 	for _, content := range parsedContents {
 		clusterRole := content.Data.(*v1.ClusterRole)
 
-		d.StreamListItem(ctx, ClusterRole{*clusterRole, content.Path, content.Line})
+		d.StreamListItem(ctx, ClusterRole{*clusterRole, content.Path, content.StartLine, content.EndLine})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -128,7 +135,7 @@ func listK8sClusterRoles(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 		}
 
 		for _, clusterRole := range response.Items {
-			d.StreamListItem(ctx, ClusterRole{clusterRole, "", 0})
+			d.StreamListItem(ctx, ClusterRole{clusterRole, "", 0, 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -170,7 +177,7 @@ func getK8sClusterRole(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 		clusterRole := content.Data.(*v1.ClusterRole)
 
 		if clusterRole.Name == name {
-			return ClusterRole{*clusterRole, content.Path, content.Line}, nil
+			return ClusterRole{*clusterRole, content.Path, content.StartLine, content.EndLine}, nil
 		}
 	}
 
@@ -186,7 +193,7 @@ func getK8sClusterRole(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 		return nil, err
 	}
 
-	return ClusterRole{*clusterRole, "", 0}, nil
+	return ClusterRole{*clusterRole, "", 0, 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS
@@ -194,4 +201,13 @@ func getK8sClusterRole(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 func transformClusterRoleTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(ClusterRole)
 	return mergeTags(obj.Labels, obj.Annotations), nil
+}
+
+func clusterRoleResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+	obj := d.HydrateItem.(ClusterRole)
+
+	if obj.Path != "" {
+		return "manifest", nil
+	}
+	return "deployed", nil
 }

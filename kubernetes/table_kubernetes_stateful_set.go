@@ -116,6 +116,12 @@ func tableKubernetesStatefulSet(ctx context.Context) *plugin.Table {
 				Description: "Indicates the StatefulSetUpdateStrategy that will be employed to update Pods in the StatefulSet when a revision is made to Template.",
 				Transform:   transform.FromField("Spec.UpdateStrategy"),
 			},
+			{
+				Name:        "source",
+				Type:        proto.ColumnType_STRING,
+				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
+				Transform:   transform.From(statefulSetResourceSource),
+			},
 
 			// Steampipe Standard Columns
 			{
@@ -138,6 +144,7 @@ type StatefulSet struct {
 	v1.StatefulSet
 	Path      string
 	StartLine int
+	EndLine   int
 }
 
 //// HYDRATE FUNCTIONS
@@ -164,7 +171,7 @@ func listK8sStatefulSets(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 	for _, content := range parsedContents {
 		statefulSet := content.Data.(*v1.StatefulSet)
 
-		d.StreamListItem(ctx, StatefulSet{*statefulSet, content.Path, content.Line})
+		d.StreamListItem(ctx, StatefulSet{*statefulSet, content.Path, content.StartLine, content.EndLine})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -217,7 +224,7 @@ func listK8sStatefulSets(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 		}
 
 		for _, statefulSet := range response.Items {
-			d.StreamListItem(ctx, StatefulSet{statefulSet, "", 0})
+			d.StreamListItem(ctx, StatefulSet{statefulSet, "", 0, 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -260,7 +267,7 @@ func getK8sStatefulSet(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 		statefulSet := content.Data.(*v1.StatefulSet)
 
 		if statefulSet.Name == name && statefulSet.Namespace == namespace {
-			return StatefulSet{*statefulSet, content.Path, content.Line}, nil
+			return StatefulSet{*statefulSet, content.Path, content.StartLine, content.EndLine}, nil
 		}
 	}
 
@@ -277,7 +284,7 @@ func getK8sStatefulSet(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 		return nil, err
 	}
 
-	return StatefulSet{*statefulSet, "", 0}, nil
+	return StatefulSet{*statefulSet, "", 0, 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS
@@ -285,4 +292,13 @@ func getK8sStatefulSet(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 func transformStatefulSetTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(StatefulSet)
 	return mergeTags(obj.Labels, obj.Annotations), nil
+}
+
+func statefulSetResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+	obj := d.HydrateItem.(StatefulSet)
+
+	if obj.Path != "" {
+		return "manifest", nil
+	}
+	return "deployed", nil
 }

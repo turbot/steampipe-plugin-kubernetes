@@ -61,6 +61,12 @@ func tableKubernetesStorageClass(ctx context.Context) *plugin.Table {
 				Type:        proto.ColumnType_JSON,
 				Description: "Parameters holds the parameters for the provisioner that should create volumes of this storage class.",
 			},
+			{
+				Name:        "source",
+				Type:        proto.ColumnType_STRING,
+				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
+				Transform:   transform.From(storageClassResourceSource),
+			},
 
 			//// Steampipe Standard Columns
 			{
@@ -77,6 +83,7 @@ type StorageClass struct {
 	v1.StorageClass
 	Path      string
 	StartLine int
+	EndLine   int
 }
 
 //// HYDRATE FUNCTIONS
@@ -101,7 +108,7 @@ func listK8sStorageClasses(ctx context.Context, d *plugin.QueryData, _ *plugin.H
 	for _, content := range parsedContents {
 		storageClass := content.Data.(*v1.StorageClass)
 
-		d.StreamListItem(ctx, StorageClass{*storageClass, content.Path, content.Line})
+		d.StreamListItem(ctx, StorageClass{*storageClass, content.Path, content.StartLine, content.EndLine})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -151,7 +158,7 @@ func listK8sStorageClasses(ctx context.Context, d *plugin.QueryData, _ *plugin.H
 		}
 
 		for _, item := range response.Items {
-			d.StreamListItem(ctx, StorageClass{item, "", 0})
+			d.StreamListItem(ctx, StorageClass{item, "", 0, 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -191,7 +198,7 @@ func getK8sStorageClass(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 		storageClass := content.Data.(*v1.StorageClass)
 
 		if storageClass.Name == name {
-			return StorageClass{*storageClass, content.Path, content.Line}, nil
+			return StorageClass{*storageClass, content.Path, content.StartLine, content.EndLine}, nil
 		}
 	}
 
@@ -208,5 +215,16 @@ func getK8sStorageClass(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 		return nil, err
 	}
 
-	return StorageClass{*rs, "", 0}, nil
+	return StorageClass{*rs, "", 0, 0}, nil
+}
+
+//// TRANSFORM FUNCTIONS
+
+func storageClassResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+	obj := d.HydrateItem.(StorageClass)
+
+	if obj.Path != "" {
+		return "manifest", nil
+	}
+	return "deployed", nil
 }

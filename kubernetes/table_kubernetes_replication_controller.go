@@ -95,6 +95,12 @@ func tableKubernetesReplicaController(ctx context.Context) *plugin.Table {
 				Description: "Represents the latest available observations of a replication controller's current state.",
 				Transform:   transform.FromField("Status.Conditions"),
 			},
+			{
+				Name:        "source",
+				Type:        proto.ColumnType_STRING,
+				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
+				Transform:   transform.From(replicationControllerResourceSource),
+			},
 
 			//// Steampipe Standard Columns
 			{
@@ -117,6 +123,7 @@ type ReplicationController struct {
 	v1.ReplicationController
 	Path      string
 	StartLine int
+	EndLine   int
 }
 
 //// HYDRATE FUNCTIONS
@@ -143,7 +150,7 @@ func listK8sReplicaControllers(ctx context.Context, d *plugin.QueryData, _ *plug
 	for _, content := range parsedContents {
 		replicationController := content.Data.(*v1.ReplicationController)
 
-		d.StreamListItem(ctx, ReplicationController{*replicationController, content.Path, content.Line})
+		d.StreamListItem(ctx, ReplicationController{*replicationController, content.Path, content.StartLine, content.EndLine})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -196,7 +203,7 @@ func listK8sReplicaControllers(ctx context.Context, d *plugin.QueryData, _ *plug
 		}
 
 		for _, replicaController := range response.Items {
-			d.StreamListItem(ctx, ReplicationController{replicaController, "", 0})
+			d.StreamListItem(ctx, ReplicationController{replicaController, "", 0, 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -239,7 +246,7 @@ func getK8sReplicaController(ctx context.Context, d *plugin.QueryData, _ *plugin
 		replicationController := content.Data.(*v1.ReplicationController)
 
 		if replicationController.Name == name && replicationController.Namespace == namespace {
-			return ReplicationController{*replicationController, content.Path, content.Line}, nil
+			return ReplicationController{*replicationController, content.Path, content.StartLine, content.EndLine}, nil
 		}
 	}
 
@@ -255,7 +262,7 @@ func getK8sReplicaController(ctx context.Context, d *plugin.QueryData, _ *plugin
 		return nil, err
 	}
 
-	return ReplicationController{*replicaController, "", 0}, nil
+	return ReplicationController{*replicaController, "", 0, 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS
@@ -263,4 +270,13 @@ func getK8sReplicaController(ctx context.Context, d *plugin.QueryData, _ *plugin
 func transformReplicaControllerTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(ReplicationController)
 	return mergeTags(obj.Labels, obj.Annotations), nil
+}
+
+func replicationControllerResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+	obj := d.HydrateItem.(ReplicationController)
+
+	if obj.Path != "" {
+		return "manifest", nil
+	}
+	return "deployed", nil
 }

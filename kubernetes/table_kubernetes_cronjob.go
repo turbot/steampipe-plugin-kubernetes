@@ -88,6 +88,12 @@ func tableKubernetesCronJob(ctx context.Context) *plugin.Table {
 				Description: "A list of pointers to currently running jobs.",
 				Transform:   transform.FromField("Status.Active"),
 			},
+			{
+				Name:        "source",
+				Type:        proto.ColumnType_STRING,
+				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
+				Transform:   transform.From(cronJobResourceSource),
+			},
 
 			//// Steampipe Standard Columns
 			{
@@ -110,6 +116,7 @@ type CronJob struct {
 	v1.CronJob
 	Path      string
 	StartLine int
+	EndLine   int
 }
 
 //// HYDRATE FUNCTIONS
@@ -136,7 +143,7 @@ func listK8sCronJobs(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 	for _, content := range parsedContents {
 		cronJob := content.Data.(*v1.CronJob)
 
-		d.StreamListItem(ctx, CronJob{*cronJob, content.Path, content.Line})
+		d.StreamListItem(ctx, CronJob{*cronJob, content.Path, content.StartLine, content.EndLine})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -189,7 +196,7 @@ func listK8sCronJobs(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 		}
 
 		for _, cronJob := range response.Items {
-			d.StreamListItem(ctx, CronJob{cronJob, "", 0})
+			d.StreamListItem(ctx, CronJob{cronJob, "", 0, 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -232,7 +239,7 @@ func getK8sCronJob(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDa
 		cronJob := content.Data.(*v1.CronJob)
 
 		if cronJob.Name == name && cronJob.Namespace == namespace {
-			return CronJob{*cronJob, content.Path, content.Line}, nil
+			return CronJob{*cronJob, content.Path, content.StartLine, content.EndLine}, nil
 		}
 	}
 
@@ -249,7 +256,7 @@ func getK8sCronJob(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDa
 		return nil, err
 	}
 
-	return CronJob{*cronJob, "", 0}, nil
+	return CronJob{*cronJob, "", 0, 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS
@@ -257,4 +264,13 @@ func getK8sCronJob(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDa
 func transformCronJobTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(CronJob)
 	return mergeTags(obj.Labels, obj.Annotations), nil
+}
+
+func cronJobResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+	obj := d.HydrateItem.(CronJob)
+
+	if obj.Path != "" {
+		return "manifest", nil
+	}
+	return "deployed", nil
 }

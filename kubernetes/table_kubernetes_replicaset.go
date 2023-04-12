@@ -95,6 +95,12 @@ func tableKubernetesReplicaSet(ctx context.Context) *plugin.Table {
 				Description: "Represents the latest available observations of a replica set's current state.",
 				Transform:   transform.FromField("Status.Conditions"),
 			},
+			{
+				Name:        "source",
+				Type:        proto.ColumnType_STRING,
+				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
+				Transform:   transform.From(replicaSetResourceSource),
+			},
 
 			//// Steampipe Standard Columns
 			{
@@ -117,6 +123,7 @@ type ReplicaSet struct {
 	v1.ReplicaSet
 	Path      string
 	StartLine int
+	EndLine   int
 }
 
 //// HYDRATE FUNCTIONS
@@ -143,7 +150,7 @@ func listK8sReplicaSets(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 	for _, content := range parsedContents {
 		replicaSet := content.Data.(*v1.ReplicaSet)
 
-		d.StreamListItem(ctx, ReplicaSet{*replicaSet, content.Path, content.Line})
+		d.StreamListItem(ctx, ReplicaSet{*replicaSet, content.Path, content.StartLine, content.EndLine})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -196,7 +203,7 @@ func listK8sReplicaSets(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 		}
 
 		for _, item := range response.Items {
-			d.StreamListItem(ctx, ReplicaSet{item, "", 0})
+			d.StreamListItem(ctx, ReplicaSet{item, "", 0, 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -239,7 +246,7 @@ func getK8sReplicaSet(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 		replicaSet := content.Data.(*v1.ReplicaSet)
 
 		if replicaSet.Name == name && replicaSet.Namespace == namespace {
-			return ReplicaSet{*replicaSet, content.Path, content.Line}, nil
+			return ReplicaSet{*replicaSet, content.Path, content.StartLine, content.EndLine}, nil
 		}
 	}
 
@@ -255,7 +262,7 @@ func getK8sReplicaSet(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 		return nil, err
 	}
 
-	return ReplicaSet{*rs, "", 0}, nil
+	return ReplicaSet{*rs, "", 0, 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS
@@ -263,4 +270,13 @@ func getK8sReplicaSet(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 func transformReplicaSetTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(ReplicaSet)
 	return mergeTags(obj.Labels, obj.Annotations), nil
+}
+
+func replicaSetResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+	obj := d.HydrateItem.(ReplicaSet)
+
+	if obj.Path != "" {
+		return "manifest", nil
+	}
+	return "deployed", nil
 }

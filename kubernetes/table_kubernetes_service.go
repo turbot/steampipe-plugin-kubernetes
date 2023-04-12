@@ -146,6 +146,12 @@ func tableKubernetesService(ctx context.Context) *plugin.Table {
 				Description: "A preference-order list of topology keys which implementations of services should use to preferentially sort endpoints when accessing this Service, it can not be used at the same time as externalTrafficPolicy=Local.",
 				Transform:   transform.FromField("Spec.TopologyKeys"),
 			},
+			{
+				Name:        "source",
+				Type:        proto.ColumnType_STRING,
+				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
+				Transform:   transform.From(serviceResourceSource),
+			},
 
 			// Steampipe Standard Columns
 			{
@@ -168,6 +174,7 @@ type Service struct {
 	v1.Service
 	Path      string
 	StartLine int
+	EndLine   int
 }
 
 //// HYDRATE FUNCTIONS
@@ -194,7 +201,7 @@ func listK8sServices(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 	for _, content := range parsedContents {
 		service := content.Data.(*v1.Service)
 
-		d.StreamListItem(ctx, Service{*service, content.Path, content.Line})
+		d.StreamListItem(ctx, Service{*service, content.Path, content.StartLine, content.EndLine})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -247,7 +254,7 @@ func listK8sServices(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 		}
 
 		for _, service := range response.Items {
-			d.StreamListItem(ctx, Service{service, "", 0})
+			d.StreamListItem(ctx, Service{service, "", 0, 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -289,7 +296,7 @@ func getK8sService(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDa
 		service := content.Data.(*v1.Service)
 
 		if service.Name == name && service.Namespace == namespace {
-			return Service{*service, content.Path, content.Line}, nil
+			return Service{*service, content.Path, content.StartLine, content.EndLine}, nil
 		}
 	}
 
@@ -306,7 +313,7 @@ func getK8sService(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDa
 		return nil, err
 	}
 
-	return Service{*service, "", 0}, nil
+	return Service{*service, "", 0, 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS
@@ -314,4 +321,13 @@ func getK8sService(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDa
 func transformServiceTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(Service)
 	return mergeTags(obj.Labels, obj.Annotations), nil
+}
+
+func serviceResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+	obj := d.HydrateItem.(Service)
+
+	if obj.Path != "" {
+		return "manifest", nil
+	}
+	return "deployed", nil
 }

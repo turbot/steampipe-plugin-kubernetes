@@ -128,6 +128,12 @@ func tableKubernetesNode(ctx context.Context) *plugin.Table {
 				Description: "Status of the config assigned to the node via the dynamic Kubelet config feature.",
 				Transform:   transform.FromField("Status.Config"),
 			},
+			{
+				Name:        "source",
+				Type:        proto.ColumnType_STRING,
+				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
+				Transform:   transform.From(nodeResourceSource),
+			},
 			// To do - add Status Columns...
 
 			//// Steampipe Standard Columns
@@ -151,6 +157,7 @@ type Node struct {
 	v1.Node
 	Path      string
 	StartLine int
+	EndLine   int
 }
 
 //// HYDRATE FUNCTIONS
@@ -177,7 +184,7 @@ func listK8sNodes(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 	for _, content := range parsedContents {
 		node := content.Data.(*v1.Node)
 
-		d.StreamListItem(ctx, Node{*node, content.Path, content.Line})
+		d.StreamListItem(ctx, Node{*node, content.Path, content.StartLine, content.EndLine})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -224,7 +231,7 @@ func listK8sNodes(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 		}
 
 		for _, node := range response.Items {
-			d.StreamListItem(ctx, Node{node, "", 0})
+			d.StreamListItem(ctx, Node{node, "", 0, 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -266,7 +273,7 @@ func getK8sNode(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData)
 		node := content.Data.(*v1.Node)
 
 		if node.Name == name {
-			return Node{*node, content.Path, content.Line}, nil
+			return Node{*node, content.Path, content.StartLine, content.EndLine}, nil
 		}
 	}
 
@@ -282,7 +289,7 @@ func getK8sNode(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData)
 		return nil, err
 	}
 
-	return Node{*node, "", 0}, nil
+	return Node{*node, "", 0, 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS
@@ -290,4 +297,13 @@ func getK8sNode(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData)
 func transformNodeTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(Node)
 	return mergeTags(obj.Labels, obj.Annotations), nil
+}
+
+func nodeResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+	obj := d.HydrateItem.(Node)
+
+	if obj.Path != "" {
+		return "manifest", nil
+	}
+	return "deployed", nil
 }

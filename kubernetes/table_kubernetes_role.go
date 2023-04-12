@@ -30,6 +30,12 @@ func tableKubernetesRole(ctx context.Context) *plugin.Table {
 				Type:        proto.ColumnType_JSON,
 				Description: "List of the PolicyRules for this Role.",
 			},
+			{
+				Name:        "source",
+				Type:        proto.ColumnType_STRING,
+				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
+				Transform:   transform.From(roleResourceSource),
+			},
 
 			//// Steampipe Standard Columns
 			{
@@ -52,6 +58,7 @@ type Role struct {
 	v1.Role
 	Path      string
 	StartLine int
+	EndLine   int
 }
 
 //// HYDRATE FUNCTIONS
@@ -78,7 +85,7 @@ func listK8sRoles(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 	for _, content := range parsedContents {
 		role := content.Data.(*v1.Role)
 
-		d.StreamListItem(ctx, Role{*role, content.Path, content.Line})
+		d.StreamListItem(ctx, Role{*role, content.Path, content.StartLine, content.EndLine})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -131,7 +138,7 @@ func listK8sRoles(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 		}
 
 		for _, role := range response.Items {
-			d.StreamListItem(ctx, Role{role, "", 0})
+			d.StreamListItem(ctx, Role{role, "", 0, 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -174,7 +181,7 @@ func getK8sRole(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData)
 		role := content.Data.(*v1.Role)
 
 		if role.Name == name && role.Namespace == namespace {
-			return Role{*role, content.Path, content.Line}, nil
+			return Role{*role, content.Path, content.StartLine, content.EndLine}, nil
 		}
 	}
 
@@ -190,7 +197,7 @@ func getK8sRole(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData)
 		return nil, err
 	}
 
-	return Role{*role, "", 0}, nil
+	return Role{*role, "", 0, 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS
@@ -198,4 +205,13 @@ func getK8sRole(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData)
 func transformRoleTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(Role)
 	return mergeTags(obj.Labels, obj.Annotations), nil
+}
+
+func roleResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+	obj := d.HydrateItem.(Role)
+
+	if obj.Path != "" {
+		return "manifest", nil
+	}
+	return "deployed", nil
 }

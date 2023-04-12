@@ -100,6 +100,12 @@ func tableKubernetesHorizontalPodAutoscaler(ctx context.Context) *plugin.Table {
 				Description: "Conditions is the set of conditions required for this autoscaler to scale its target and indicates whether or not those conditions are met.",
 				Transform:   transform.FromField("Status.Conditions"),
 			},
+			{
+				Name:        "source",
+				Type:        proto.ColumnType_STRING,
+				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
+				Transform:   transform.From(horizontalPodAutoscalarResourceSource),
+			},
 
 			//// Steampipe Standard Columns
 			{
@@ -122,6 +128,7 @@ type HorizontalPodAutoscaler struct {
 	v1.HorizontalPodAutoscaler
 	Path      string
 	StartLine int
+	EndLine   int
 }
 
 //// HYDRATE FUNCTIONS
@@ -146,7 +153,7 @@ func listK8sHPAs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 	for _, content := range parsedContents {
 		hpa := content.Data.(*v1.HorizontalPodAutoscaler)
 
-		d.StreamListItem(ctx, HorizontalPodAutoscaler{*hpa, content.Path, content.Line})
+		d.StreamListItem(ctx, HorizontalPodAutoscaler{*hpa, content.Path, content.StartLine, content.EndLine})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -200,7 +207,7 @@ func listK8sHPAs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 		}
 
 		for _, hpa := range response.Items {
-			d.StreamListItem(ctx, HorizontalPodAutoscaler{hpa, "", 0})
+			d.StreamListItem(ctx, HorizontalPodAutoscaler{hpa, "", 0, 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -241,7 +248,7 @@ func getK8sHPA(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) 
 		hpa := content.Data.(*v1.HorizontalPodAutoscaler)
 
 		if hpa.Name == name && hpa.Namespace == namespace {
-			return HorizontalPodAutoscaler{*hpa, content.Path, content.Line}, nil
+			return HorizontalPodAutoscaler{*hpa, content.Path, content.StartLine, content.EndLine}, nil
 		}
 	}
 
@@ -258,7 +265,7 @@ func getK8sHPA(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) 
 		return nil, err
 	}
 
-	return HorizontalPodAutoscaler{*hpa, "", 0}, nil
+	return HorizontalPodAutoscaler{*hpa, "", 0, 0}, nil
 }
 
 ////// TRANSFORM FUNCTIONS
@@ -266,4 +273,13 @@ func getK8sHPA(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) 
 func transformHpaTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(HorizontalPodAutoscaler)
 	return mergeTags(obj.Labels, obj.Annotations), nil
+}
+
+func horizontalPodAutoscalarResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+	obj := d.HydrateItem.(HorizontalPodAutoscaler)
+
+	if obj.Path != "" {
+		return "manifest", nil
+	}
+	return "deployed", nil
 }

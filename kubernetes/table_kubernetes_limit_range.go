@@ -33,6 +33,12 @@ func tableKubernetesLimitRange(ctx context.Context) *plugin.Table {
 				Description: "List of limit range item objects that are enforced.",
 				Transform:   transform.FromField("Spec.Limits"),
 			},
+			{
+				Name:        "source",
+				Type:        proto.ColumnType_STRING,
+				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
+				Transform:   transform.From(limitRangeResourceSource),
+			},
 
 			//// Steampipe Standard Columns
 			{
@@ -55,6 +61,7 @@ type LimitRange struct {
 	v1.LimitRange
 	Path      string
 	StartLine int
+	EndLine   int
 }
 
 //// HYDRATE FUNCTIONS
@@ -80,7 +87,7 @@ func listK8sLimitRanges(ctx context.Context, d *plugin.QueryData, h *plugin.Hydr
 	for _, content := range parsedContents {
 		limitRange := content.Data.(*v1.LimitRange)
 
-		d.StreamListItem(ctx, LimitRange{*limitRange, content.Path, content.Line})
+		d.StreamListItem(ctx, LimitRange{*limitRange, content.Path, content.StartLine, content.EndLine})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -133,7 +140,7 @@ func listK8sLimitRanges(ctx context.Context, d *plugin.QueryData, h *plugin.Hydr
 		}
 
 		for _, limitRange := range response.Items {
-			d.StreamListItem(ctx, LimitRange{limitRange, "", 0})
+			d.StreamListItem(ctx, LimitRange{limitRange, "", 0, 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -175,7 +182,7 @@ func getK8sLimitRange(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 		limitRange := content.Data.(*v1.LimitRange)
 
 		if limitRange.Name == name && limitRange.Namespace == namespace {
-			return LimitRange{*limitRange, content.Path, content.Line}, nil
+			return LimitRange{*limitRange, content.Path, content.StartLine, content.EndLine}, nil
 		}
 	}
 
@@ -191,7 +198,7 @@ func getK8sLimitRange(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 		return nil, err
 	}
 
-	return LimitRange{*limitRange, "", 0}, nil
+	return LimitRange{*limitRange, "", 0, 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS
@@ -199,4 +206,13 @@ func getK8sLimitRange(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 func transformLimitRangeTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(LimitRange)
 	return mergeTags(obj.Labels, obj.Annotations), nil
+}
+
+func limitRangeResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+	obj := d.HydrateItem.(LimitRange)
+
+	if obj.Path != "" {
+		return "manifest", nil
+	}
+	return "deployed", nil
 }

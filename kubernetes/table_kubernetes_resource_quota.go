@@ -59,6 +59,12 @@ func tableKubernetesResourceQuota(ctx context.Context) *plugin.Table {
 				Description: "Indicates current observed total usage of the resource in the namespace.",
 				Transform:   transform.FromField("Status.Used"),
 			},
+			{
+				Name:        "source",
+				Type:        proto.ColumnType_STRING,
+				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
+				Transform:   transform.From(resourceQuotaResourceSource),
+			},
 
 			//// Steampipe Standard Columns
 			{
@@ -81,6 +87,7 @@ type ResourceQuota struct {
 	v1.ResourceQuota
 	Path      string
 	StartLine int
+	EndLine   int
 }
 
 //// HYDRATE FUNCTIONS
@@ -106,7 +113,7 @@ func listK8sResourceQuotas(ctx context.Context, d *plugin.QueryData, h *plugin.H
 	for _, content := range parsedContents {
 		resourceQuota := content.Data.(*v1.ResourceQuota)
 
-		d.StreamListItem(ctx, ResourceQuota{*resourceQuota, content.Path, content.Line})
+		d.StreamListItem(ctx, ResourceQuota{*resourceQuota, content.Path, content.StartLine, content.EndLine})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -159,7 +166,7 @@ func listK8sResourceQuotas(ctx context.Context, d *plugin.QueryData, h *plugin.H
 		}
 
 		for _, resourceQuota := range response.Items {
-			d.StreamListItem(ctx, ResourceQuota{resourceQuota, "", 0})
+			d.StreamListItem(ctx, ResourceQuota{resourceQuota, "", 0, 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -201,7 +208,7 @@ func getK8sResourceQuota(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 		resourceQuota := content.Data.(*v1.ResourceQuota)
 
 		if resourceQuota.Name == name && resourceQuota.Namespace == namespace {
-			return ResourceQuota{*resourceQuota, content.Path, content.Line}, nil
+			return ResourceQuota{*resourceQuota, content.Path, content.StartLine, content.EndLine}, nil
 		}
 	}
 
@@ -217,7 +224,7 @@ func getK8sResourceQuota(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 		return nil, err
 	}
 
-	return ResourceQuota{*resourceQuota, "", 0}, nil
+	return ResourceQuota{*resourceQuota, "", 0, 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS
@@ -225,4 +232,13 @@ func getK8sResourceQuota(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 func transformResourceQuotaTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(ResourceQuota)
 	return mergeTags(obj.Labels, obj.Annotations), nil
+}
+
+func resourceQuotaResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+	obj := d.HydrateItem.(ResourceQuota)
+
+	if obj.Path != "" {
+		return "manifest", nil
+	}
+	return "deployed", nil
 }

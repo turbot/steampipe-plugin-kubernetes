@@ -46,6 +46,12 @@ func tableKubernetesPDB(ctx context.Context) *plugin.Table {
 				Description: "An eviction is allowed if at most 'maxAvailable' pods selected by 'selector' will still be unavailable after the eviction.",
 				Transform:   transform.FromField("Spec.MaxUnavailable"),
 			},
+			{
+				Name:        "source",
+				Type:        proto.ColumnType_STRING,
+				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
+				Transform:   transform.From(podDisruptionBudgetResourceSource),
+			},
 
 			// Steampipe Standard Columns
 			{
@@ -68,6 +74,7 @@ type PodDisruptionBudget struct {
 	v1.PodDisruptionBudget
 	Path      string
 	StartLine int
+	EndLine   int
 }
 
 //// HYDRATE FUNCTIONS
@@ -94,7 +101,7 @@ func listPDBs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (
 	for _, content := range parsedContents {
 		pdb := content.Data.(*v1.PodDisruptionBudget)
 
-		d.StreamListItem(ctx, PodDisruptionBudget{*pdb, content.Path, content.Line})
+		d.StreamListItem(ctx, PodDisruptionBudget{*pdb, content.Path, content.StartLine, content.EndLine})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -147,7 +154,7 @@ func listPDBs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (
 		}
 
 		for _, item := range response.Items {
-			d.StreamListItem(ctx, PodDisruptionBudget{item, "", 0})
+			d.StreamListItem(ctx, PodDisruptionBudget{item, "", 0, 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -190,7 +197,7 @@ func getPDB(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (in
 		pdb := content.Data.(*v1.PodDisruptionBudget)
 
 		if pdb.Name == name && pdb.Namespace == namespace {
-			return PodDisruptionBudget{*pdb, content.Path, content.Line}, nil
+			return PodDisruptionBudget{*pdb, content.Path, content.StartLine, content.EndLine}, nil
 		}
 	}
 
@@ -206,7 +213,7 @@ func getPDB(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (in
 		return nil, err
 	}
 
-	return PodDisruptionBudget{*pdb, "", 0}, nil
+	return PodDisruptionBudget{*pdb, "", 0, 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS
@@ -214,4 +221,13 @@ func getPDB(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (in
 func transformPDBTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(PodDisruptionBudget)
 	return mergeTags(obj.Labels, obj.Annotations), nil
+}
+
+func podDisruptionBudgetResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+	obj := d.HydrateItem.(PodDisruptionBudget)
+
+	if obj.Path != "" {
+		return "manifest", nil
+	}
+	return "deployed", nil
 }

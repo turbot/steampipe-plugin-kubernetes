@@ -118,6 +118,12 @@ func tableKubernetesJob(ctx context.Context) *plugin.Table {
 				Description: "The latest available observations of an object's current state.",
 				Transform:   transform.FromField("Status.Conditions"),
 			},
+			{
+				Name:        "source",
+				Type:        proto.ColumnType_STRING,
+				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
+				Transform:   transform.From(jobResourceSource),
+			},
 
 			//// Steampipe Standard Columns
 			{
@@ -140,6 +146,7 @@ type Job struct {
 	v1.Job
 	Path      string
 	StartLine int
+	EndLine   int
 }
 
 //// HYDRATE FUNCTIONS
@@ -166,7 +173,7 @@ func listK8sJobs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 	for _, content := range parsedContents {
 		job := content.Data.(*v1.Job)
 
-		d.StreamListItem(ctx, Job{*job, content.Path, content.Line})
+		d.StreamListItem(ctx, Job{*job, content.Path, content.StartLine, content.EndLine})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -219,7 +226,7 @@ func listK8sJobs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 		}
 
 		for _, job := range response.Items {
-			d.StreamListItem(ctx, Job{job, "", 0})
+			d.StreamListItem(ctx, Job{job, "", 0, 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -262,7 +269,7 @@ func getK8sJob(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) 
 		job := content.Data.(*v1.Job)
 
 		if job.Name == name && job.Namespace == namespace {
-			return Job{*job, content.Path, content.Line}, nil
+			return Job{*job, content.Path, content.StartLine, content.EndLine}, nil
 		}
 	}
 
@@ -278,7 +285,7 @@ func getK8sJob(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) 
 		return nil, err
 	}
 
-	return Job{*job, "", 0}, nil
+	return Job{*job, "", 0, 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS
@@ -286,4 +293,13 @@ func getK8sJob(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) 
 func transformJobTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(Job)
 	return mergeTags(obj.Labels, obj.Annotations), nil
+}
+
+func jobResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+	obj := d.HydrateItem.(Job)
+
+	if obj.Path != "" {
+		return "manifest", nil
+	}
+	return "deployed", nil
 }

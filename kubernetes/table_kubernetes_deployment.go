@@ -131,6 +131,12 @@ func tableKubernetesDeployment(ctx context.Context) *plugin.Table {
 				Description: "Count of hash collisions for the Deployment. The Deployment controller uses this field as a collision avoidance mechanism when it needs to create the name for the newest ReplicaSet.",
 				Transform:   transform.FromField("Status.CollisionCount"),
 			},
+			{
+				Name:        "source",
+				Type:        proto.ColumnType_STRING,
+				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
+				Transform:   transform.From(deploymentResourceSource),
+			},
 
 			//// Steampipe Standard Columns
 			{
@@ -153,6 +159,7 @@ type Deployment struct {
 	v1.Deployment
 	Path      string
 	StartLine int
+	EndLine   int
 }
 
 //// HYDRATE FUNCTIONS
@@ -179,7 +186,7 @@ func listK8sDeployments(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 	for _, content := range parsedContents {
 		deployment := content.Data.(*v1.Deployment)
 
-		d.StreamListItem(ctx, Deployment{*deployment, content.Path, content.Line})
+		d.StreamListItem(ctx, Deployment{*deployment, content.Path, content.StartLine, content.EndLine})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -233,7 +240,7 @@ func listK8sDeployments(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 		}
 
 		for _, item := range response.Items {
-			d.StreamListItem(ctx, Deployment{item, "", 0})
+			d.StreamListItem(ctx, Deployment{item, "", 0, 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -276,7 +283,7 @@ func getK8sDeployment(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 		deployment := content.Data.(*v1.Deployment)
 
 		if deployment.Name == name && deployment.Namespace == namespace {
-			return Deployment{*deployment, content.Path, content.Line}, nil
+			return Deployment{*deployment, content.Path, content.StartLine, content.EndLine}, nil
 		}
 	}
 
@@ -292,7 +299,7 @@ func getK8sDeployment(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 		return nil, err
 	}
 
-	return Deployment{*deployment, "", 0}, nil
+	return Deployment{*deployment, "", 0, 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS
@@ -300,4 +307,13 @@ func getK8sDeployment(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 func transformDeploymentTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(Deployment)
 	return mergeTags(obj.Labels, obj.Annotations), nil
+}
+
+func deploymentResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+	obj := d.HydrateItem.(Deployment)
+
+	if obj.Path != "" {
+		return "manifest", nil
+	}
+	return "deployed", nil
 }

@@ -14,18 +14,9 @@ const (
 
 func manifestResourceColumns() []*plugin.Column {
 	return []*plugin.Column{
-		{
-			Name:        "path",
-			Type:        proto.ColumnType_STRING,
-			Description: "The path to the manifest file.",
-			Transform:   transform.FromField("Path").Transform(transform.NullIfZeroValue),
-		},
-		{
-			Name:        "start_line",
-			Type:        proto.ColumnType_INT,
-			Description: "The path to the manifest file.",
-			Transform:   transform.FromField("StartLine").NullIfZero(),
-		},
+		{Name: "path", Type: proto.ColumnType_STRING, Description: "The path to the manifest file.", Transform: transform.FromField("Path").Transform(transform.NullIfZeroValue)},
+		{Name: "start_line", Type: proto.ColumnType_INT, Description: "The path to the manifest file.", Transform: transform.FromField("StartLine").NullIfZero()},
+		{Name: "end_line", Type: proto.ColumnType_INT, Description: "The path to the manifest file.", Transform: transform.FromField("EndLine").NullIfZero()},
 	}
 }
 
@@ -34,7 +25,7 @@ func objectMetadataPrimaryColumnsWithoutNamespace() []*plugin.Column {
 		//{Name: "raw", Type: proto.ColumnType_JSON, Transform: transform.FromValue()},
 		{Name: "name", Type: proto.ColumnType_STRING, Description: "Name of the object.  Name must be unique within a namespace."},
 		// {Name: "namespace", Type: proto.ColumnType_STRING, Description: "Namespace defines the space within which each name must be unique."},
-		{Name: "uid", Type: proto.ColumnType_STRING, Description: "UID is the unique in time and space value for this object."},
+		{Name: "uid", Type: proto.ColumnType_STRING, Description: "UID is the unique in time and space value for this object.", Transform: transform.FromField("UID").Transform(transform.NullIfZeroValue)},
 	}
 }
 
@@ -43,7 +34,7 @@ func objectMetadataPrimaryColumns() []*plugin.Column {
 		//{Name: "raw", Type: proto.ColumnType_JSON, Transform: transform.FromValue()},
 		{Name: "name", Type: proto.ColumnType_STRING, Description: "Name of the object.  Name must be unique within a namespace."},
 		{Name: "namespace", Type: proto.ColumnType_STRING, Description: "Namespace defines the space within which each name must be unique."},
-		{Name: "uid", Type: proto.ColumnType_STRING, Description: "UID is the unique in time and space value for this object."},
+		{Name: "uid", Type: proto.ColumnType_STRING, Description: "UID is the unique in time and space value for this object.", Transform: transform.FromField("UID").Transform(transform.NullIfZeroValue)},
 	}
 }
 

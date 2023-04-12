@@ -41,6 +41,12 @@ func tableKubernetesServiceAccount(ctx context.Context) *plugin.Table {
 				Type:        proto.ColumnType_JSON,
 				Description: "Secrets is the list of secrets allowed to be used by pods running using this ServiceAccount.",
 			},
+			{
+				Name:        "source",
+				Type:        proto.ColumnType_STRING,
+				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
+				Transform:   transform.From(serviceAccountResourceSource),
+			},
 
 			//// Steampipe Standard Columns
 			{
@@ -63,6 +69,7 @@ type ServiceAccount struct {
 	v1.ServiceAccount
 	Path      string
 	StartLine int
+	EndLine   int
 }
 
 //// HYDRATE FUNCTIONS
@@ -89,7 +96,7 @@ func listK8sServiceAccounts(ctx context.Context, d *plugin.QueryData, _ *plugin.
 	for _, content := range parsedContents {
 		serviceAccount := content.Data.(*v1.ServiceAccount)
 
-		d.StreamListItem(ctx, ServiceAccount{*serviceAccount, content.Path, content.Line})
+		d.StreamListItem(ctx, ServiceAccount{*serviceAccount, content.Path, content.StartLine, content.EndLine})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -142,7 +149,7 @@ func listK8sServiceAccounts(ctx context.Context, d *plugin.QueryData, _ *plugin.
 		}
 
 		for _, serviceAccount := range response.Items {
-			d.StreamListItem(ctx, ServiceAccount{serviceAccount, "", 0})
+			d.StreamListItem(ctx, ServiceAccount{serviceAccount, "", 0, 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -185,7 +192,7 @@ func getK8sServiceAccount(ctx context.Context, d *plugin.QueryData, _ *plugin.Hy
 		serviceAccount := content.Data.(*v1.ServiceAccount)
 
 		if serviceAccount.Name == name && serviceAccount.Namespace == namespace {
-			return ServiceAccount{*serviceAccount, content.Path, content.Line}, nil
+			return ServiceAccount{*serviceAccount, content.Path, content.StartLine, content.EndLine}, nil
 		}
 	}
 
@@ -202,7 +209,7 @@ func getK8sServiceAccount(ctx context.Context, d *plugin.QueryData, _ *plugin.Hy
 		return nil, err
 	}
 
-	return ServiceAccount{*serviceAccount, "", 0}, nil
+	return ServiceAccount{*serviceAccount, "", 0, 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS
@@ -210,4 +217,13 @@ func getK8sServiceAccount(ctx context.Context, d *plugin.QueryData, _ *plugin.Hy
 func transformServiceAccountTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(ServiceAccount)
 	return mergeTags(obj.Labels, obj.Annotations), nil
+}
+
+func serviceAccountResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+	obj := d.HydrateItem.(ServiceAccount)
+
+	if obj.Path != "" {
+		return "manifest", nil
+	}
+	return "deployed", nil
 }

@@ -400,6 +400,12 @@ func tableKubernetesPod(ctx context.Context) *plugin.Table {
 					"This field is alpha-level and is only populated by servers that enable the EphemeralContainers feature.",
 				Transform: transform.FromField("Status.EphemeralContainerStatuses"),
 			},
+			{
+				Name:        "source",
+				Type:        proto.ColumnType_STRING,
+				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
+				Transform:   transform.From(podResourceSource),
+			},
 
 			//// Steampipe Standard Columns
 			{
@@ -422,6 +428,7 @@ type Pod struct {
 	v1.Pod
 	Path      string
 	StartLine int
+	EndLine   int
 }
 
 //// HYDRATE FUNCTIONS
@@ -448,7 +455,7 @@ func listK8sPods(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 	for _, content := range parsedContents {
 		pod := content.Data.(*v1.Pod)
 
-		d.StreamListItem(ctx, Pod{*pod, content.Path, content.Line})
+		d.StreamListItem(ctx, Pod{*pod, content.Path, content.StartLine, content.EndLine})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -507,7 +514,7 @@ func listK8sPods(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 		}
 
 		for _, pod := range response.Items {
-			d.StreamListItem(ctx, Pod{pod, "", 0})
+			d.StreamListItem(ctx, Pod{pod, "", 0, 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -550,7 +557,7 @@ func getK8sPod(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) 
 		pod := content.Data.(*v1.Pod)
 
 		if pod.Name == name && pod.Namespace == namespace {
-			return Pod{*pod, content.Path, content.Line}, nil
+			return Pod{*pod, content.Path, content.StartLine, content.EndLine}, nil
 		}
 	}
 
@@ -566,7 +573,7 @@ func getK8sPod(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) 
 		return nil, err
 	}
 
-	return Pod{*pod, "", 0}, nil
+	return Pod{*pod, "", 0, 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS
@@ -605,4 +612,13 @@ func buildKubernetsPodFieldSelectorFilter(ctx context.Context, d *plugin.QueryDa
 	}
 
 	return commonFieldSelectorValue
+}
+
+func podResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+	obj := d.HydrateItem.(Pod)
+
+	if obj.Path != "" {
+		return "manifest", nil
+	}
+	return "deployed", nil
 }

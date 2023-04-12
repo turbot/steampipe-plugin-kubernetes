@@ -8,6 +8,7 @@ import (
 
 	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
+	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
 )
 
 func tableKubernetesCustomResourceDefinition(ctx context.Context) *plugin.Table {
@@ -33,6 +34,12 @@ func tableKubernetesCustomResourceDefinition(ctx context.Context) *plugin.Table 
 				Description: "Status indicates the actual state of the CustomResourceDefinition.",
 				Type:        proto.ColumnType_JSON,
 			},
+			{
+				Name:        "source",
+				Type:        proto.ColumnType_STRING,
+				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
+				Transform:   transform.From(customResourceDefinitionResourceSource),
+			},
 		}),
 	}
 }
@@ -41,6 +48,7 @@ type CustomResourceDefinition struct {
 	v1.CustomResourceDefinition
 	Path      string
 	StartLine int
+	EndLine   int
 }
 
 //// HYDRATE FUNCTIONS
@@ -63,7 +71,7 @@ func listK8sCustomResourceDefinitions(ctx context.Context, d *plugin.QueryData, 
 	for _, content := range parsedContents {
 		crd := content.Data.(*v1.CustomResourceDefinition)
 
-		d.StreamListItem(ctx, CustomResourceDefinition{*crd, content.Path, content.Line})
+		d.StreamListItem(ctx, CustomResourceDefinition{*crd, content.Path, content.StartLine, content.EndLine})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -109,7 +117,7 @@ func listK8sCustomResourceDefinitions(ctx context.Context, d *plugin.QueryData, 
 		}
 
 		for _, crd := range response.Items {
-			d.StreamListItem(ctx, CustomResourceDefinition{crd, "", 0})
+			d.StreamListItem(ctx, CustomResourceDefinition{crd, "", 0, 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -147,7 +155,7 @@ func getK8sCustomResourceDefinition(ctx context.Context, d *plugin.QueryData, _ 
 		crd := content.Data.(*v1.CustomResourceDefinition)
 
 		if crd.Name == name {
-			return CustomResourceDefinition{*crd, content.Path, content.Line}, nil
+			return CustomResourceDefinition{*crd, content.Path, content.StartLine, content.EndLine}, nil
 		}
 	}
 
@@ -164,5 +172,16 @@ func getK8sCustomResourceDefinition(ctx context.Context, d *plugin.QueryData, _ 
 		return nil, err
 	}
 
-	return CustomResourceDefinition{*response, "", 0}, nil
+	return CustomResourceDefinition{*response, "", 0, 0}, nil
+}
+
+//// TRANSFORM FUNCTIONS
+
+func customResourceDefinitionResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+	obj := d.HydrateItem.(CustomResourceDefinition)
+
+	if obj.Path != "" {
+		return "manifest", nil
+	}
+	return "deployed", nil
 }

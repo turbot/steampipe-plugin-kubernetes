@@ -49,6 +49,12 @@ func tableKubernetesSecret(ctx context.Context) *plugin.Table {
 				Type:        proto.ColumnType_JSON,
 				Description: "Contains the configuration binary data.",
 			},
+			{
+				Name:        "source",
+				Type:        proto.ColumnType_STRING,
+				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
+				Transform:   transform.From(secretResourceSource),
+			},
 
 			//// Steampipe Standard Columns
 			{
@@ -71,6 +77,7 @@ type Secret struct {
 	v1.Secret
 	Path      string
 	StartLine int
+	EndLine   int
 }
 
 //// HYDRATE FUNCTIONS
@@ -97,7 +104,7 @@ func listK8sSecrets(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateD
 	for _, content := range parsedContents {
 		secret := content.Data.(*v1.Secret)
 
-		d.StreamListItem(ctx, Secret{*secret, content.Path, content.Line})
+		d.StreamListItem(ctx, Secret{*secret, content.Path, content.StartLine, content.EndLine})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -154,7 +161,7 @@ func listK8sSecrets(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateD
 		}
 
 		for _, secret := range response.Items {
-			d.StreamListItem(ctx, Secret{secret, "", 0})
+			d.StreamListItem(ctx, Secret{secret, "", 0, 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -197,7 +204,7 @@ func getK8sSecret(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 		secret := content.Data.(*v1.Secret)
 
 		if secret.Name == name && secret.Namespace == namespace {
-			return Secret{*secret, content.Path, content.Line}, nil
+			return Secret{*secret, content.Path, content.StartLine, content.EndLine}, nil
 		}
 	}
 
@@ -213,7 +220,7 @@ func getK8sSecret(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 		return nil, err
 	}
 
-	return Secret{*secret, "", 0}, nil
+	return Secret{*secret, "", 0, 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS
@@ -221,4 +228,13 @@ func getK8sSecret(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 func transformSecretTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(Secret)
 	return mergeTags(obj.Labels, obj.Annotations), nil
+}
+
+func secretResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+	obj := d.HydrateItem.(Secret)
+
+	if obj.Path != "" {
+		return "manifest", nil
+	}
+	return "deployed", nil
 }

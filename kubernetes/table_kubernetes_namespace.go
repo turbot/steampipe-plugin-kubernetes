@@ -49,6 +49,12 @@ func tableKubernetesNamespace(ctx context.Context) *plugin.Table {
 				Description: "The latest available observations of namespace's current state.",
 				Transform:   transform.FromField("Status.NamespaceCondition"),
 			},
+			{
+				Name:        "source",
+				Type:        proto.ColumnType_STRING,
+				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
+				Transform:   transform.From(namespaceResourceSource),
+			},
 
 			//// Steampipe Standard Columns
 			{
@@ -71,6 +77,7 @@ type Namespace struct {
 	v1.Namespace
 	Path      string
 	StartLine int
+	EndLine   int
 }
 
 //// HYDRATE FUNCTIONS
@@ -97,7 +104,7 @@ func listK8sNamespaces(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 	for _, content := range parsedContents {
 		namespace := content.Data.(*v1.Namespace)
 
-		d.StreamListItem(ctx, Namespace{*namespace, content.Path, content.Line})
+		d.StreamListItem(ctx, Namespace{*namespace, content.Path, content.StartLine, content.EndLine})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -148,7 +155,7 @@ func listK8sNamespaces(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 		}
 
 		for _, namespace := range response.Items {
-			d.StreamListItem(ctx, Namespace{namespace, "", 0})
+			d.StreamListItem(ctx, Namespace{namespace, "", 0, 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -190,7 +197,7 @@ func getK8sNamespace(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 		namespace := content.Data.(*v1.Namespace)
 
 		if namespace.Name == name {
-			return Namespace{*namespace, content.Path, content.Line}, nil
+			return Namespace{*namespace, content.Path, content.StartLine, content.EndLine}, nil
 		}
 	}
 
@@ -206,7 +213,7 @@ func getK8sNamespace(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 		return nil, err
 	}
 
-	return Namespace{*namespace, "", 0}, nil
+	return Namespace{*namespace, "", 0, 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS
@@ -214,4 +221,13 @@ func getK8sNamespace(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 func transformNamespaceTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(Namespace)
 	return mergeTags(obj.Labels, obj.Annotations), nil
+}
+
+func namespaceResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+	obj := d.HydrateItem.(Namespace)
+
+	if obj.Path != "" {
+		return "manifest", nil
+	}
+	return "deployed", nil
 }

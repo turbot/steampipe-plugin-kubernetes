@@ -50,6 +50,12 @@ func tableKubernetesIngress(ctx context.Context) *plugin.Table {
 				Description: "A list of host rules used to configure the Ingress.",
 				Transform:   transform.FromField("Spec.Rules"),
 			},
+			{
+				Name:        "source",
+				Type:        proto.ColumnType_STRING,
+				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
+				Transform:   transform.From(ingressResourceSource),
+			},
 
 			//// IngressStatus columns
 			{
@@ -80,6 +86,7 @@ type Ingress struct {
 	v1.Ingress
 	Path      string
 	StartLine int
+	EndLine   int
 }
 
 //// HYDRATE FUNCTIONS
@@ -106,7 +113,7 @@ func listK8sIngresses(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 	for _, content := range parsedContents {
 		ingress := content.Data.(*v1.Ingress)
 
-		d.StreamListItem(ctx, Ingress{*ingress, content.Path, content.Line})
+		d.StreamListItem(ctx, Ingress{*ingress, content.Path, content.StartLine, content.EndLine})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -159,7 +166,7 @@ func listK8sIngresses(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 		}
 
 		for _, ingress := range response.Items {
-			d.StreamListItem(ctx, Ingress{ingress, "", 0})
+			d.StreamListItem(ctx, Ingress{ingress, "", 0, 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -202,7 +209,7 @@ func getK8sIngress(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDa
 		ingress := content.Data.(*v1.Ingress)
 
 		if ingress.Name == name && ingress.Namespace == namespace {
-			return Ingress{*ingress, content.Path, content.Line}, nil
+			return Ingress{*ingress, content.Path, content.StartLine, content.EndLine}, nil
 		}
 	}
 
@@ -218,7 +225,7 @@ func getK8sIngress(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDa
 		return nil, err
 	}
 
-	return Ingress{*ingress, "", 0}, nil
+	return Ingress{*ingress, "", 0, 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS
@@ -226,4 +233,13 @@ func getK8sIngress(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDa
 func transformIngressTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(Ingress)
 	return mergeTags(obj.Labels, obj.Annotations), nil
+}
+
+func ingressResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+	obj := d.HydrateItem.(Ingress)
+
+	if obj.Path != "" {
+		return "manifest", nil
+	}
+	return "deployed", nil
 }

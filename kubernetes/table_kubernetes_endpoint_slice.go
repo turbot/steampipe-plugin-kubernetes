@@ -40,6 +40,12 @@ func tableKubernetesEndpointSlice(ctx context.Context) *plugin.Table {
 				Type:        proto.ColumnType_JSON,
 				Description: "List of network ports exposed by each endpoint in this slice. Each port must have a unique name. When ports is empty, it indicates that there are no defined ports.",
 			},
+			{
+				Name:        "source",
+				Type:        proto.ColumnType_STRING,
+				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
+				Transform:   transform.From(endpointSliceResourceSource),
+			},
 
 			//// Steampipe Standard Columns
 			{
@@ -62,6 +68,7 @@ type EndpointSlice struct {
 	v1.EndpointSlice
 	Path      string
 	StartLine int
+	EndLine   int
 }
 
 //// HYDRATE FUNCTIONS
@@ -88,7 +95,7 @@ func listK8sEnpointSlices(ctx context.Context, d *plugin.QueryData, _ *plugin.Hy
 	for _, content := range parsedContents {
 		endpointSlice := content.Data.(*v1.EndpointSlice)
 
-		d.StreamListItem(ctx, EndpointSlice{*endpointSlice, content.Path, content.Line})
+		d.StreamListItem(ctx, EndpointSlice{*endpointSlice, content.Path, content.StartLine, content.EndLine})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -141,7 +148,7 @@ func listK8sEnpointSlices(ctx context.Context, d *plugin.QueryData, _ *plugin.Hy
 		}
 
 		for _, endpointSlice := range response.Items {
-			d.StreamListItem(ctx, EndpointSlice{endpointSlice, "", 0})
+			d.StreamListItem(ctx, EndpointSlice{endpointSlice, "", 0, 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -184,7 +191,7 @@ func getK8sEnpointSlice(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 		endpointSlice := content.Data.(*v1.EndpointSlice)
 
 		if endpointSlice.Name == name && endpointSlice.Namespace == namespace {
-			return EndpointSlice{*endpointSlice, content.Path, content.Line}, nil
+			return EndpointSlice{*endpointSlice, content.Path, content.StartLine, content.EndLine}, nil
 		}
 	}
 
@@ -200,7 +207,7 @@ func getK8sEnpointSlice(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 		return nil, err
 	}
 
-	return EndpointSlice{*endpointSlice, "", 0}, nil
+	return EndpointSlice{*endpointSlice, "", 0, 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS
@@ -208,4 +215,13 @@ func getK8sEnpointSlice(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 func transformEndpointSliceTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(EndpointSlice)
 	return mergeTags(obj.Labels, obj.Annotations), nil
+}
+
+func endpointSliceResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+	obj := d.HydrateItem.(EndpointSlice)
+
+	if obj.Path != "" {
+		return "manifest", nil
+	}
+	return "deployed", nil
 }

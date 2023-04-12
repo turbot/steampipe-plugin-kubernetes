@@ -41,6 +41,12 @@ func tableKubernetesConfigMap(ctx context.Context) *plugin.Table {
 				Type:        proto.ColumnType_JSON,
 				Description: "Contains the configuration binary data.",
 			},
+			{
+				Name:        "source",
+				Type:        proto.ColumnType_STRING,
+				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
+				Transform:   transform.From(configMapResourceSource),
+			},
 
 			//// Steampipe Standard Columns
 			{
@@ -63,6 +69,7 @@ type ConfigMap struct {
 	v1.ConfigMap
 	Path      string
 	StartLine int
+	EndLine   int
 }
 
 //// HYDRATE FUNCTIONS
@@ -89,7 +96,7 @@ func listK8sConfigMaps(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 	for _, content := range parsedContents {
 		configMap := content.Data.(*v1.ConfigMap)
 
-		d.StreamListItem(ctx, ConfigMap{*configMap, content.Path, content.Line})
+		d.StreamListItem(ctx, ConfigMap{*configMap, content.Path, content.StartLine, content.EndLine})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -142,7 +149,7 @@ func listK8sConfigMaps(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 		}
 
 		for _, configMap := range response.Items {
-			d.StreamListItem(ctx, ConfigMap{configMap, "", 0})
+			d.StreamListItem(ctx, ConfigMap{configMap, "", 0, 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -185,7 +192,7 @@ func getK8sConfigMap(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 		configMap := content.Data.(*v1.ConfigMap)
 
 		if configMap.Name == name && configMap.Namespace == namespace {
-			return ConfigMap{*configMap, content.Path, content.Line}, nil
+			return ConfigMap{*configMap, content.Path, content.StartLine, content.EndLine}, nil
 		}
 	}
 
@@ -201,7 +208,7 @@ func getK8sConfigMap(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 		return nil, err
 	}
 
-	return ConfigMap{*configMap, "", 0}, nil
+	return ConfigMap{*configMap, "", 0, 0}, nil
 }
 
 //// TRANSFORM FUNCTIONS
@@ -209,4 +216,13 @@ func getK8sConfigMap(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 func transformConfigMapTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(ConfigMap)
 	return mergeTags(obj.Labels, obj.Annotations), nil
+}
+
+func configMapResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+	obj := d.HydrateItem.(ConfigMap)
+
+	if obj.Path != "" {
+		return "manifest", nil
+	}
+	return "deployed", nil
 }

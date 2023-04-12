@@ -101,6 +101,12 @@ func tableKubernetesEvent(ctx context.Context) *plugin.Table {
 				Type:        proto.ColumnType_JSON,
 				Description: "The component reporting this event.",
 			},
+			{
+				Name:        "config_source",
+				Type:        proto.ColumnType_STRING,
+				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
+				Transform:   transform.From(eventResourceSource),
+			},
 		}),
 	}
 }
@@ -109,6 +115,7 @@ type Event struct {
 	v1.Event
 	Path      string
 	StartLine int
+	EndLine   int
 }
 
 //// HYDRATE FUNCTIONS
@@ -134,7 +141,7 @@ func listK8sEvents(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDa
 	for _, content := range parsedContents {
 		event := content.Data.(*v1.Event)
 
-		d.StreamListItem(ctx, Event{*event, content.Path, content.Line})
+		d.StreamListItem(ctx, Event{*event, content.Path, content.StartLine, content.EndLine})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -188,7 +195,7 @@ func listK8sEvents(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDa
 		}
 
 		for _, event := range response.Items {
-			d.StreamListItem(ctx, Event{event, "", 0})
+			d.StreamListItem(ctx, Event{event, "", 0, 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -230,7 +237,7 @@ func getK8sEvent(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 		event := content.Data.(*v1.Event)
 
 		if event.Name == name && event.Namespace == namespace {
-			return Event{*event, content.Path, content.Line}, nil
+			return Event{*event, content.Path, content.StartLine, content.EndLine}, nil
 		}
 	}
 
@@ -247,5 +254,16 @@ func getK8sEvent(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 		return nil, err
 	}
 
-	return Event{*event, "", 0}, nil
+	return Event{*event, "", 0, 0}, nil
+}
+
+//// TRANSFORM FUNCTIONS
+
+func eventResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+	obj := d.HydrateItem.(Event)
+
+	if obj.Path != "" {
+		return "manifest", nil
+	}
+	return "deployed", nil
 }
