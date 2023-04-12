@@ -124,7 +124,9 @@ func listK8sDynamicCRDs(ctx context.Context, cn *connection.ConnectionCache, c *
 	clientset, err := GetNewClientCRDRaw(ctx, cn, c)
 	if err != nil {
 		plugin.Logger(ctx).Error("listK8sDynamicCRDs", "GetNewClientCRDRaw", err)
-		return nil, err
+
+		// At the plugin load time, if the config file does not contain valid properties, return nil
+		return nil, nil
 	}
 
 	input := metav1.ListOptions{
