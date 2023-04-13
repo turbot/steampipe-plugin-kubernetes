@@ -681,27 +681,6 @@ func parsedManifestFileContentUncached(ctx context.Context, d *plugin.QueryData,
 		}
 		decoder := clientgoscheme.Codecs.UniversalDeserializer()
 
-		// Get the start lines for all resource specified in the file
-		temp := strings.Split(string(content), "\n")
-		resourceLocationMap := map[string][]int{}
-
-		// Initialize the line with 0
-		line := 0
-		for _, item := range temp {
-			item = strings.ReplaceAll(item, " ", "")
-
-			// Extract the starting position of the resource defined in a file.
-			// If the file has multiple resource configuration defined, store the position based on the occurrence.
-			if strings.Contains(item, "kind") {
-				splitStr := strings.Split(item, "kind:")
-				if len(splitStr) == 2 {
-					resourceLocationMap[splitStr[1]] = append(resourceLocationMap[splitStr[1]], line)
-				}
-			}
-			line++
-		}
-		plugin.Logger(ctx).Debug("parsedManifestFileContentUncached", "file", path, "resource locations", resourceLocationMap)
-
 		// Check for the start of the document
 		pos := 0
 		for _, resource := range strings.Split(string(content), "---") {
