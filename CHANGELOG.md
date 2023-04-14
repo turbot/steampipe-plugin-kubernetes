@@ -2,7 +2,7 @@
 
 _Bug fixes_
 
-- Fixed the plugin initialization errors by correctly handling the invalid config arguments in the `config/kubernetes.spc` file. ([#130](https://github.com/turbot/steampipe-plugin-kubernetes/pull/130))
+- The plugin will no longer fail to initialize when attempting to create dynamic custom resource tables and the client cannot be created. ([#130](https://github.com/turbot/steampipe-plugin-kubernetes/pull/130))
 - Fixed the `selector_query` column of `kubernetes_replication_controller` table to correctly return data instead of an error. ([#127](https://github.com/turbot/steampipe-plugin-kubernetes/pull/127))
 - Fixed `kubernetes_endpoint_slice`, `kubernetes_horizontal_pod_autoscaler`, `kubernetes_pod_disruption_budget` and `kubernetes_pod_security_policy` tables to correctly return data instead of an error by removing incompatible API dependencies. ([#126](https://github.com/turbot/steampipe-plugin-kubernetes/pull/126)) 
 
