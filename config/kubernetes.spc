@@ -46,5 +46,5 @@ connection "kubernetes" {
   # the CWD will be matched, which may cause errors if incompatible file types exist
 
   # Defaults to CWD
-  paths = [ "*.yml", "*.yaml" ]
+  # paths = [ "*.yml", "*.yaml" ]
 }

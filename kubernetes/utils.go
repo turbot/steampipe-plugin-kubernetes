@@ -32,6 +32,26 @@ import (
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
 )
 
+type SourceType string
+
+const (
+	Deployed SourceType = "deployed"
+	Manifest SourceType = "manifest"
+	All      SourceType = "all"
+)
+
+func (sourceType SourceType) IsValid() error {
+	switch sourceType {
+	case Deployed, Manifest, All:
+		return nil
+	}
+	return fmt.Errorf("invalid source type: %s", sourceType)
+}
+
+func (sourceType SourceType) String() string {
+	return string(sourceType)
+}
+
 // GetNewClientset :: gets client for querying k8s apis for the provided context
 func GetNewClientset(ctx context.Context, d *plugin.QueryData) (*kubernetes.Clientset, error) {
 	logger := plugin.Logger(ctx)
@@ -308,11 +328,20 @@ func getK8Config(ctx context.Context, d *plugin.QueryData) (clientcmd.ClientConf
 	// get kubernetes config info
 	kubernetesConfig := GetConfig(d.Connection)
 
-	if err := validateKubernetesConfig(d.Connection); err != nil {
-		plugin.Logger(ctx).Error("getK8Config", "connection_config_error", "connection", d.Connection.Name, "error", err)
-		return nil, err
+	// Check for the sourceType argument in the config. Valid values are: "deployed", "manifest" and "all".
+	// Default set to "all".
+	var source SourceType = "all"
+	if kubernetesConfig.SourceType != nil {
+		source = SourceType(*kubernetesConfig.SourceType)
+		if err := source.IsValid(); err != nil {
+			return nil, err
+		}
 	}
-	if isManifestFilePathsConfigured := isManifestFilePathsConfigured(d.Connection); isManifestFilePathsConfigured {
+
+	// By default source type is set to "all", which indicates querying the table will return both deployed and manifest resources.
+	// If the source type is explicitly set to "manifest", the table will only return the manifest resources.
+	// Similarly, setting the value as "deployed" will return all the deployed resources.
+	if source.String() == "manifest" {
 		return nil, nil
 	}
 
