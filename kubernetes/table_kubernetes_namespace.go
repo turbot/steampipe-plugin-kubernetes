@@ -50,10 +50,10 @@ func tableKubernetesNamespace(ctx context.Context) *plugin.Table {
 				Transform:   transform.FromField("Status.NamespaceCondition"),
 			},
 			{
-				Name:        "source",
+				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Transform:   transform.From(namespaceResourceSource),
+				Transform:   transform.From(namespaceResourceSourceType),
 			},
 
 			//// Steampipe Standard Columns
@@ -223,7 +223,7 @@ func transformNamespaceTags(_ context.Context, d *transform.TransformData) (inte
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }
 
-func namespaceResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+func namespaceResourceSourceType(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(Namespace)
 
 	if obj.Path != "" {

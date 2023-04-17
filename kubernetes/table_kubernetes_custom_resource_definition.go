@@ -35,10 +35,10 @@ func tableKubernetesCustomResourceDefinition(ctx context.Context) *plugin.Table 
 				Type:        proto.ColumnType_JSON,
 			},
 			{
-				Name:        "source",
+				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Transform:   transform.From(customResourceDefinitionResourceSource),
+				Transform:   transform.From(customResourceDefinitionResourceSourceType),
 			},
 		}),
 	}
@@ -177,7 +177,7 @@ func getK8sCustomResourceDefinition(ctx context.Context, d *plugin.QueryData, _ 
 
 //// TRANSFORM FUNCTIONS
 
-func customResourceDefinitionResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+func customResourceDefinitionResourceSourceType(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(CustomResourceDefinition)
 
 	if obj.Path != "" {

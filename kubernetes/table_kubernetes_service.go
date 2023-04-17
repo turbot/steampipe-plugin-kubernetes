@@ -147,10 +147,10 @@ func tableKubernetesService(ctx context.Context) *plugin.Table {
 				Transform:   transform.FromField("Spec.TopologyKeys"),
 			},
 			{
-				Name:        "source",
+				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Transform:   transform.From(serviceResourceSource),
+				Transform:   transform.From(serviceResourceSourceType),
 			},
 
 			// Steampipe Standard Columns
@@ -323,7 +323,7 @@ func transformServiceTags(_ context.Context, d *transform.TransformData) (interf
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }
 
-func serviceResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+func serviceResourceSourceType(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(Service)
 
 	if obj.Path != "" {

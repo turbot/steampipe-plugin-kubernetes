@@ -129,10 +129,10 @@ func tableKubernetesNode(ctx context.Context) *plugin.Table {
 				Transform:   transform.FromField("Status.Config"),
 			},
 			{
-				Name:        "source",
+				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Transform:   transform.From(nodeResourceSource),
+				Transform:   transform.From(nodeResourceSourceType),
 			},
 			// To do - add Status Columns...
 
@@ -299,7 +299,7 @@ func transformNodeTags(_ context.Context, d *transform.TransformData) (interface
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }
 
-func nodeResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+func nodeResourceSourceType(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(Node)
 
 	if obj.Path != "" {

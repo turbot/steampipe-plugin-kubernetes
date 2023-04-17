@@ -50,10 +50,10 @@ func tableKubernetesSecret(ctx context.Context) *plugin.Table {
 				Description: "Contains the configuration binary data.",
 			},
 			{
-				Name:        "source",
+				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Transform:   transform.From(secretResourceSource),
+				Transform:   transform.From(secretResourceSourceType),
 			},
 
 			//// Steampipe Standard Columns
@@ -230,7 +230,7 @@ func transformSecretTags(_ context.Context, d *transform.TransformData) (interfa
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }
 
-func secretResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+func secretResourceSourceType(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(Secret)
 
 	if obj.Path != "" {

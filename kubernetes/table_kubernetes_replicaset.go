@@ -96,10 +96,10 @@ func tableKubernetesReplicaSet(ctx context.Context) *plugin.Table {
 				Transform:   transform.FromField("Status.Conditions"),
 			},
 			{
-				Name:        "source",
+				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Transform:   transform.From(replicaSetResourceSource),
+				Transform:   transform.From(replicaSetResourceSourceType),
 			},
 
 			//// Steampipe Standard Columns
@@ -272,7 +272,7 @@ func transformReplicaSetTags(_ context.Context, d *transform.TransformData) (int
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }
 
-func replicaSetResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+func replicaSetResourceSourceType(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(ReplicaSet)
 
 	if obj.Path != "" {

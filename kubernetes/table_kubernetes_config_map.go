@@ -42,10 +42,10 @@ func tableKubernetesConfigMap(ctx context.Context) *plugin.Table {
 				Description: "Contains the configuration binary data.",
 			},
 			{
-				Name:        "source",
+				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Transform:   transform.From(configMapResourceSource),
+				Transform:   transform.From(configMapResourceSourceType),
 			},
 
 			//// Steampipe Standard Columns
@@ -218,7 +218,7 @@ func transformConfigMapTags(_ context.Context, d *transform.TransformData) (inte
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }
 
-func configMapResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+func configMapResourceSourceType(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(ConfigMap)
 
 	if obj.Path != "" {

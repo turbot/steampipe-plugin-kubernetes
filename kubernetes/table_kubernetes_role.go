@@ -31,10 +31,10 @@ func tableKubernetesRole(ctx context.Context) *plugin.Table {
 				Description: "List of the PolicyRules for this Role.",
 			},
 			{
-				Name:        "source",
+				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Transform:   transform.From(roleResourceSource),
+				Transform:   transform.From(roleResourceSourceType),
 			},
 
 			//// Steampipe Standard Columns
@@ -207,7 +207,7 @@ func transformRoleTags(_ context.Context, d *transform.TransformData) (interface
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }
 
-func roleResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+func roleResourceSourceType(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(Role)
 
 	if obj.Path != "" {

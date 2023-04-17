@@ -97,7 +97,7 @@ func tableKubernetesEvent(ctx context.Context) *plugin.Table {
 				Description: "Data about the event series this event represents.",
 			},
 			{
-				Name:        "source",
+				Name:        "source_type",
 				Type:        proto.ColumnType_JSON,
 				Description: "The component reporting this event.",
 			},
@@ -105,7 +105,7 @@ func tableKubernetesEvent(ctx context.Context) *plugin.Table {
 				Name:        "config_source",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Transform:   transform.From(eventResourceSource),
+				Transform:   transform.From(eventResourceSourceType),
 			},
 		}),
 	}
@@ -259,7 +259,7 @@ func getK8sEvent(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 
 //// TRANSFORM FUNCTIONS
 
-func eventResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+func eventResourceSourceType(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(Event)
 
 	if obj.Path != "" {

@@ -62,10 +62,10 @@ func tableKubernetesStorageClass(ctx context.Context) *plugin.Table {
 				Description: "Parameters holds the parameters for the provisioner that should create volumes of this storage class.",
 			},
 			{
-				Name:        "source",
+				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Transform:   transform.From(storageClassResourceSource),
+				Transform:   transform.From(storageClassResourceSourceType),
 			},
 
 			//// Steampipe Standard Columns
@@ -220,7 +220,7 @@ func getK8sStorageClass(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 
 //// TRANSFORM FUNCTIONS
 
-func storageClassResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+func storageClassResourceSourceType(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(StorageClass)
 
 	if obj.Path != "" {

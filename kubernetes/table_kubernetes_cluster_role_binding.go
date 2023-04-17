@@ -49,10 +49,10 @@ func tableKubernetesClusterRoleBinding(ctx context.Context) *plugin.Table {
 				Transform:   transform.FromField("RoleRef.Kind"),
 			},
 			{
-				Name:        "source",
+				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Transform:   transform.From(clusterRoleBindingResourceSource),
+				Transform:   transform.From(clusterRoleBindingResourceSourceType),
 			},
 
 			//// Steampipe Standard Columns
@@ -218,7 +218,7 @@ func transformClusterRoleBindingTags(_ context.Context, d *transform.TransformDa
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }
 
-func clusterRoleBindingResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+func clusterRoleBindingResourceSourceType(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(ClusterRoleBinding)
 
 	if obj.Path != "" {

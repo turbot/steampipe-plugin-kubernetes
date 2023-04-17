@@ -35,10 +35,10 @@ func tableKubernetesClusterRole(ctx context.Context) *plugin.Table {
 				Description: "An optional field that describes how to build the Rules for this ClusterRole",
 			},
 			{
-				Name:        "source",
+				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Transform:   transform.From(clusterRoleResourceSource),
+				Transform:   transform.From(clusterRoleResourceSourceType),
 			},
 
 			//// Steampipe Standard Columns
@@ -203,7 +203,7 @@ func transformClusterRoleTags(_ context.Context, d *transform.TransformData) (in
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }
 
-func clusterRoleResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+func clusterRoleResourceSourceType(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(ClusterRole)
 
 	if obj.Path != "" {

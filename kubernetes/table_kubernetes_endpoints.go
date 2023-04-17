@@ -31,10 +31,10 @@ func tableKubernetesEndpoints(ctx context.Context) *plugin.Table {
 				Description: "List of addresses and ports that comprise a service.",
 			},
 			{
-				Name:        "source",
+				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Transform:   transform.From(endpointResourceSource),
+				Transform:   transform.From(endpointResourceSourceType),
 			},
 
 			//// Steampipe Standard Columns
@@ -207,7 +207,7 @@ func transformEndpointTags(_ context.Context, d *transform.TransformData) (inter
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }
 
-func endpointResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+func endpointResourceSourceType(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(Endpoints)
 
 	if obj.Path != "" {

@@ -117,10 +117,10 @@ func tableKubernetesStatefulSet(ctx context.Context) *plugin.Table {
 				Transform:   transform.FromField("Spec.UpdateStrategy"),
 			},
 			{
-				Name:        "source",
+				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Transform:   transform.From(statefulSetResourceSource),
+				Transform:   transform.From(statefulSetResourceSourceType),
 			},
 
 			// Steampipe Standard Columns
@@ -294,7 +294,7 @@ func transformStatefulSetTags(_ context.Context, d *transform.TransformData) (in
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }
 
-func statefulSetResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+func statefulSetResourceSourceType(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(StatefulSet)
 
 	if obj.Path != "" {

@@ -168,10 +168,10 @@ func tableKubernetesPodSecurityPolicy(ctx context.Context) *plugin.Table {
 				Transform:   transform.FromField("Spec.Volumes"),
 			},
 			{
-				Name:        "source",
+				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Transform:   transform.From(podSecurityPolicyResourceSource),
+				Transform:   transform.From(podSecurityPolicyResourceSourceType),
 			},
 
 			//// Steampipe Standard Columns
@@ -337,7 +337,7 @@ func transformPodSecurityPolicyTags(_ context.Context, d *transform.TransformDat
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }
 
-func podSecurityPolicyResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+func podSecurityPolicyResourceSourceType(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(PodSecurityPolicy)
 
 	if obj.Path != "" {

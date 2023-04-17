@@ -132,10 +132,10 @@ func tableKubernetesDeployment(ctx context.Context) *plugin.Table {
 				Transform:   transform.FromField("Status.CollisionCount"),
 			},
 			{
-				Name:        "source",
+				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Transform:   transform.From(deploymentResourceSource),
+				Transform:   transform.From(deploymentResourceSourceType),
 			},
 
 			//// Steampipe Standard Columns
@@ -309,7 +309,7 @@ func transformDeploymentTags(_ context.Context, d *transform.TransformData) (int
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }
 
-func deploymentResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+func deploymentResourceSourceType(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(Deployment)
 
 	if obj.Path != "" {

@@ -41,10 +41,10 @@ func tableKubernetesEndpointSlice(ctx context.Context) *plugin.Table {
 				Description: "List of network ports exposed by each endpoint in this slice. Each port must have a unique name. When ports is empty, it indicates that there are no defined ports.",
 			},
 			{
-				Name:        "source",
+				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Transform:   transform.From(endpointSliceResourceSource),
+				Transform:   transform.From(endpointSliceResourceSourceType),
 			},
 
 			//// Steampipe Standard Columns
@@ -217,7 +217,7 @@ func transformEndpointSliceTags(_ context.Context, d *transform.TransformData) (
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }
 
-func endpointSliceResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+func endpointSliceResourceSourceType(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(EndpointSlice)
 
 	if obj.Path != "" {

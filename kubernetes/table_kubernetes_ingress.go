@@ -51,10 +51,10 @@ func tableKubernetesIngress(ctx context.Context) *plugin.Table {
 				Transform:   transform.FromField("Spec.Rules"),
 			},
 			{
-				Name:        "source",
+				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Transform:   transform.From(ingressResourceSource),
+				Transform:   transform.From(ingressResourceSourceType),
 			},
 
 			//// IngressStatus columns
@@ -235,7 +235,7 @@ func transformIngressTags(_ context.Context, d *transform.TransformData) (interf
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }
 
-func ingressResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+func ingressResourceSourceType(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(Ingress)
 
 	if obj.Path != "" {

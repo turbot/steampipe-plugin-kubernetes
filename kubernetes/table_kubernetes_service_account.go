@@ -42,10 +42,10 @@ func tableKubernetesServiceAccount(ctx context.Context) *plugin.Table {
 				Description: "Secrets is the list of secrets allowed to be used by pods running using this ServiceAccount.",
 			},
 			{
-				Name:        "source",
+				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Transform:   transform.From(serviceAccountResourceSource),
+				Transform:   transform.From(serviceAccountResourceSourceType),
 			},
 
 			//// Steampipe Standard Columns
@@ -219,7 +219,7 @@ func transformServiceAccountTags(_ context.Context, d *transform.TransformData) 
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }
 
-func serviceAccountResourceSource(_ context.Context, d *transform.TransformData) (interface{}, error) {
+func serviceAccountResourceSourceType(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(ServiceAccount)
 
 	if obj.Path != "" {
