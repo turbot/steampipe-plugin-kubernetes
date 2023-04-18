@@ -70,7 +70,14 @@ connection "kubernetes" {
   # the CWD will be matched, which may cause errors if incompatible file types exist
 
   # Defaults to CWD
-  paths = [ "*.yml", "*.yaml" ]
+  # manifest_file_paths = [ "*.yml", "*.yaml" ]
+
+  # Specify the source of the resource. Possible values: `deployed`, `manifest`, and `all`.
+  # Default set to `all`. Set the argument to override the default value.
+  # If the value is set to `deployed`, tables will show all the deployed resources.
+  # If set to `manifest`, tables will show all the resources from the kubernetes manifest. Make sure that the `manifest_file_paths` arg is set.
+  # If `all`, tables will show all the deployed and manifest resources.
+  # source_type = "all"
 }
 ```
 

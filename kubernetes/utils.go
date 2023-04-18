@@ -40,6 +40,7 @@ const (
 	All      SourceType = "all"
 )
 
+// Validate the source type.
 func (sourceType SourceType) IsValid() error {
 	switch sourceType {
 	case Deployed, Manifest, All:
@@ -334,6 +335,7 @@ func getK8Config(ctx context.Context, d *plugin.QueryData) (clientcmd.ClientConf
 	if kubernetesConfig.SourceType != nil {
 		source = SourceType(*kubernetesConfig.SourceType)
 		if err := source.IsValid(); err != nil {
+			plugin.Logger(ctx).Debug("getK8Config", "invalid_source_type_error", "connection", d.Connection.Name, "error", err)
 			return nil, err
 		}
 	}
@@ -342,6 +344,7 @@ func getK8Config(ctx context.Context, d *plugin.QueryData) (clientcmd.ClientConf
 	// If the source type is explicitly set to "manifest", the table will only return the manifest resources.
 	// Similarly, setting the value as "deployed" will return all the deployed resources.
 	if source.String() == "manifest" {
+		plugin.Logger(ctx).Debug("getK8Config", "The source_type set to 'manifest'. Returning nil for API server client.", "connection", d.Connection.Name)
 		return nil, nil
 	}
 
@@ -408,11 +411,22 @@ func getK8ConfigRaw(ctx context.Context, cc *connection.ConnectionCache, c *plug
 	// get kubernetes config info
 	kubernetesConfig := GetConfig(c)
 
-	if err := validateKubernetesConfig(c); err != nil {
-		plugin.Logger(ctx).Error("getK8ConfigRaw", "connection_config_error", "connection", c.Name, "error", err)
-		return nil, err
+	// Check for the sourceType argument in the config. Valid values are: "deployed", "manifest" and "all".
+	// Default set to "all".
+	var source SourceType = "all"
+	if kubernetesConfig.SourceType != nil {
+		source = SourceType(*kubernetesConfig.SourceType)
+		if err := source.IsValid(); err != nil {
+			plugin.Logger(ctx).Debug("getK8ConfigRaw", "invalid_source_type_error", "connection", c.Name, "error", err)
+			return nil, err
+		}
 	}
-	if isManifestFilePathsConfigured := isManifestFilePathsConfigured(c); isManifestFilePathsConfigured {
+
+	// By default source type is set to "all", which indicates querying the table will return both deployed and manifest resources.
+	// If the source type is explicitly set to "manifest", the table will only return the manifest resources.
+	// Similarly, setting the value as "deployed" will return all the deployed resources.
+	if source.String() == "manifest" {
+		plugin.Logger(ctx).Debug("getK8ConfigRaw", "The source_type set to 'manifest'. Returning nil for API server client.", "connection", c.Name)
 		return nil, nil
 	}
 
@@ -612,26 +626,6 @@ func mergeTags(labels map[string]string, annotations map[string]string) map[stri
 	return tags
 }
 
-// Check whether the config file is configured correctly.
-// The plugin can list both live resources and the resources from the manifest file.
-// To avoid the conflict, a connection can only contains either config_path / config_paths to define the kube config files, or,
-// the paths to define the location to the manifest files.
-func validateKubernetesConfig(connection *plugin.Connection) error {
-	kubernetesConfig := GetConfig(connection)
-
-	if (kubernetesConfig.ConfigPath != nil || kubernetesConfig.ConfigPaths != nil) &&
-		kubernetesConfig.ManifestFilePaths != nil {
-		return fmt.Errorf("both config_path, config_paths and paths can not be passed in a single connection")
-	}
-	return nil
-}
-
-func isManifestFilePathsConfigured(connection *plugin.Connection) bool {
-	kubernetesConfig := GetConfig(connection)
-
-	return kubernetesConfig.ManifestFilePaths != nil
-}
-
 func fetchResourceFromManifestFileByKind(ctx context.Context, d *plugin.QueryData, kind string) ([]parsedContent, error) {
 
 	if kind == "" {
@@ -661,6 +655,7 @@ type parsedContent struct {
 	EndLine          int
 }
 
+// Get the parsed contents of the given files.
 func getParsedManifestFileContent(ctx context.Context, d *plugin.QueryData) ([]parsedContent, error) {
 	conn, err := parsedManifestFileContentCached(ctx, d, nil)
 	if err != nil {
@@ -669,13 +664,25 @@ func getParsedManifestFileContent(ctx context.Context, d *plugin.QueryData) ([]p
 	return conn.([]parsedContent), nil
 }
 
+// Cached form of the parsed file content.
 var parsedManifestFileContentCached = plugin.HydrateFunc(parsedManifestFileContentUncached).Memoize()
 
+// parsedManifestFileContentUncached is the actual implementation of getParsedManifestFileContent, which should
+// be run only once per connection. Do not call this directly, use
+// getParsedManifestFileContent instead.
 func parsedManifestFileContentUncached(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (any, error) {
 	plugin.Logger(ctx).Debug("parsedManifestFileContentUncached", "Parsing file content...", "connection", d.Connection.Name)
 
 	// Read the config
 	k8sConfig := GetConfig(d.Connection)
+
+	// Return error if source_tpe arg is explicitly set to "manifest" in the config, but
+	// manifest_file_paths arg is not set.
+	if k8sConfig.SourceType != nil &&
+		*k8sConfig.SourceType == "manifest" &&
+		k8sConfig.ManifestFilePaths == nil {
+		return nil, errors.New("manifest_file_paths must be set in the config while the source_type is 'manifest'")
+	}
 
 	// Gather file path matches for the glob
 	var matches, resolvedPaths []string
