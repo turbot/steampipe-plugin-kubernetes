@@ -89,6 +89,7 @@ func pluginTableDefinitions(ctx context.Context, d *plugin.TableMapData) (map[st
 	for _, crd := range crds {
 		ctx = context.WithValue(ctx, contextKey("CRDName"), crd.Name)
 		ctx = context.WithValue(ctx, contextKey("CustomResourceName"), crd.Spec.Names.Plural)
+		ctx = context.WithValue(ctx, contextKey("CustomResourceNameSingular"), crd.Spec.Names.Singular)
 		ctx = context.WithValue(ctx, contextKey("GroupName"), crd.Spec.Group)
 		for _, version := range crd.Spec.Versions {
 			if version.Served {
@@ -128,6 +129,22 @@ func listK8sDynamicCRDs(ctx context.Context, cn *connection.ConnectionCache, c *
 		// At the plugin load time, if the config file does not contain valid properties, return nil
 		return nil, nil
 	}
+	crds := []v1.CustomResourceDefinition{}
+
+	queryData := &plugin.QueryData{
+		Connection:      c,
+		ConnectionCache: cn,
+	}
+
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, queryData, "CustomResourceDefinition")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		crd := content.Data.(*v1.CustomResourceDefinition)
+		crds = append(crds, *crd)
+	}
 
 	if clientset == nil {
 		return nil, nil
@@ -138,7 +155,6 @@ func listK8sDynamicCRDs(ctx context.Context, cn *connection.ConnectionCache, c *
 		TimeoutSeconds: types.Int64(5),
 	}
 
-	crds := []v1.CustomResourceDefinition{}
 	temp_crd_names := []string{}
 
 	// get the crds from config if any

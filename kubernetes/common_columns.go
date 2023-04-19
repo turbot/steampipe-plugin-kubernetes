@@ -99,8 +99,10 @@ func k8sCRDResourceCommonColumns(columns []*plugin.Column) []*plugin.Column {
 		{Name: "namespace", Type: proto.ColumnType_STRING, Description: "Namespace defines the space within which each name must be unique."},
 		{Name: "creation_timestamp", Type: proto.ColumnType_TIMESTAMP, Transform: transform.FromGo().Transform(v1TimeToRFC3339), Description: "CreationTimestamp is a timestamp representing the server time when this object was created."},
 		{Name: "labels", Type: proto.ColumnType_JSON, Description: "Map of string keys and values that can be used to organize and categorize (scope and select) objects. May match selectors of replication controllers and services."},
+		{Name: "source_type", Type: proto.ColumnType_STRING, Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest."},
 	}
 	allColumns = append(allColumns, columns...)
+	allColumns = append(allColumns, manifestResourceColumns()...)
 
 	return allColumns
 }

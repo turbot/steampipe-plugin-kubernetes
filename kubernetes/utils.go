@@ -9,16 +9,14 @@ import (
 	"strings"
 
 	filehelpers "github.com/turbot/go-kit/files"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextension "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/azure"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
@@ -626,6 +624,8 @@ func mergeTags(labels map[string]string, annotations map[string]string) map[stri
 	return tags
 }
 
+//// Utility functions for manifest files
+
 func fetchResourceFromManifestFileByKind(ctx context.Context, d *plugin.QueryData, kind string) ([]parsedContent, error) {
 
 	if kind == "" {
@@ -639,7 +639,7 @@ func fetchResourceFromManifestFileByKind(ctx context.Context, d *plugin.QueryDat
 	}
 
 	for _, content := range parsedContents {
-		if content.GroupVersionKind.Kind == kind {
+		if content.Kind == kind {
 			data = append(data, content)
 		}
 	}
@@ -648,11 +648,11 @@ func fetchResourceFromManifestFileByKind(ctx context.Context, d *plugin.QueryDat
 }
 
 type parsedContent struct {
-	Data             runtime.Object
-	GroupVersionKind *schema.GroupVersionKind
-	Path             string
-	StartLine        int
-	EndLine          int
+	Data      any
+	Kind      string
+	Path      string
+	StartLine int
+	EndLine   int
 }
 
 // Get the parsed contents of the given files.
@@ -673,6 +673,87 @@ var parsedManifestFileContentCached = plugin.HydrateFunc(parsedManifestFileConte
 func parsedManifestFileContentUncached(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (any, error) {
 	plugin.Logger(ctx).Debug("parsedManifestFileContentUncached", "Parsing file content...", "connection", d.Connection.Name)
 
+	// Read the config
+	resolvedPaths, err := resolveManifestFilePaths(ctx, d)
+	if err != nil {
+		return nil, err
+	}
+
+	var parsedContents []parsedContent
+	for _, path := range resolvedPaths {
+		// Load the file into a buffer
+		content, err := os.ReadFile(path)
+		if err != nil {
+			plugin.Logger(ctx).Error("parsedManifestFileContentUncached", "failed to read file", err, "path", path)
+			return nil, err
+		}
+
+		// Check for the start of the document
+		pos := 0
+		for _, resource := range strings.Split(string(content), "---") {
+			// Skip empty documents, `Decode` will fail on them
+			// Also, increment the pos to include the separator position (e.g. ---)
+			if len(resource) == 0 {
+				pos++
+				continue
+			}
+
+			// Calculate the length of the YAML resource block
+			blockLength := strings.Split(strings.ReplaceAll(resource, " ", ""), "\n")
+
+			// Remove the extra lines added during the split operation based on the separator
+			blockLength = blockLength[:len(blockLength)-1]
+			if blockLength[0] == "" {
+				blockLength = blockLength[1:]
+			}
+
+			// skip if no kind defined
+			if !strings.Contains(resource, "kind:") {
+				pos = pos + len(blockLength) + 1
+				continue
+			}
+
+			obj := &unstructured.Unstructured{}
+			err = yaml.Unmarshal([]byte(resource), obj)
+			if err != nil {
+				plugin.Logger(ctx).Error("parsedManifestFileContentUncached", "failed to unmarshal the content", err, "path", path)
+				return nil, err
+			}
+
+			obj.SetAPIVersion(obj.GetAPIVersion())
+			obj.SetKind(obj.GetKind())
+			gvk := obj.GetObjectKind().GroupVersionKind()
+			obj.SetGroupVersionKind(schema.GroupVersionKind{
+				Group:   gvk.Group,
+				Version: gvk.Version,
+				Kind:    gvk.Kind,
+			})
+
+			// Convert the content to concrete type based on the resource kind
+			targetObj, err := convertUnstructuredDataToType(obj)
+			if err != nil {
+				plugin.Logger(ctx).Error("parsedManifestFileContentUncached", "failed to convert content into a concrete type", err, "path", path)
+				return nil, err
+			}
+
+			parsedContents = append(parsedContents, parsedContent{
+				Data:      targetObj,
+				Kind:      obj.GetKind(),
+				Path:      path,
+				StartLine: pos + 1, // Since starts from 0
+				EndLine:   pos + len(blockLength),
+			})
+
+			// Increment the position by the length of the block
+			// the value is added with 1 to include the separator
+			pos = pos + len(blockLength) + 1
+		}
+	}
+
+	return parsedContents, nil
+}
+
+func resolveManifestFilePaths(ctx context.Context, d *plugin.QueryData) ([]string, error) {
 	// Read the config
 	k8sConfig := GetConfig(d.Connection)
 
@@ -707,84 +788,5 @@ func parsedManifestFileContentUncached(ctx context.Context, d *plugin.QueryData,
 		resolvedPaths = append(resolvedPaths, i)
 	}
 
-	var parsedContents []parsedContent
-	for _, path := range resolvedPaths {
-		// Load the file into a buffer
-		content, err := os.ReadFile(path)
-		if err != nil {
-			plugin.Logger(ctx).Error("parsedManifestFileContentUncached", "failed to read file", err, "path", path)
-			return nil, err
-		}
-		decoder := clientgoscheme.Codecs.UniversalDeserializer()
-
-		// Check for the start of the document
-		pos := 0
-		for _, resource := range strings.Split(string(content), "---") {
-			plugin.Logger(ctx).Debug("parsedManifestFileContentUncached", "Starting Position", pos)
-
-			// Skip empty documents, `Decode` will fail on them
-			// Also, increment the pos to include the separator position (e.g. ---)
-			if len(resource) == 0 {
-				pos++
-				continue
-			}
-
-			// Calculate the length of the YAML resource block
-			blockLength := strings.Split(strings.ReplaceAll(resource, " ", ""), "\n")
-
-			// Remove the extra lines added during the split operation based on the separator
-			blockLength = blockLength[:len(blockLength)-1]
-			if blockLength[0] == "" {
-				blockLength = blockLength[1:]
-			}
-
-			// skip if no kind defined
-			if !strings.Contains(resource, "kind:") {
-				pos = pos + len(blockLength) + 1
-				continue
-			}
-
-			// Decode the file content
-			obj, groupVersionKind, err := decodeFileContent(decoder, resource)
-			if err != nil {
-				plugin.Logger(ctx).Error("parsedManifestFileContentUncached", "failed to decode the file", err, "path", path)
-				return nil, err
-			}
-
-			parsedContents = append(parsedContents, parsedContent{
-				Data:             obj,
-				GroupVersionKind: groupVersionKind,
-				Path:             path,
-				StartLine:        pos + 1, // Since starts from 0
-				EndLine:          pos + len(blockLength),
-			})
-
-			// Increment the position by the length of the block
-			// the value is added with 1 to include the separator
-			pos = pos + len(blockLength) + 1
-		}
-	}
-
-	return parsedContents, nil
-}
-
-func decodeFileContent(decoder runtime.Decoder, resource string) (runtime.Object, *schema.GroupVersionKind, error) {
-	// Decode the file content
-	obj, groupVersionKind, err := decoder.Decode([]byte(resource), nil, nil)
-	if err != nil {
-		// The resource kind CustomResourceDefinition is not valid.
-		// For the CustomResourceDefinition it needed to add the scheme.
-		if strings.HasPrefix(err.Error(), "no kind \"CustomResourceDefinition\"") {
-			sch := runtime.NewScheme()
-			_ = clientgoscheme.AddToScheme(sch)
-			_ = apiextensionsv1.AddToScheme(sch)
-
-			decoder := serializer.NewCodecFactory(sch).UniversalDeserializer()
-
-			return decodeFileContent(decoder, resource)
-		}
-		return nil, nil, err
-	}
-
-	return obj, groupVersionKind, nil
+	return resolvedPaths, nil
 }

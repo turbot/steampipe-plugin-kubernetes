@@ -2,20 +2,25 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/iancoleman/strcase"
 	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 func tableKubernetesCustomResource(ctx context.Context) *plugin.Table {
 	crdName := ctx.Value(contextKey("CRDName")).(string)
 	resourceName := ctx.Value(contextKey("CustomResourceName")).(string)
+	resourceNameSingular := ctx.Value(contextKey("CustomResourceNameSingular")).(string)
 	groupName := ctx.Value(contextKey("GroupName")).(string)
 	activeVersion := ctx.Value(contextKey("ActiveVersion")).(string)
 	versionSchemaSpec := ctx.Value(contextKey("VersionSchemaSpec"))
@@ -32,17 +37,17 @@ func tableKubernetesCustomResource(ctx context.Context) *plugin.Table {
 		Name:        tableName,
 		Description: description,
 		List: &plugin.ListConfig{
-			Hydrate: listK8sCustomResources(ctx, crdName, resourceName, groupName, activeVersion),
+			Hydrate: listK8sCustomResources(ctx, crdName, resourceName, resourceNameSingular, groupName, activeVersion),
 		},
 		Columns: k8sCRDResourceCommonColumns(getCustomResourcesDynamicColumns(ctx, versionSchemaSpec, versionSchemaStatus)),
 	}
 }
 
-func getCustomResourcesDynamicColumns(_ context.Context, versionSchemaSpec interface{}, versionSchemaStatus interface{}) []*plugin.Column {
+func getCustomResourcesDynamicColumns(ctx context.Context, versionSchemaSpec interface{}, versionSchemaStatus interface{}) []*plugin.Column {
 	columns := []*plugin.Column{}
 
 	// default metadata columns
-	allColumns := []string{"name", "uid", "kind", "api_version", "namespace", "creation_timestamp", "labels"}
+	allColumns := []string{"name", "uid", "kind", "api_version", "namespace", "creation_timestamp", "labels", "start_line", "end_line", "path", "source_type"}
 
 	// add the spec columns
 	flag := 0
@@ -113,15 +118,64 @@ type CRDResourceInfo struct {
 	Spec              interface{}
 	Labels            interface{}
 	Status            interface{}
+	Path              string
+	StartLine         int
+	EndLine           int
+	SourceType        string
 }
 
 // //// HYDRATE FUNCTIONS
 
-func listK8sCustomResources(ctx context.Context, crdName string, resourceName string, groupName string, activeVersion string) func(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+func listK8sCustomResources(ctx context.Context, crdName string, resourceName string, resourceNameSingular string, groupName string, activeVersion string) func(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 	return func(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 		clientset, err := GetNewClientDynamic(ctx, d)
 		if err != nil {
 			return nil, err
+		}
+
+		//
+		// Check for manifest files
+		//
+		
+		// In general, the kind of the custom resource must be same as the singular name defined in the CRD
+		// Convert the singular name into title format, e.g. if the name is `certificate`, the custom resource kind must be `Certificate`
+		caser := cases.Title(language.English)
+		parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, caser.String(resourceNameSingular))
+		if err != nil {
+			return nil, err
+		}
+
+		for _, content := range parsedContents {
+			deployment := content.Data.(*unstructured.Unstructured)
+			
+			// Also, the apiVersion of the custom resource must be in format of <groupName in CRD>/<spec version in CRD>
+			if !(deployment.GetAPIVersion() == fmt.Sprintf("%s/%s", groupName, activeVersion)) {
+				continue
+			}
+
+			data := deployment.Object
+			d.StreamListItem(ctx, &CRDResourceInfo{
+				Name:              deployment.GetName(),
+				UID:               deployment.GetUID(),
+				APIVersion:        deployment.GetAPIVersion(),
+				Kind:              deployment.GetKind(),
+				Namespace:         deployment.GetNamespace(),
+				CreationTimestamp: deployment.GetCreationTimestamp(),
+				Labels:            deployment.GetLabels(),
+				Spec:              data["spec"],
+				Status:            data["status"],
+				StartLine:         content.StartLine,
+				EndLine:           content.EndLine,
+				Path:              content.Path,
+				SourceType:        "manifest",
+			})
+		}
+
+		//
+		// Check for deployed resources
+		//
+		if clientset == nil {
+			return nil, nil
 		}
 
 		resourceId := schema.GroupVersionResource{
@@ -151,6 +205,7 @@ func listK8sCustomResources(ctx context.Context, crdName string, resourceName st
 				Labels:            crd.GetLabels(),
 				Spec:              data["spec"],
 				Status:            data["status"],
+				SourceType:        "deployed",
 			})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
