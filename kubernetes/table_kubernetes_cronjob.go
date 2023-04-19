@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	v1 "k8s.io/api/batch/v1"
+	"k8s.io/api/batch/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
@@ -139,10 +139,10 @@ func listK8sCronJobs(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 		input.FieldSelector = strings.Join(commonFieldSelectorValue, ",")
 	}
 
-	var response *v1.CronJobList
+	var response *v1beta1.CronJobList
 	pageLeft := true
 	for pageLeft {
-		response, err = clientset.BatchV1().CronJobs("").List(ctx, input)
+		response, err = clientset.BatchV1beta1().CronJobs("").List(ctx, input)
 		if err != nil {
 			logger.Error("listK8sCronJobs", "list_err", err)
 			return nil, err
@@ -196,6 +196,6 @@ func getK8sCronJob(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDa
 //// TRANSFORM FUNCTIONS
 
 func transformCronJobTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	obj := d.HydrateItem.(v1.CronJob)
+	obj := d.HydrateItem.(v1beta1.CronJob)
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }
