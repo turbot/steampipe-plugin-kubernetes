@@ -47,6 +47,7 @@ func (sourceType SourceType) IsValid() error {
 	return fmt.Errorf("invalid source type: %s", sourceType)
 }
 
+// Convert the source type to its string equivalent
 func (sourceType SourceType) String() string {
 	return string(sourceType)
 }
@@ -68,6 +69,7 @@ func GetNewClientset(ctx context.Context, d *plugin.QueryData) (*kubernetes.Clie
 		return nil, err
 	}
 
+	// Return nil, if the config is set only to list the manifest resources.
 	if kubeconfig == nil {
 		return nil, nil
 	}
@@ -134,6 +136,7 @@ func GetNewClientCRD(ctx context.Context, d *plugin.QueryData) (*apiextension.Cl
 		return nil, err
 	}
 
+	// Return nil, if the config is set to only list the manifest resources.
 	if kubeconfig == nil {
 		return nil, nil
 	}
@@ -187,6 +190,7 @@ func GetNewClientCRDRaw(ctx context.Context, cc *connection.ConnectionCache, c *
 		return nil, err
 	}
 
+	// Return nil, if the config is set to only list the manifest resources.
 	if kubeconfig == nil {
 		return nil, nil
 	}
@@ -756,6 +760,12 @@ func parsedManifestFileContentUncached(ctx context.Context, d *plugin.QueryData,
 func resolveManifestFilePaths(ctx context.Context, d *plugin.QueryData) ([]string, error) {
 	// Read the config
 	k8sConfig := GetConfig(d.Connection)
+
+	// Return nil, if the source_type is set to "deployed"
+	if k8sConfig.SourceType != nil &&
+		*k8sConfig.SourceType == "deployed" {
+		return nil, nil
+	}
 
 	// Return error if source_tpe arg is explicitly set to "manifest" in the config, but
 	// manifest_file_paths arg is not set.
