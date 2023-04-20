@@ -7,6 +7,7 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/turbot/go-kit v0.5.0
 	github.com/turbot/steampipe-plugin-sdk/v5 v5.2.0
+	golang.org/x/text v0.7.0
 	k8s.io/api v0.26.3
 	k8s.io/apiextensions-apiserver v0.25.2
 	k8s.io/apimachinery v0.26.3
@@ -124,7 +125,6 @@ require (
 	golang.org/x/sync v0.1.0 // indirect
 	golang.org/x/sys v0.5.0 // indirect
 	golang.org/x/term v0.5.0 // indirect
-	golang.org/x/text v0.7.0 // indirect
 	golang.org/x/time v0.0.0-20220210224613-90d013bbcef8 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/api v0.57.0 // indirect
