@@ -48,6 +48,13 @@ func convertUnstructuredDataToType(obj *unstructured.Unstructured) (any, error) 
 			return nil, err
 		}
 		return targetObj, nil
+	case "CronJob":
+		targetObj := &batchv1.CronJob{}
+		err := runtime.DefaultUnstructuredConverter.FromUnstructured(obj.UnstructuredContent(), &targetObj)
+		if err != nil {
+			return nil, err
+		}
+		return targetObj, nil
 	case "DaemonSet":
 		targetObj := &appsv1.DaemonSet{}
 		err := runtime.DefaultUnstructuredConverter.FromUnstructured(obj.UnstructuredContent(), &targetObj)
