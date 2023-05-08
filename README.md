@@ -52,8 +52,8 @@ connection "kubernetes" {
   # If no kubeconfig file can be found, the plugin will attempt to use the service account Kubernetes gives to pods.
   # This authentication method is intended for clients that expect to be running inside a pod running on Kubernetes.
 
-  # Paths is a list of locations to search for Kubernetes manifest files
-  # Paths can be configured with a local directory, a remote Git repository URL, or an S3 bucket URL
+  # Manifest file paths is a list of locations to search for Kubernetes manifest files
+  # Manifest file paths can be configured with a local directory, a remote Git repository URL, or an S3 bucket URL
   # Refer https://hub.steampipe.io/plugins/turbot/kubernetes#supported-path-formats for more information
   # Wildcard based searches are supported, including recursive searches
   # Local paths are resolved relative to the current working directory (CWD)
@@ -66,7 +66,7 @@ connection "kubernetes" {
   #  - "/path/to/dir/*.yml" matches all Kubernetes manifest files in a specific directory
   #  - "/path/to/dir/main.yml" matches a specific file
 
-  # If paths includes "*", all files (including non-kubernetes manifest files) in
+  # If the given paths includes "*", all files (including non-kubernetes manifest files) in
   # the CWD will be matched, which may cause errors if incompatible file types exist
 
   # Defaults to CWD
