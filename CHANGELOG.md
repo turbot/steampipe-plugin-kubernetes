@@ -1,10 +1,16 @@
+## v0.19.0 [2023-05-11]
+
+_Dependencies_
+
+- Recompiled plugin with [steampipe-plugin-sdk v5.4.1](https://github.com/turbot/steampipe-plugin-sdk/blob/main/CHANGELOG.md#v541-2023-05-05) which fixes increased plugin initialization time due to multiple connections causing the schema to be loaded repeatedly. ([#134](https://github.com/turbot/steampipe-plugin-kubernetes/pull/134))
+
 ## v0.18.1 [2023-04-14]
 
 _Bug fixes_
 
 - The plugin will no longer fail to initialize when attempting to create dynamic custom resource tables and the client cannot be created. ([#130](https://github.com/turbot/steampipe-plugin-kubernetes/pull/130))
 - Fixed the `selector_query` column of `kubernetes_replication_controller` table to correctly return data instead of an error. ([#127](https://github.com/turbot/steampipe-plugin-kubernetes/pull/127))
-- Fixed `kubernetes_endpoint_slice`, `kubernetes_horizontal_pod_autoscaler`, `kubernetes_pod_disruption_budget` and `kubernetes_pod_security_policy` tables to correctly return data instead of an error by removing incompatible API dependencies. ([#126](https://github.com/turbot/steampipe-plugin-kubernetes/pull/126)) 
+- Fixed `kubernetes_endpoint_slice`, `kubernetes_horizontal_pod_autoscaler`, `kubernetes_pod_disruption_budget` and `kubernetes_pod_security_policy` tables to correctly return data instead of an error by removing incompatible API dependencies. ([#126](https://github.com/turbot/steampipe-plugin-kubernetes/pull/126))
 
 ## v0.18.0 [2023-04-04]
 
