@@ -34,10 +34,16 @@ func tableKubernetesLimitRange(ctx context.Context) *plugin.Table {
 				Transform:   transform.FromField("Spec.Limits"),
 			},
 			{
+				Name:        "context_name",
+				Type:        proto.ColumnType_STRING,
+				Description: "Kubectl config context name.",
+				Hydrate:     getLimitRangeResourceAdditionalData,
+			},
+			{
 				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Transform:   transform.From(limitRangeResourceSourceType),
+				Hydrate:     getLimitRangeResourceAdditionalData,
 			},
 
 			//// Steampipe Standard Columns
@@ -201,18 +207,33 @@ func getK8sLimitRange(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 	return LimitRange{*limitRange, "", 0, 0}, nil
 }
 
+func getLimitRangeResourceAdditionalData(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+	obj := h.Item.(LimitRange)
+
+	data := map[string]interface{}{
+		"SourceType": "deployed",
+	}
+
+	// Set the source_type as manifest, if path is not empty
+	// also, set the context_name as nil
+	if obj.Path != "" {
+		data["SourceType"] = "manifest"
+		return data, nil
+	}
+
+	// Else, set the current context as context_name
+	currentContext, err := getKubectlContext(ctx, d, nil)
+	if err != nil {
+		return data, nil
+	}
+	data["ContextName"] = currentContext.(string)
+
+	return data, nil
+}
+
 //// TRANSFORM FUNCTIONS
 
 func transformLimitRangeTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(LimitRange)
 	return mergeTags(obj.Labels, obj.Annotations), nil
-}
-
-func limitRangeResourceSourceType(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	obj := d.HydrateItem.(LimitRange)
-
-	if obj.Path != "" {
-		return "manifest", nil
-	}
-	return "deployed", nil
 }

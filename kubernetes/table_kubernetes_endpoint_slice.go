@@ -41,10 +41,16 @@ func tableKubernetesEndpointSlice(ctx context.Context) *plugin.Table {
 				Description: "List of network ports exposed by each endpoint in this slice. Each port must have a unique name. When ports is empty, it indicates that there are no defined ports.",
 			},
 			{
+				Name:        "context_name",
+				Type:        proto.ColumnType_STRING,
+				Description: "Kubectl config context name.",
+				Hydrate:     getEndpointSliceResourceAdditionalData,
+			},
+			{
 				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Transform:   transform.From(endpointSliceResourceSourceType),
+				Hydrate:     getEndpointSliceResourceAdditionalData,
 			},
 
 			//// Steampipe Standard Columns
@@ -210,18 +216,33 @@ func getK8sEnpointSlice(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 	return EndpointSlice{*endpointSlice, "", 0, 0}, nil
 }
 
+func getEndpointSliceResourceAdditionalData(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+	obj := h.Item.(EndpointSlice)
+
+	data := map[string]interface{}{
+		"SourceType": "deployed",
+	}
+
+	// Set the source_type as manifest, if path is not empty
+	// also, set the context_name as nil
+	if obj.Path != "" {
+		data["SourceType"] = "manifest"
+		return data, nil
+	}
+
+	// Else, set the current context as context_name
+	currentContext, err := getKubectlContext(ctx, d, nil)
+	if err != nil {
+		return data, nil
+	}
+	data["ContextName"] = currentContext.(string)
+
+	return data, nil
+}
+
 //// TRANSFORM FUNCTIONS
 
 func transformEndpointSliceTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(EndpointSlice)
 	return mergeTags(obj.Labels, obj.Annotations), nil
-}
-
-func endpointSliceResourceSourceType(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	obj := d.HydrateItem.(EndpointSlice)
-
-	if obj.Path != "" {
-		return "manifest", nil
-	}
-	return "deployed", nil
 }

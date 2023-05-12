@@ -8,7 +8,6 @@ import (
 
 	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
-	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
 )
 
 func tableKubernetesCustomResourceDefinition(ctx context.Context) *plugin.Table {
@@ -35,10 +34,16 @@ func tableKubernetesCustomResourceDefinition(ctx context.Context) *plugin.Table 
 				Type:        proto.ColumnType_JSON,
 			},
 			{
+				Name:        "context_name",
+				Type:        proto.ColumnType_STRING,
+				Description: "Kubectl config context name.",
+				Hydrate:     getCustomResourceDefinitionResourceAdditionalData,
+			},
+			{
 				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Transform:   transform.From(customResourceDefinitionResourceSourceType),
+				Hydrate:     getCustomResourceDefinitionResourceAdditionalData,
 			},
 		}),
 	}
@@ -175,13 +180,26 @@ func getK8sCustomResourceDefinition(ctx context.Context, d *plugin.QueryData, _ 
 	return CustomResourceDefinition{*response, "", 0, 0}, nil
 }
 
-//// TRANSFORM FUNCTIONS
+func getCustomResourceDefinitionResourceAdditionalData(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+	obj := h.Item.(CustomResourceDefinition)
 
-func customResourceDefinitionResourceSourceType(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	obj := d.HydrateItem.(CustomResourceDefinition)
-
-	if obj.Path != "" {
-		return "manifest", nil
+	data := map[string]interface{}{
+		"SourceType": "deployed",
 	}
-	return "deployed", nil
+
+	// Set the source_type as manifest, if path is not empty
+	// also, set the context_name as nil
+	if obj.Path != "" {
+		data["SourceType"] = "manifest"
+		return data, nil
+	}
+
+	// Else, set the current context as context_name
+	currentContext, err := getKubectlContext(ctx, d, nil)
+	if err != nil {
+		return data, nil
+	}
+	data["ContextName"] = currentContext.(string)
+
+	return data, nil
 }

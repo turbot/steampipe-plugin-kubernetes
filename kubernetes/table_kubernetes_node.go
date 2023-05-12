@@ -129,10 +129,16 @@ func tableKubernetesNode(ctx context.Context) *plugin.Table {
 				Transform:   transform.FromField("Status.Config"),
 			},
 			{
+				Name:        "context_name",
+				Type:        proto.ColumnType_STRING,
+				Description: "Kubectl config context name.",
+				Hydrate:     getNodeResourceAdditionalData,
+			},
+			{
 				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Transform:   transform.From(nodeResourceSourceType),
+				Hydrate:     getNodeResourceAdditionalData,
 			},
 			// To do - add Status Columns...
 
@@ -292,18 +298,33 @@ func getK8sNode(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData)
 	return Node{*node, "", 0, 0}, nil
 }
 
+func getNodeResourceAdditionalData(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+	obj := h.Item.(Node)
+
+	data := map[string]interface{}{
+		"SourceType": "deployed",
+	}
+
+	// Set the source_type as manifest, if path is not empty
+	// also, set the context_name as nil
+	if obj.Path != "" {
+		data["SourceType"] = "manifest"
+		return data, nil
+	}
+
+	// Else, set the current context as context_name
+	currentContext, err := getKubectlContext(ctx, d, nil)
+	if err != nil {
+		return data, nil
+	}
+	data["ContextName"] = currentContext.(string)
+
+	return data, nil
+}
+
 //// TRANSFORM FUNCTIONS
 
 func transformNodeTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(Node)
 	return mergeTags(obj.Labels, obj.Annotations), nil
-}
-
-func nodeResourceSourceType(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	obj := d.HydrateItem.(Node)
-
-	if obj.Path != "" {
-		return "manifest", nil
-	}
-	return "deployed", nil
 }

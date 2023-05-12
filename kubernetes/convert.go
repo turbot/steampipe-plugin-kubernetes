@@ -35,7 +35,7 @@ func convertUnstructuredDataToType(obj *unstructured.Unstructured) (any, error) 
 		}
 		return targetObj, nil
 	case "ClusterRole":
-		targetObj := &rbacv1.ClusterRoleBinding{}
+		targetObj := &rbacv1.ClusterRole{}
 		err := runtime.DefaultUnstructuredConverter.FromUnstructured(obj.UnstructuredContent(), &targetObj)
 		if err != nil {
 			return nil, err

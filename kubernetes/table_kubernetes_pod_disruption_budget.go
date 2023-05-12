@@ -47,10 +47,16 @@ func tableKubernetesPDB(ctx context.Context) *plugin.Table {
 				Transform:   transform.FromField("Spec.MaxUnavailable"),
 			},
 			{
+				Name:        "context_name",
+				Type:        proto.ColumnType_STRING,
+				Description: "Kubectl config context name.",
+				Hydrate:     getPodDisruptionBudgetResourceAdditionalData,
+			},
+			{
 				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Transform:   transform.From(podDisruptionBudgetResourceSourceType),
+				Hydrate:     getPodDisruptionBudgetResourceAdditionalData,
 			},
 
 			// Steampipe Standard Columns
@@ -216,18 +222,33 @@ func getPDB(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (in
 	return PodDisruptionBudget{*pdb, "", 0, 0}, nil
 }
 
+func getPodDisruptionBudgetResourceAdditionalData(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+	obj := h.Item.(PodDisruptionBudget)
+
+	data := map[string]interface{}{
+		"SourceType": "deployed",
+	}
+
+	// Set the source_type as manifest, if path is not empty
+	// also, set the context_name as nil
+	if obj.Path != "" {
+		data["SourceType"] = "manifest"
+		return data, nil
+	}
+
+	// Else, set the current context as context_name
+	currentContext, err := getKubectlContext(ctx, d, nil)
+	if err != nil {
+		return data, nil
+	}
+	data["ContextName"] = currentContext.(string)
+
+	return data, nil
+}
+
 //// TRANSFORM FUNCTIONS
 
 func transformPDBTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(PodDisruptionBudget)
 	return mergeTags(obj.Labels, obj.Annotations), nil
-}
-
-func podDisruptionBudgetResourceSourceType(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	obj := d.HydrateItem.(PodDisruptionBudget)
-
-	if obj.Path != "" {
-		return "manifest", nil
-	}
-	return "deployed", nil
 }

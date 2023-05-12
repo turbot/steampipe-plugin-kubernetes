@@ -119,10 +119,16 @@ func tableKubernetesJob(ctx context.Context) *plugin.Table {
 				Transform:   transform.FromField("Status.Conditions"),
 			},
 			{
+				Name:        "context_name",
+				Type:        proto.ColumnType_STRING,
+				Description: "Kubectl config context name.",
+				Hydrate:     getJobResourceAdditionalData,
+			},
+			{
 				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Transform:   transform.From(jobResourceSourceType),
+				Hydrate:     getJobResourceAdditionalData,
 			},
 
 			//// Steampipe Standard Columns
@@ -288,18 +294,33 @@ func getK8sJob(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) 
 	return Job{*job, "", 0, 0}, nil
 }
 
+func getJobResourceAdditionalData(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+	obj := h.Item.(Job)
+
+	data := map[string]interface{}{
+		"SourceType": "deployed",
+	}
+
+	// Set the source_type as manifest, if path is not empty
+	// also, set the context_name as nil
+	if obj.Path != "" {
+		data["SourceType"] = "manifest"
+		return data, nil
+	}
+
+	// Else, set the current context as context_name
+	currentContext, err := getKubectlContext(ctx, d, nil)
+	if err != nil {
+		return data, nil
+	}
+	data["ContextName"] = currentContext.(string)
+
+	return data, nil
+}
+
 //// TRANSFORM FUNCTIONS
 
 func transformJobTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(Job)
 	return mergeTags(obj.Labels, obj.Annotations), nil
-}
-
-func jobResourceSourceType(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	obj := d.HydrateItem.(Job)
-
-	if obj.Path != "" {
-		return "manifest", nil
-	}
-	return "deployed", nil
 }

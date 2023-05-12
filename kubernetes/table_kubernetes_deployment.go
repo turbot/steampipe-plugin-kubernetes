@@ -132,10 +132,16 @@ func tableKubernetesDeployment(ctx context.Context) *plugin.Table {
 				Transform:   transform.FromField("Status.CollisionCount"),
 			},
 			{
+				Name:        "context_name",
+				Type:        proto.ColumnType_STRING,
+				Description: "Kubectl config context name.",
+				Hydrate:     getDeploymentResourceAdditionalData,
+			},
+			{
 				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Transform:   transform.From(deploymentResourceSourceType),
+				Hydrate:     getDeploymentResourceAdditionalData,
 			},
 
 			//// Steampipe Standard Columns
@@ -302,6 +308,30 @@ func getK8sDeployment(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 	return Deployment{*deployment, "", 0, 0}, nil
 }
 
+func getDeploymentResourceAdditionalData(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+	obj := h.Item.(Deployment)
+
+	data := map[string]interface{}{
+		"SourceType": "deployed",
+	}
+
+	// Set the source_type as manifest, if path is not empty
+	// also, set the context_name as nil
+	if obj.Path != "" {
+		data["SourceType"] = "manifest"
+		return data, nil
+	}
+
+	// Else, set the current context as context_name
+	currentContext, err := getKubectlContext(ctx, d, nil)
+	if err != nil {
+		return data, nil
+	}
+	data["ContextName"] = currentContext.(string)
+
+	return data, nil
+}
+
 //// TRANSFORM FUNCTIONS
 
 func transformDeploymentTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
@@ -309,11 +339,3 @@ func transformDeploymentTags(_ context.Context, d *transform.TransformData) (int
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }
 
-func deploymentResourceSourceType(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	obj := d.HydrateItem.(Deployment)
-
-	if obj.Path != "" {
-		return "manifest", nil
-	}
-	return "deployed", nil
-}

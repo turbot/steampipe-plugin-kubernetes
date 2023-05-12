@@ -102,10 +102,16 @@ func tableKubernetesEvent(ctx context.Context) *plugin.Table {
 				Description: "The component reporting this event.",
 			},
 			{
+				Name:        "context_name",
+				Type:        proto.ColumnType_STRING,
+				Description: "Kubectl config context name.",
+				Hydrate:     getEventResourceAdditionalData,
+			},
+			{
 				Name:        "config_source",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Transform:   transform.From(eventResourceSourceType),
+				Hydrate:     getEventResourceAdditionalData,
 			},
 		}),
 	}
@@ -257,13 +263,26 @@ func getK8sEvent(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 	return Event{*event, "", 0, 0}, nil
 }
 
-//// TRANSFORM FUNCTIONS
+func getEventResourceAdditionalData(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+	obj := h.Item.(Event)
 
-func eventResourceSourceType(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	obj := d.HydrateItem.(Event)
-
-	if obj.Path != "" {
-		return "manifest", nil
+	data := map[string]interface{}{
+		"SourceType": "deployed",
 	}
-	return "deployed", nil
+
+	// Set the source_type as manifest, if path is not empty
+	// also, set the context_name as nil
+	if obj.Path != "" {
+		data["SourceType"] = "manifest"
+		return data, nil
+	}
+
+	// Else, set the current context as context_name
+	currentContext, err := getKubectlContext(ctx, d, nil)
+	if err != nil {
+		return data, nil
+	}
+	data["ContextName"] = currentContext.(string)
+
+	return data, nil
 }

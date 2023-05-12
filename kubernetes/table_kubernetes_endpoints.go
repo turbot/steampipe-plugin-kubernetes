@@ -31,10 +31,16 @@ func tableKubernetesEndpoints(ctx context.Context) *plugin.Table {
 				Description: "List of addresses and ports that comprise a service.",
 			},
 			{
+				Name:        "context_name",
+				Type:        proto.ColumnType_STRING,
+				Description: "Kubectl config context name.",
+				Hydrate:     endpointResourceAdditionalData,
+			},
+			{
 				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Transform:   transform.From(endpointResourceSourceType),
+				Hydrate:     endpointResourceAdditionalData,
 			},
 
 			//// Steampipe Standard Columns
@@ -200,18 +206,33 @@ func getK8sEndpoint(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateD
 	return Endpoints{*endpoint, "", 0, 0}, nil
 }
 
+func endpointResourceAdditionalData(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+	obj := h.Item.(Endpoints)
+
+	data := map[string]interface{}{
+		"SourceType": "deployed",
+	}
+
+	// Set the source_type as manifest, if path is not empty
+	// also, set the context_name as nil
+	if obj.Path != "" {
+		data["SourceType"] = "manifest"
+		return data, nil
+	}
+
+	// Else, set the current context as context_name
+	currentContext, err := getKubectlContext(ctx, d, nil)
+	if err != nil {
+		return data, nil
+	}
+	data["ContextName"] = currentContext.(string)
+
+	return data, nil
+}
+
 //// TRANSFORM FUNCTIONS
 
 func transformEndpointTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(Endpoints)
 	return mergeTags(obj.Labels, obj.Annotations), nil
-}
-
-func endpointResourceSourceType(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	obj := d.HydrateItem.(Endpoints)
-
-	if obj.Path != "" {
-		return "manifest", nil
-	}
-	return "deployed", nil
 }
