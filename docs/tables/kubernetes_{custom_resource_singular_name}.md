@@ -1,4 +1,4 @@
-# Table: kubernetes_{custom_resource_singular_name}
+# Table: kubernetes\_{custom_resource_singular_name}
 
 Query data from the custom resource called `kubernetes_{custom_resource_singular_name}`, e.g., `kubernetes_certificate`, `kubernetes_capacityrequest`. A table is automatically created to represent each custom resource.
 
@@ -32,25 +32,6 @@ spec:
     - name: v1
       subresources:
         status: {}
-      additionalPrinterColumns:
-        - jsonPath: .status.conditions[?(@.type=="Ready")].status
-          name: Ready
-          type: string
-        - jsonPath: .spec.secretName
-          name: Secret
-          type: string
-        - jsonPath: .spec.issuerRef.name
-          name: Issuer
-          priority: 1
-          type: string
-        - jsonPath: .status.conditions[?(@.type=="Ready")].message
-          name: Status
-          priority: 1
-          type: string
-        - jsonPath: .metadata.creationTimestamp
-          description: A timestamp representing the server time when this object was created.
-          name: Age
-          type: date
       schema:
         openAPIV3Schema:
           description: "A Certificate resource should be created to ensure an up to date and signed x509 certificate is stored in the Kubernetes Secret resource named in `spec.secretName`."
@@ -82,8 +63,13 @@ spec:
                   items:
                     type: string
                 duration:
-                  description: The requested 'duration' (i.e. lifetime) of the Certificate. Defaults to 90 days.
+                  description: "The requested 'duration' (i.e. lifetime) of the Certificate. Defaults to 90 days."
                   type: string
+                ipAddresses:
+                  description: A list of IP address subjectAltNames to be set on the Certificate.
+                  type: array
+                  items:
+                    type: string
                 isCA:
                   description: IsCA will mark this Certificate as valid for certificate signing.
                   type: boolean
@@ -97,58 +83,11 @@ spec:
                       description: Name of the resource being referred to.
                       type: string
                 renewBefore:
-                  description: How long before the currently issued certificate's expiry cert-manager should renew the certificate. Default to 2/3 of the duration.
+                  description: "How long before the currently issued certificate's expiry cert-manager should renew the certificate. Default to 2/3 of the duration."
                   type: string
                 secretName:
                   description: The name of the secret resource that will be automatically created and managed by this Certificate resource.
                   type: string
-            status:
-              description: Status of the Certificate.
-              type: object
-              properties:
-                conditions:
-                  description: List of status conditions to indicate the status of certificates.
-                  type: array
-                  items:
-                    description: CertificateCondition contains condition information for a Certificate.
-                    type: object
-                    required:
-                      - status
-                      - type
-                    properties:
-                      lastTransitionTime:
-                        description: The timestamp corresponding to the last status change of this condition.
-                        type: string
-                        format: date-time
-                      status:
-                        description: Status of the condition, one of (`True`, `False`, `Unknown`).
-                        type: string
-                        enum:
-                          - "True"
-                          - "False"
-                          - Unknown
-                      type:
-                        description: Type of the condition, known values are `Ready` and `Issuing`.
-                        type: string
-                  x-kubernetes-list-map-keys:
-                    - type
-                  x-kubernetes-list-type: map
-                lastFailureTime:
-                  description: The time as recorded by the Certificate controller of the most recent failure to complete a CertificateRequest for this resource.
-                  type: string
-                  format: date-time
-                notAfter:
-                  description: The expiration time of the certificate stored in the secret named by this resource in `spec.secretName`.
-                  type: string
-                  format: date-time
-                notBefore:
-                  description: The time after which the certificate stored in the secret named by this resource in spec.secretName is valid.
-                  type: string
-                  format: date-time
-                renewalTime:
-                  description: The time at which the certificate will be next renewed. If not set, no upcoming renewal is scheduled.
-                  type: string
-                  format: date-time
       served: true
       storage: true
 ```
@@ -197,23 +136,20 @@ Steampipe will automatically create the `kubernetes_certificate` table, which ca
 | _ctx               | jsonb                    | Steampipe context in JSON form, e.g. connection_name.                                                                                                              |
 | api_version        | text                     | The API version of the resource.                                                                                                                                   |
 | common_name        | text                     | A common name to be used on the Certificate.                                                                                                                       |
-| conditions         | jsonb                    | List of status conditions to indicate the status of certificates.                                                                                                  |
+| context_name       | text                     | Kubectl config context name.                                                                                                                                       |
 | creation_timestamp | timestamp with time zone | CreationTimestamp is a timestamp representing the server time when this object was created.                                                                        |
 | dns_names          | jsonb                    | A list of DNS subjectAltNames to be set on the Certificate.                                                                                                        |
 | duration           | text                     | The requested 'duration' (i.e. lifetime) of the Certificate. Defaults to 90 days.                                                                                  |
 | end_line           | bigint                   | The path to the manifest file.                                                                                                                                     |
+| ip_addresses       | jsonb                    | A list of IP address subjectAltNames to be set on the Certificate.                                                                                                 |
 | is_ca              | boolean                  | IsCA will mark this Certificate as valid for certificate signing.                                                                                                  |
 | issuer_ref         | jsonb                    | A reference to the issuer for this certificate.                                                                                                                    |
 | kind               | text                     | Type of resource.                                                                                                                                                  |
 | labels             | jsonb                    | Map of string keys and values that can be used to organize and categorize (scope and select) objects. May match selectors of replication controllers and services. |
-| last_failure_time  | text                     | The time as recorded by the Certificate controller of the most recent failure to complete a CertificateRequest for this resource.                                  |
 | name               | text                     | Name of resource.                                                                                                                                                  |
 | namespace          | text                     | Namespace defines the space within which each name must be unique.                                                                                                 |
-| not_after          | text                     | The expiration time of the certificate stored in the secret named by this resource in `spec.secretName`.                                                           |
-| not_before         | text                     | The time after which the certificate stored in the secret named by this resource in spec.secretName is valid.                                                      |
 | path               | text                     | The path to the manifest file.                                                                                                                                     |
-| renew_before       | text                     | How long before the currently issued certificate expiry cert-manager should renew the certificate. Default to 2/3 of the duration.                                 |
-| renewal_time       | text                     | The time at which the certificate will be next renewed. If not set, no upcoming renewal is scheduled.                                                              |
+| renew_before       | text                     | How long before the currently issued certificate's expiry cert-manager should renew the certificate. Default to 2/3 of the duration.                               |
 | secret_name        | text                     | The name of the secret resource that will be automatically created and managed by this Certificate resource.                                                       |
 | source_type        | text                     | The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.                  |
 | start_line         | bigint                   | The path to the manifest file.                                                                                                                                     |
