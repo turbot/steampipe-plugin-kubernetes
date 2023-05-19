@@ -6,7 +6,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
+
+	goYaml "gopkg.in/yaml.v3"
 
 	filehelpers "github.com/turbot/go-kit/files"
 	apiextension "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
@@ -23,6 +27,13 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+
+	"helm.sh/helm/v3/pkg/chart"
+	"helm.sh/helm/v3/pkg/chart/loader"
+	"helm.sh/helm/v3/pkg/chartutil"
+	"helm.sh/helm/v3/pkg/engine"
+
+	helmClient "github.com/mittwald/go-helm-client"
 
 	"github.com/mitchellh/go-homedir"
 	"github.com/turbot/steampipe-plugin-sdk/v5/connection"
@@ -630,18 +641,35 @@ func mergeTags(labels map[string]string, annotations map[string]string) map[stri
 
 //// Utility functions for manifest files
 
+type parsedContent struct {
+	Data      any
+	Kind      string
+	Path      string
+	StartLine int
+	EndLine   int
+}
+
+// Returns the manifest file content based on the kind provided
 func fetchResourceFromManifestFileByKind(ctx context.Context, d *plugin.QueryData, kind string) ([]parsedContent, error) {
 
 	if kind == "" {
 		return nil, fmt.Errorf("missing required property: kind")
 	}
-
 	var data []parsedContent
+
+	// Get parsed content from manifest files
 	parsedContents, err := getParsedManifestFileContent(ctx, d)
 	if err != nil {
 		return nil, err
 	}
 
+	// Get parsed content from rendered Helm templates
+	renderedTemplateContents, err := getRenderedHelmTemplateContent(ctx, d)
+	if err != nil {
+		return nil, err
+	}
+
+	parsedContents = append(parsedContents, renderedTemplateContents...)
 	for _, content := range parsedContents {
 		if content.Kind == kind {
 			data = append(data, content)
@@ -649,14 +677,6 @@ func fetchResourceFromManifestFileByKind(ctx context.Context, d *plugin.QueryDat
 	}
 
 	return data, nil
-}
-
-type parsedContent struct {
-	Data      any
-	Kind      string
-	Path      string
-	StartLine int
-	EndLine   int
 }
 
 // Get the parsed contents of the given files.
@@ -757,6 +777,7 @@ func parsedManifestFileContentUncached(ctx context.Context, d *plugin.QueryData,
 	return parsedContents, nil
 }
 
+// Returns the list of file paths/glob patterns after resolving all the given manifest file paths.
 func resolveManifestFilePaths(ctx context.Context, d *plugin.QueryData) ([]string, error) {
 	// Read the config
 	k8sConfig := GetConfig(d.Connection)
@@ -799,4 +820,459 @@ func resolveManifestFilePaths(ctx context.Context, d *plugin.QueryData) ([]strin
 	}
 
 	return resolvedPaths, nil
+}
+
+type parsedHelmChart struct {
+	Chart *chart.Chart
+	Path  string
+}
+
+// Get the parsed contents of the given Helm chart.
+func getParsedHelmChart(ctx context.Context, d *plugin.QueryData) (*parsedHelmChart, error) {
+	conn, err := parsedHelmChartCached(ctx, d, nil)
+	if err != nil {
+		return nil, err
+	}
+	return conn.(*parsedHelmChart), nil
+}
+
+// Cached form of the parsed Helm chart.
+var parsedHelmChartCached = plugin.HydrateFunc(parsedHelmChartUncached).Memoize()
+
+// parsedHelmChartUncached is the actual implementation of getParsedHelmChart, which should
+// be run only once per connection. Do not call this directly, use
+// getParsedHelmChart instead.
+func parsedHelmChartUncached(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (any, error) {
+	// Read the config
+	helmConfig := GetConfig(d.Connection)
+
+	chartDir := helmConfig.HelmChartDir
+
+	// Return empty parsedHelmChart object if no Helm chart directory path provided in the config
+	if chartDir == nil {
+		plugin.Logger(ctx).Debug("parsedHelmChartUncached", "helm_chart_dir not configured in the config", "connection", d.Connection.Name)
+		return &parsedHelmChart{}, nil
+	}
+	plugin.Logger(ctx).Debug("parsedHelmChartUncached", "Parsing Helm chart", chartDir, "connection", d.Connection.Name)
+
+	// Load the given chart directory
+	chart, err := loader.Load(*chartDir)
+	if err != nil {
+		plugin.Logger(ctx).Error("parsedHelmChartUncached", "load_chart_error", err)
+		return nil, err
+	}
+
+	return &parsedHelmChart{
+		Chart: chart,
+		Path:  *chartDir,
+	}, nil
+}
+
+// Get the rendered template contents.
+func getHelmRenderedTemplates(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (map[string]string, error) {
+	helmRenderedTemplates, err := parsedHelmRenderedTemplatesCached(ctx, d, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if helmRenderedTemplates != nil {
+		return helmRenderedTemplates.(map[string]string), nil
+	}
+	return nil, nil
+}
+
+// Cached form of the rendered template content.
+var parsedHelmRenderedTemplatesCached = plugin.HydrateFunc(parsedHelmRenderedTemplatesUncached).Memoize()
+
+// parsedHelmRenderedTemplatesUncached is the actual implementation of getHelmRenderedTemplates, which should
+// be run only once per connection. Do not call this directly, use
+// getHelmRenderedTemplates instead.
+func parsedHelmRenderedTemplatesUncached(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (any, error) {
+	chart, err := getParsedHelmChart(ctx, d)
+	if err != nil {
+		return nil, err
+	}
+
+	// Return nil, if the config doesn't have any chart path configured
+	if chart.Chart == nil {
+		plugin.Logger(ctx).Debug("parsedHelmRenderedTemplatesUncached", "no chart configuration found", "connection", d.Connection.Name)
+		return nil, nil
+	}
+
+	// Get the values required to render the templates
+	values, err := getHelmChartOverrideValues(ctx, d, chart)
+	if err != nil {
+		return nil, err
+	}
+
+	values = map[string]interface{}{
+		"Values": values,
+		"Release": map[string]interface{}{
+			"Service": "Helm",
+			"Name":    chart.Chart.Metadata.Name, // Keeping it as same as the chart name for now. In CLI, either the value can be passed in the arg, or can be auto-generated.
+		},
+		"Chart":        chart.Chart.Metadata,
+		"Capabilities": chartutil.Capabilities{},
+		"Template": map[string]interface{}{
+			"BasePath": "/path/to/base",
+		},
+	}
+
+	renderedChart, err := engine.Render(chart.Chart, values)
+	if err != nil {
+		plugin.Logger(ctx).Error("parsedHelmRenderedTemplatesUncached", "connection", d.Connection.Name, "template_render_error", err)
+		return nil, err
+	}
+
+	return renderedChart, nil
+}
+
+// Return the values required to render the templates
+func getHelmChartOverrideValues(ctx context.Context, d *plugin.QueryData, chart *parsedHelmChart) (map[string]interface{}, error) {
+	helmConfig := GetConfig(d.Connection)
+
+	// Get the default values defined in the values.yaml file
+	values := chart.Chart.Values
+
+	// Check for value override files configured in the connection config
+	var valueFiles []string
+	if helmConfig.HelmValueOverride != nil {
+		valueFiles = helmConfig.HelmValueOverride
+	}
+
+	// If any value override files provided in the config, use those value to render the templates
+	// The priority will be given to the last file specified.
+	// For example, if both values.yaml and override.yaml
+	// contained a key called 'foo', the value set in override.yaml would take precedence.
+	for _, f := range valueFiles {
+		var override map[string]interface{}
+		// Read files
+		bs, err := os.ReadFile(f)
+		if err != nil {
+			plugin.Logger(ctx).Error("parsedHelmRenderedTemplatesUncached", "read_file_error", "connection_name", d.Connection.Name, "failed to read file %s: %v", f, err)
+			return nil, err
+		}
+		if err := goYaml.Unmarshal(bs, &override); err != nil {
+			plugin.Logger(ctx).Debug("getHelmChartOverrideValues", "unmarshal_error", "failed to unmarshal value override file", f, "error", err)
+			return nil, err
+		}
+		values = mergeMaps(values, override)
+	}
+
+	return values, nil
+}
+
+// Get the parsed contents of the given files.
+func getRenderedHelmTemplateContent(ctx context.Context, d *plugin.QueryData) ([]parsedContent, error) {
+	conn, err := RenderedHelmTemplateContentCached(ctx, d, nil)
+	if err != nil {
+		return nil, err
+	}
+	return conn.([]parsedContent), nil
+}
+
+// Cached form of the parsed file content.
+var RenderedHelmTemplateContentCached = plugin.HydrateFunc(RenderedHelmTemplateContentUncached).Memoize()
+
+// RenderedHelmTemplateContentUncached is the actual implementation of getRenderedHelmTemplateContent, which should
+// be run only once per connection. Do not call this directly, use
+// getRenderedHelmTemplateContent instead.
+func RenderedHelmTemplateContentUncached(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (any, error) {
+	plugin.Logger(ctx).Debug("RenderedHelmTemplateContentUncached", "Parsing file content...", "connection", d.Connection.Name)
+
+	// Read the config
+	renderedTemplates, err := getHelmRenderedTemplates(ctx, d, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var parsedContents []parsedContent
+	for path, template := range renderedTemplates {
+
+		obj := &unstructured.Unstructured{}
+		err = yaml.Unmarshal([]byte(template), obj)
+		if err != nil {
+			plugin.Logger(ctx).Error("RenderedHelmTemplateContentUncached", "unmarshal_error", err)
+			return nil, err
+		}
+
+		obj.SetAPIVersion(obj.GetAPIVersion())
+		obj.SetKind(obj.GetKind())
+		gvk := obj.GetObjectKind().GroupVersionKind()
+		obj.SetGroupVersionKind(schema.GroupVersionKind{
+			Group:   gvk.Group,
+			Version: gvk.Version,
+			Kind:    gvk.Kind,
+		})
+
+		// Convert the content to concrete type based on the resource kind
+		targetObj, err := convertUnstructuredDataToType(obj)
+		if err != nil {
+			plugin.Logger(ctx).Error("RenderedHelmTemplateContentUncached", "failed to convert content into a concrete type", err, "path", path)
+			return nil, err
+		}
+
+		parsedContents = append(parsedContents, parsedContent{
+			Data: targetObj,
+			Kind: obj.GetKind(),
+			Path: path,
+		})
+	}
+
+	// // Check for the start of the document
+	// pos := 0
+	// for _, resource := range strings.Split(string(content), "---") {
+	// 	// Skip empty documents, `Decode` will fail on them
+	// 	// Also, increment the pos to include the separator position (e.g. ---)
+	// 	if len(resource) == 0 {
+	// 		pos++
+	// 		continue
+	// 	}
+
+	// 	// Calculate the length of the YAML resource block
+	// 	blockLength := strings.Split(strings.ReplaceAll(resource, " ", ""), "\n")
+
+	// 	// Remove the extra lines added during the split operation based on the separator
+	// 	blockLength = blockLength[:len(blockLength)-1]
+	// 	if blockLength[0] == "" {
+	// 		blockLength = blockLength[1:]
+	// 	}
+
+	// 	// skip if no kind defined
+	// 	if !strings.Contains(resource, "kind:") {
+	// 		pos = pos + len(blockLength) + 1
+	// 		continue
+	// 	}
+
+	// 	obj := &unstructured.Unstructured{}
+	// 	err = yaml.Unmarshal([]byte(resource), obj)
+	// 	if err != nil {
+	// 		plugin.Logger(ctx).Error("parsedHelmChartContentUncached", "failed to unmarshal the content", err, "path", path)
+	// 		return nil, err
+	// 	}
+
+	// 	obj.SetAPIVersion(obj.GetAPIVersion())
+	// 	obj.SetKind(obj.GetKind())
+	// 	gvk := obj.GetObjectKind().GroupVersionKind()
+	// 	obj.SetGroupVersionKind(schema.GroupVersionKind{
+	// 		Group:   gvk.Group,
+	// 		Version: gvk.Version,
+	// 		Kind:    gvk.Kind,
+	// 	})
+
+	// 	// Convert the content to concrete type based on the resource kind
+	// 	targetObj, err := convertUnstructuredDataToType(obj)
+	// 	if err != nil {
+	// 		plugin.Logger(ctx).Error("parsedHelmChartContentUncached", "failed to convert content into a concrete type", err, "path", path)
+	// 		return nil, err
+	// 	}
+
+	// 	parsedContents = append(parsedContents, parsedContent{
+	// 		Data:      targetObj,
+	// 		Kind:      obj.GetKind(),
+	// 		Path:      path,
+	// 		StartLine: pos + 1, // Since starts from 0
+	// 		EndLine:   pos + len(blockLength),
+	// 	})
+
+	// 	// Increment the position by the length of the block
+	// 	// the value is added with 1 to include the separator
+	// 	pos = pos + len(blockLength) + 1
+	// }
+
+	return parsedContents, nil
+}
+
+// getHelmClient creates  the client for Helm
+func getHelmClient(ctx context.Context, namespace string) (helmClient.Client, error) {
+	// Set the namespace if specified.
+	// By default current namespace context is used.
+	options := &helmClient.Options{}
+	if namespace != "" {
+		options.Namespace = namespace
+	}
+
+	// Create client
+	client, err := helmClient.New(options)
+	if err != nil {
+		plugin.Logger(ctx).Error("getHelmClient", "client_error", err)
+		return nil, err
+	}
+
+	return client, nil
+}
+
+// Returns combined values of two files.
+// The objects got merged, but same attributes gets replaced.
+func mergeMaps(a, b map[string]interface{}) map[string]interface{} {
+	out := make(map[string]interface{}, len(a))
+	for k, v := range a {
+		out[k] = v
+	}
+	for k, v := range b {
+		if v, ok := v.(map[string]interface{}); ok {
+			if bv, ok := out[k]; ok {
+				if bv, ok := bv.(map[string]interface{}); ok {
+					out[k] = mergeMaps(bv, v)
+					continue
+				}
+			}
+		}
+		out[k] = v
+	}
+	return out
+}
+
+//// HELM values
+
+type Rows []Row
+type Row struct {
+	Path        string
+	Key         []string
+	Value       interface{}
+	Tag         *string
+	PreComments []string
+	HeadComment string
+	LineComment string
+	FootComment string
+	StartLine   int
+	StartColumn int
+}
+
+func treeToList(tree *goYaml.Node, prefix []string, rows *Rows, preComments []string, headComments []string, footComments []string) {
+	switch tree.Kind {
+	case goYaml.DocumentNode:
+		for i, v := range tree.Content {
+			localComments := []string{}
+			headComments = []string{}
+			footComments = []string{}
+			if i == 0 {
+				localComments = append(localComments, preComments...)
+				if tree.HeadComment != "" {
+					localComments = append(localComments, tree.HeadComment)
+					headComments = append(headComments, tree.HeadComment)
+				}
+				if tree.FootComment != "" {
+					footComments = append(footComments, tree.FootComment)
+				}
+				if tree.LineComment != "" {
+					localComments = append(localComments, tree.LineComment)
+				}
+			}
+			treeToList(v, prefix, rows, localComments, headComments, footComments)
+		}
+	case goYaml.SequenceNode:
+		if len(tree.Content) == 0 {
+			row := Row{
+				Key:         prefix,
+				Value:       []string{},
+				Tag:         &tree.Tag,
+				StartLine:   tree.Line,
+				StartColumn: tree.Column,
+				PreComments: preComments,
+				HeadComment: strings.Join(headComments, ","),
+				LineComment: tree.LineComment,
+				FootComment: strings.Join(footComments, ","),
+			}
+			*rows = append(*rows, row)
+		}
+
+		for i, v := range tree.Content {
+			localComments := []string{}
+			headComments = []string{}
+			footComments = []string{}
+			if i == 0 {
+				localComments = append(localComments, preComments...)
+				if tree.HeadComment != "" {
+					localComments = append(localComments, tree.HeadComment)
+					headComments = append(headComments, tree.HeadComment)
+				}
+				if tree.LineComment != "" {
+					localComments = append(localComments, tree.LineComment)
+				}
+			}
+			newKey := make([]string, len(prefix))
+			copy(newKey, prefix)
+			newKey = append(newKey, strconv.Itoa(i))
+			treeToList(v, newKey, rows, localComments, headComments, footComments)
+		}
+	case goYaml.MappingNode:
+		localComments := []string{}
+		headComments = []string{}
+		footComments = []string{}
+		localComments = append(localComments, preComments...)
+		if tree.HeadComment != "" {
+			localComments = append(localComments, tree.HeadComment)
+			headComments = append(headComments, tree.HeadComment)
+		}
+		if tree.FootComment != "" {
+			footComments = append(footComments, tree.FootComment)
+		}
+		if tree.LineComment != "" {
+			localComments = append(localComments, tree.LineComment)
+		}
+		if len(tree.Content) == 0 {
+			row := Row{
+				Key:         prefix,
+				Value:       map[string]interface{}{},
+				Tag:         &tree.Tag,
+				StartLine:   tree.Line,
+				StartColumn: tree.Column,
+				PreComments: preComments,
+				HeadComment: strings.Join(headComments, ","),
+				LineComment: tree.LineComment,
+				FootComment: strings.Join(footComments, ","),
+			}
+			*rows = append(*rows, row)
+		}
+		i := 0
+		for i < len(tree.Content)-1 {
+			key := tree.Content[i]
+			val := tree.Content[i+1]
+			i = i + 2
+			if key.HeadComment != "" {
+				localComments = append(localComments, key.HeadComment)
+				headComments = append(headComments, key.HeadComment)
+			}
+			if key.FootComment != "" {
+				footComments = append(footComments, key.FootComment)
+			}
+			if key.LineComment != "" {
+				localComments = append(localComments, key.LineComment)
+			}
+			newKey := make([]string, len(prefix))
+			copy(newKey, prefix)
+			newKey = append(newKey, key.Value)
+			treeToList(val, newKey, rows, localComments, headComments, footComments)
+			localComments = make([]string, 0)
+			headComments = make([]string, 0)
+			footComments = make([]string, 0)
+		}
+	case goYaml.ScalarNode:
+		row := Row{
+			Key:         prefix,
+			Value:       tree.Value,
+			Tag:         &tree.Tag,
+			StartLine:   tree.Line,
+			StartColumn: tree.Column,
+			PreComments: preComments,
+			HeadComment: strings.Join(headComments, ","),
+			LineComment: tree.LineComment,
+			FootComment: strings.Join(footComments, ","),
+		}
+		if tree.Tag == "!!null" {
+			row.Value = nil
+		}
+		*rows = append(*rows, row)
+	}
+}
+
+func keysToSnakeCase(_ context.Context, d *transform.TransformData) (interface{}, error) {
+	keys := d.Value.([]string)
+	snakes := []string{}
+	re := regexp.MustCompile(`[^A-Za-z0-9_]`)
+	for _, k := range keys {
+		snakes = append(snakes, re.ReplaceAllString(k, "_"))
+	}
+	return strings.Join(snakes, "."), nil
 }

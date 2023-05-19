@@ -45,6 +45,9 @@ func Plugin(ctx context.Context) *plugin.Plugin {
 func pluginTableDefinitions(ctx context.Context, d *plugin.TableMapData) (map[string]*plugin.Table, error) {
 	// Initialize tables
 	tables := map[string]*plugin.Table{
+		"helm_chart":                            tableHelmChart(ctx),
+		"helm_release":                          tableHelmRelease(ctx),
+		"helm_value":                            tableHelmValue(ctx),
 		"kubernetes_cluster_role":               tableKubernetesClusterRole(ctx),
 		"kubernetes_cluster_role_binding":       tableKubernetesClusterRoleBinding(ctx),
 		"kubernetes_config_map":                 tableKubernetesConfigMap(ctx),

@@ -11,6 +11,8 @@ type kubernetesConfig struct {
 	ConfigContext        *string  `cty:"config_context"`
 	CustomResourceTables []string `cty:"custom_resource_tables"`
 	ManifestFilePaths    []string `cty:"manifest_file_paths" steampipe:"watch"`
+	HelmChartDir         *string  `cty:"helm_chart_dir" steampipe:"watch"`
+	HelmValueOverride    []string `cty:"helm_value_override" steampipe:"watch"`
 	SourceType           *string  `cty:"source_type"`
 }
 
@@ -30,6 +32,13 @@ var ConfigSchema = map[string]*schema.Attribute{
 		Elem: &schema.Attribute{Type: schema.TypeString},
 	},
 	"manifest_file_paths": {
+		Type: schema.TypeList,
+		Elem: &schema.Attribute{Type: schema.TypeString},
+	},
+	"helm_chart_dir": {
+		Type: schema.TypeString,
+	},
+	"helm_value_override": {
 		Type: schema.TypeList,
 		Elem: &schema.Attribute{Type: schema.TypeString},
 	},
