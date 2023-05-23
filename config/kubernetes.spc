@@ -27,4 +27,31 @@ connection "kubernetes" {
 
   # If no kubeconfig file can be found, the plugin will attempt to use the service account Kubernetes gives to pods.
   # This authentication method is intended for clients that expect to be running inside a pod running on Kubernetes.
+
+  # Manifest file paths is a list of locations to search for Kubernetes manifest files
+  # Manifest file paths can be configured with a local directory, a remote Git repository URL, or an S3 bucket URL
+  # Refer https://hub.steampipe.io/plugins/turbot/kubernetes#supported-path-formats for more information
+  # Wildcard based searches are supported, including recursive searches
+  # Local paths are resolved relative to the current working directory (CWD)
+
+  # For example:
+  #  - "*.yml" matches all Kubernetes manifest files in the CWD
+  #  - "**/*.yml" matches all Kubernetes manifest files in the CWD and all sub-directories
+  #  - "../*.yml" matches all Kubernetes manifest files in the CWD's parent directory
+  #  - "steampipe*.yml" matches all Kubernetes manifest files starting with "steampipe" in the CWD
+  #  - "/path/to/dir/*.yml" matches all Kubernetes manifest files in a specific directory
+  #  - "/path/to/dir/main.yml" matches a specific file
+
+  # If the given paths includes "*", all files (including non-kubernetes manifest files) in
+  # the CWD will be matched, which may cause errors if incompatible file types exist
+
+  # Defaults to CWD
+  # manifest_file_paths = [ "*.yml", "*.yaml" ]
+
+  # Specify the source of the resource. Possible values: `deployed`, `manifest`, and `all`.
+  # Default set to `all`. Set the argument to override the default value.
+  # If the value is set to `deployed`, tables will show all the deployed resources.
+  # If set to `manifest`, tables will show all the resources from the kubernetes manifest. Make sure that the `manifest_file_paths` arg is set.
+  # If `all`, tables will show all the deployed and manifest resources.
+  # source_type = "all"
 }

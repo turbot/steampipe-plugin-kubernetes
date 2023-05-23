@@ -46,6 +46,18 @@ func tableKubernetesPDB(ctx context.Context) *plugin.Table {
 				Description: "An eviction is allowed if at most 'maxAvailable' pods selected by 'selector' will still be unavailable after the eviction.",
 				Transform:   transform.FromField("Spec.MaxUnavailable"),
 			},
+			{
+				Name:        "context_name",
+				Type:        proto.ColumnType_STRING,
+				Description: "Kubectl config context name.",
+				Hydrate:     getPodDisruptionBudgetResourceAdditionalData,
+			},
+			{
+				Name:        "source_type",
+				Type:        proto.ColumnType_STRING,
+				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
+				Hydrate:     getPodDisruptionBudgetResourceAdditionalData,
+			},
 
 			// Steampipe Standard Columns
 			{
@@ -64,15 +76,46 @@ func tableKubernetesPDB(ctx context.Context) *plugin.Table {
 	}
 }
 
+type PodDisruptionBudget struct {
+	v1.PodDisruptionBudget
+	Path      string
+	StartLine int
+	EndLine   int
+}
+
 //// HYDRATE FUNCTIONS
 
 func listPDBs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
 	logger := plugin.Logger(ctx)
 	logger.Trace("listPDBs")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
+	}
+
+	// Check for manifest files
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "PodDisruptionBudget")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		pdb := content.Data.(*v1.PodDisruptionBudget)
+
+		d.StreamListItem(ctx, PodDisruptionBudget{*pdb, content.Path, content.StartLine, content.EndLine})
+
+		// Context can be cancelled due to manual cancellation or the limit has been hit
+		if d.RowsRemaining(ctx) == 0 {
+			return nil, nil
+		}
+	}
+
+	// Check for deployed resources
+	if clientset == nil {
+		return nil, nil
 	}
 
 	input := metav1.ListOptions{
@@ -113,7 +156,7 @@ func listPDBs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (
 		}
 
 		for _, item := range response.Items {
-			d.StreamListItem(ctx, item)
+			d.StreamListItem(ctx, PodDisruptionBudget{item, "", 0, 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -129,6 +172,8 @@ func getPDB(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (in
 	logger := plugin.Logger(ctx)
 	logger.Trace("getPDB")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
@@ -142,17 +187,60 @@ func getPDB(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (in
 		return nil, nil
 	}
 
+	// Get the manifest resource
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "PodDisruptionBudget")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		pdb := content.Data.(*v1.PodDisruptionBudget)
+
+		if pdb.Name == name && pdb.Namespace == namespace {
+			return PodDisruptionBudget{*pdb, content.Path, content.StartLine, content.EndLine}, nil
+		}
+	}
+
+	// Get the deployed resource
+	if clientset == nil {
+		return nil, nil
+	}
+
 	pdb, err := clientset.PolicyV1().PodDisruptionBudgets(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
 		return nil, err
 	}
 
-	return *pdb, nil
+	return PodDisruptionBudget{*pdb, "", 0, 0}, nil
+}
+
+func getPodDisruptionBudgetResourceAdditionalData(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+	obj := h.Item.(PodDisruptionBudget)
+
+	data := map[string]interface{}{
+		"SourceType": "deployed",
+	}
+
+	// Set the source_type as manifest, if path is not empty
+	// also, set the context_name as nil
+	if obj.Path != "" {
+		data["SourceType"] = "manifest"
+		return data, nil
+	}
+
+	// Else, set the current context as context_name
+	currentContext, err := getKubectlContext(ctx, d, nil)
+	if err != nil {
+		return data, nil
+	}
+	data["ContextName"] = currentContext.(string)
+
+	return data, nil
 }
 
 //// TRANSFORM FUNCTIONS
 
 func transformPDBTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	obj := d.HydrateItem.(v1.PodDisruptionBudget)
+	obj := d.HydrateItem.(PodDisruptionBudget)
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }

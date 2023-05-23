@@ -34,3 +34,20 @@ select
 from
   kubernetes_horizontal_pod_autoscaler;
 ```
+
+### List manifest resources
+
+```sql
+select
+  name,
+  namespace,
+  min_replicas,
+  max_replicas,
+  current_replicas,
+  desired_replicas,
+  path
+from
+  kubernetes_horizontal_pod_autoscaler
+where
+  path is not null;
+```

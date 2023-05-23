@@ -128,6 +128,18 @@ func tableKubernetesNode(ctx context.Context) *plugin.Table {
 				Description: "Status of the config assigned to the node via the dynamic Kubelet config feature.",
 				Transform:   transform.FromField("Status.Config"),
 			},
+			{
+				Name:        "context_name",
+				Type:        proto.ColumnType_STRING,
+				Description: "Kubectl config context name.",
+				Hydrate:     getNodeResourceAdditionalData,
+			},
+			{
+				Name:        "source_type",
+				Type:        proto.ColumnType_STRING,
+				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
+				Hydrate:     getNodeResourceAdditionalData,
+			},
 			// To do - add Status Columns...
 
 			//// Steampipe Standard Columns
@@ -147,15 +159,46 @@ func tableKubernetesNode(ctx context.Context) *plugin.Table {
 	}
 }
 
+type Node struct {
+	v1.Node
+	Path      string
+	StartLine int
+	EndLine   int
+}
+
 //// HYDRATE FUNCTIONS
 
 func listK8sNodes(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
 	logger := plugin.Logger(ctx)
 	logger.Trace("listK8sNodes")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
+	}
+
+	// Check for manifest files
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "Node")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		node := content.Data.(*v1.Node)
+
+		d.StreamListItem(ctx, Node{*node, content.Path, content.StartLine, content.EndLine})
+
+		// Context can be cancelled due to manual cancellation or the limit has been hit
+		if d.RowsRemaining(ctx) == 0 {
+			return nil, nil
+		}
+	}
+
+	// Check for deployed resources
+	if clientset == nil {
+		return nil, nil
 	}
 
 	input := metav1.ListOptions{
@@ -190,7 +233,7 @@ func listK8sNodes(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 		}
 
 		for _, node := range response.Items {
-			d.StreamListItem(ctx, node)
+			d.StreamListItem(ctx, Node{node, "", 0, 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -206,6 +249,8 @@ func getK8sNode(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData)
 	logger := plugin.Logger(ctx)
 	logger.Trace("getK8sNode")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
@@ -218,17 +263,60 @@ func getK8sNode(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData)
 		return nil, nil
 	}
 
+	// Get the manifest resource
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "Node")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		node := content.Data.(*v1.Node)
+
+		if node.Name == name {
+			return Node{*node, content.Path, content.StartLine, content.EndLine}, nil
+		}
+	}
+
+	// Get the deployed resource
+	if clientset == nil {
+		return nil, nil
+	}
+
 	node, err := clientset.CoreV1().Nodes().Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
 		return nil, err
 	}
 
-	return *node, nil
+	return Node{*node, "", 0, 0}, nil
+}
+
+func getNodeResourceAdditionalData(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+	obj := h.Item.(Node)
+
+	data := map[string]interface{}{
+		"SourceType": "deployed",
+	}
+
+	// Set the source_type as manifest, if path is not empty
+	// also, set the context_name as nil
+	if obj.Path != "" {
+		data["SourceType"] = "manifest"
+		return data, nil
+	}
+
+	// Else, set the current context as context_name
+	currentContext, err := getKubectlContext(ctx, d, nil)
+	if err != nil {
+		return data, nil
+	}
+	data["ContextName"] = currentContext.(string)
+
+	return data, nil
 }
 
 //// TRANSFORM FUNCTIONS
 
 func transformNodeTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	obj := d.HydrateItem.(v1.Node)
+	obj := d.HydrateItem.(Node)
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }

@@ -56,3 +56,20 @@ where
   cr.name = crb.role_name
   and crb_sub ->> 'kind' = 'ServiceAccount';
 ```
+
+### List manifest resources
+
+```sql
+select
+  name,
+  namespace,
+  jsonb_array_length(secrets) as secrets,
+  path
+from
+  kubernetes_service_account
+where
+  path is not null
+order by
+  namespace,
+  name;
+```

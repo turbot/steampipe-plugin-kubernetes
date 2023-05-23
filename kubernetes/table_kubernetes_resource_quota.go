@@ -59,6 +59,18 @@ func tableKubernetesResourceQuota(ctx context.Context) *plugin.Table {
 				Description: "Indicates current observed total usage of the resource in the namespace.",
 				Transform:   transform.FromField("Status.Used"),
 			},
+			{
+				Name:        "context_name",
+				Type:        proto.ColumnType_STRING,
+				Description: "Kubectl config context name.",
+				Hydrate:     getResourceQuotaResourceAdditionalData,
+			},
+			{
+				Name:        "source_type",
+				Type:        proto.ColumnType_STRING,
+				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
+				Hydrate:     getResourceQuotaResourceAdditionalData,
+			},
 
 			//// Steampipe Standard Columns
 			{
@@ -77,14 +89,45 @@ func tableKubernetesResourceQuota(ctx context.Context) *plugin.Table {
 	}
 }
 
+type ResourceQuota struct {
+	v1.ResourceQuota
+	Path      string
+	StartLine int
+	EndLine   int
+}
+
 //// HYDRATE FUNCTIONS
 
 func listK8sResourceQuotas(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 	plugin.Logger(ctx).Trace("listK8sResourceQuotas")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
+	}
+
+	// Check for manifest files
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "ResourceQuota")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		resourceQuota := content.Data.(*v1.ResourceQuota)
+
+		d.StreamListItem(ctx, ResourceQuota{*resourceQuota, content.Path, content.StartLine, content.EndLine})
+
+		// Context can be cancelled due to manual cancellation or the limit has been hit
+		if d.RowsRemaining(ctx) == 0 {
+			return nil, nil
+		}
+	}
+
+	// Check for deployed resources
+	if clientset == nil {
+		return nil, nil
 	}
 
 	input := metav1.ListOptions{
@@ -125,7 +168,7 @@ func listK8sResourceQuotas(ctx context.Context, d *plugin.QueryData, h *plugin.H
 		}
 
 		for _, resourceQuota := range response.Items {
-			d.StreamListItem(ctx, resourceQuota)
+			d.StreamListItem(ctx, ResourceQuota{resourceQuota, "", 0, 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -140,6 +183,8 @@ func listK8sResourceQuotas(ctx context.Context, d *plugin.QueryData, h *plugin.H
 func getK8sResourceQuota(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
 	plugin.Logger(ctx).Trace("getK8sResourceQuota")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
@@ -153,17 +198,60 @@ func getK8sResourceQuota(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 		return nil, nil
 	}
 
+	// Get the manifest resource
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "ResourceQuota")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		resourceQuota := content.Data.(*v1.ResourceQuota)
+
+		if resourceQuota.Name == name && resourceQuota.Namespace == namespace {
+			return ResourceQuota{*resourceQuota, content.Path, content.StartLine, content.EndLine}, nil
+		}
+	}
+
+	// Get the deployed resource
+	if clientset == nil {
+		return nil, nil
+	}
+
 	resourceQuota, err := clientset.CoreV1().ResourceQuotas(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
 		return nil, err
 	}
 
-	return *resourceQuota, nil
+	return ResourceQuota{*resourceQuota, "", 0, 0}, nil
+}
+
+func getResourceQuotaResourceAdditionalData(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+	obj := h.Item.(ResourceQuota)
+
+	data := map[string]interface{}{
+		"SourceType": "deployed",
+	}
+
+	// Set the source_type as manifest, if path is not empty
+	// also, set the context_name as nil
+	if obj.Path != "" {
+		data["SourceType"] = "manifest"
+		return data, nil
+	}
+
+	// Else, set the current context as context_name
+	currentContext, err := getKubectlContext(ctx, d, nil)
+	if err != nil {
+		return data, nil
+	}
+	data["ContextName"] = currentContext.(string)
+
+	return data, nil
 }
 
 //// TRANSFORM FUNCTIONS
 
 func transformResourceQuotaTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	obj := d.HydrateItem.(v1.ResourceQuota)
+	obj := d.HydrateItem.(ResourceQuota)
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }

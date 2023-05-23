@@ -2,7 +2,7 @@
 
 A Deployment provides declarative updates for Pods and ReplicaSets.
 
-You describe a desired state in a Deployment, and the Deployment Controller changes the actual state to the desired state at a controlled rate. You can define Deployments to create new ReplicaSets, or to remove existing Deployments and adopt all their resources with new Deployments. 
+You describe a desired state in a Deployment, and the Deployment Controller changes the actual state to the desired state at a controlled rate. You can define Deployments to create new ReplicaSets, or to remove existing Deployments and adopt all their resources with new Deployments.
 
 ## Examples
 
@@ -25,8 +25,8 @@ order by
   name;
 ```
 
-
 ### Configuration Info
+
 ```sql
 select
   name,
@@ -41,15 +41,15 @@ from
   kubernetes_deployment;
 ```
 
-
 ### Container Images used in Deployments
+
 ```sql
-select 
+select
   name as deployment_name,
   namespace,
   c ->> 'name' as container_name,
   c ->> 'image' as image
-from 
+from
   kubernetes_deployment,
   jsonb_array_elements(template -> 'spec' -> 'containers') as c
 order by
@@ -57,8 +57,8 @@ order by
   name;
 ```
 
-
 ### List pods for a deployment
+
 ```sql
 select
   pod.namespace,
@@ -69,16 +69,16 @@ select
   age(current_timestamp, pod.creation_timestamp),
   pod.pod_ip,
   pod.node_name
-from 
+from
   kubernetes_pod as pod,
   jsonb_array_elements(pod.owner_references) as pod_owner,
   kubernetes_replicaset as rs,
   jsonb_array_elements(rs.owner_references) as rs_owner,
   kubernetes_deployment as d
-where 
+where
   pod_owner ->> 'kind' = 'ReplicaSet'
   and rs.uid = pod_owner ->> 'uid'
-  and rs_owner ->> 'uid' = d.uid 
+  and rs_owner ->> 'uid' = d.uid
   and d.name = 'frontend'
 order by
   pod.namespace,
@@ -87,21 +87,36 @@ order by
   pod.name;
 ```
 
-
-
-### List Pods with access to the to the host process ID, IPC, or network namespace 
+### List Pods with access to the to the host process ID, IPC, or network namespace
 
 ```sql
-select 
+select
   namespace,
   name,
   template -> 'spec' ->> 'hostPID' as hostPID,
   template -> 'spec' ->> 'hostIPC' as hostIPC,
   template -> 'spec' ->> 'hostNetwork' as hostNetwork
-from 
+from
   kubernetes_deployment
 where
   template -> 'spec' ->> 'hostPID' = 'true' or
   template -> 'spec' ->> 'hostIPC' = 'true' or
   template -> 'spec' ->> 'hostNetwork' = 'true';
+```
+
+### List manifest resources
+
+```sql
+select
+  name,
+  namespace,
+  replicas,
+  path
+from
+  kubernetes_deployment
+where
+  path is not null
+order by
+  namespace,
+  name;
 ```

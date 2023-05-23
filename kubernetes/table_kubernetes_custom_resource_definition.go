@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"context"
 
+	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
@@ -32,8 +33,27 @@ func tableKubernetesCustomResourceDefinition(ctx context.Context) *plugin.Table 
 				Description: "Status indicates the actual state of the CustomResourceDefinition.",
 				Type:        proto.ColumnType_JSON,
 			},
+			{
+				Name:        "context_name",
+				Type:        proto.ColumnType_STRING,
+				Description: "Kubectl config context name.",
+				Hydrate:     getCustomResourceDefinitionResourceAdditionalData,
+			},
+			{
+				Name:        "source_type",
+				Type:        proto.ColumnType_STRING,
+				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
+				Hydrate:     getCustomResourceDefinitionResourceAdditionalData,
+			},
 		}),
 	}
+}
+
+type CustomResourceDefinition struct {
+	v1.CustomResourceDefinition
+	Path      string
+	StartLine int
+	EndLine   int
 }
 
 //// HYDRATE FUNCTIONS
@@ -43,6 +63,28 @@ func listK8sCustomResourceDefinitions(ctx context.Context, d *plugin.QueryData, 
 	if err != nil {
 		plugin.Logger(ctx).Error("listK8sCustomResourceDefinitions", "connection_error", err)
 		return nil, err
+	}
+
+	// Check for manifest files
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "CustomResourceDefinition")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		crd := content.Data.(*v1.CustomResourceDefinition)
+
+		d.StreamListItem(ctx, CustomResourceDefinition{*crd, content.Path, content.StartLine, content.EndLine})
+
+		// Context can be cancelled due to manual cancellation or the limit has been hit
+		if d.RowsRemaining(ctx) == 0 {
+			return nil, nil
+		}
+	}
+
+	// Check for deployed resources
+	if clientset == nil {
+		return nil, nil
 	}
 
 	input := metav1.ListOptions{
@@ -76,7 +118,7 @@ func listK8sCustomResourceDefinitions(ctx context.Context, d *plugin.QueryData, 
 		}
 
 		for _, crd := range response.Items {
-			d.StreamListItem(ctx, crd)
+			d.StreamListItem(ctx, CustomResourceDefinition{crd, "", 0, 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -102,11 +144,54 @@ func getK8sCustomResourceDefinition(ctx context.Context, d *plugin.QueryData, _ 
 		return nil, err
 	}
 
+	// Get the manifest resource
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "CustomResourceDefinition")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		crd := content.Data.(*v1.CustomResourceDefinition)
+
+		if crd.Name == name {
+			return CustomResourceDefinition{*crd, content.Path, content.StartLine, content.EndLine}, nil
+		}
+	}
+
+	// Get the deployed resource
+	if clientset == nil {
+		return nil, nil
+	}
+
 	response, err := clientset.ApiextensionsV1().CustomResourceDefinitions().Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
 		plugin.Logger(ctx).Error("getK8sCustomResourceDefinition", "api_err", err)
 		return nil, err
 	}
 
-	return response, nil
+	return CustomResourceDefinition{*response, "", 0, 0}, nil
+}
+
+func getCustomResourceDefinitionResourceAdditionalData(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+	obj := h.Item.(CustomResourceDefinition)
+
+	data := map[string]interface{}{
+		"SourceType": "deployed",
+	}
+
+	// Set the source_type as manifest, if path is not empty
+	// also, set the context_name as nil
+	if obj.Path != "" {
+		data["SourceType"] = "manifest"
+		return data, nil
+	}
+
+	// Else, set the current context as context_name
+	currentContext, err := getKubectlContext(ctx, d, nil)
+	if err != nil {
+		return data, nil
+	}
+	data["ContextName"] = currentContext.(string)
+
+	return data, nil
 }

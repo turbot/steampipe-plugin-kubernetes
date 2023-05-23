@@ -36,3 +36,19 @@ order by
   namespace,
   last_timestamp;
 ```
+
+### List manifest resources
+
+```sql
+select
+  namespace,
+  type,
+  reason,
+  concat(involved_object ->> 'kind', '/', involved_object ->> 'name') as object,
+  message,
+  path
+from
+  kubernetes_event
+where
+  path is not null;
+```

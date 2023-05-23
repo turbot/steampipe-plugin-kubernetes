@@ -29,7 +29,24 @@ select
 from
   kubernetes_cronjob,
   jsonb_array_elements(job_template -> 'spec' -> 'template' -> 'spec' -> 'containers') as elems
-group by 
-  name, 
+group by
+  name,
   namespace;
+```
+
+### List manifest resources
+
+```sql
+select
+  name,
+  namespace,
+  uid,
+  failed_jobs_history_limit,
+  schedule,
+  suspend,
+  path
+from
+  kubernetes_cronjob
+where
+  path is not null;
 ```

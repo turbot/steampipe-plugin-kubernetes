@@ -20,3 +20,22 @@ order by
   namespace,
   name;
 ```
+
+### List manifest resources
+
+```sql
+select
+  name,
+  namespace,
+  data.key,
+  data.value,
+  path
+from
+  kubernetes_config_map,
+  jsonb_each(data) as data
+where
+  path is not null
+order by
+  namespace,
+  name;
+```

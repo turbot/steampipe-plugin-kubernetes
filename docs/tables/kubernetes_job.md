@@ -69,7 +69,28 @@ select
 from
   kubernetes_job,
   jsonb_array_elements(template -> 'spec' -> 'containers') as elems
-group by 
-  name, 
+group by
+  name,
   namespace;
+```
+
+### List manifest resources
+
+```sql
+select
+  name,
+  namespace,
+  active,
+  succeeded,
+  failed,
+  completions,
+  parallelism,
+  selector,
+  labels,
+  annotations,
+  path
+from
+  kubernetes_job
+where
+  path is not null;
 ```

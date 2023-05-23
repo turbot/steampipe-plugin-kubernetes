@@ -95,6 +95,18 @@ func tableKubernetesReplicaSet(ctx context.Context) *plugin.Table {
 				Description: "Represents the latest available observations of a replica set's current state.",
 				Transform:   transform.FromField("Status.Conditions"),
 			},
+			{
+				Name:        "context_name",
+				Type:        proto.ColumnType_STRING,
+				Description: "Kubectl config context name.",
+				Hydrate:     getReplicaSetResourceAdditionalData,
+			},
+			{
+				Name:        "source_type",
+				Type:        proto.ColumnType_STRING,
+				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
+				Hydrate:     getReplicaSetResourceAdditionalData,
+			},
 
 			//// Steampipe Standard Columns
 			{
@@ -113,15 +125,46 @@ func tableKubernetesReplicaSet(ctx context.Context) *plugin.Table {
 	}
 }
 
+type ReplicaSet struct {
+	v1.ReplicaSet
+	Path      string
+	StartLine int
+	EndLine   int
+}
+
 //// HYDRATE FUNCTIONS
 
 func listK8sReplicaSets(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
 	logger := plugin.Logger(ctx)
 	logger.Trace("listK8sReplicaSets")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
+	}
+
+	// Check for manifest files
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "ReplicaSet")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		replicaSet := content.Data.(*v1.ReplicaSet)
+
+		d.StreamListItem(ctx, ReplicaSet{*replicaSet, content.Path, content.StartLine, content.EndLine})
+
+		// Context can be cancelled due to manual cancellation or the limit has been hit
+		if d.RowsRemaining(ctx) == 0 {
+			return nil, nil
+		}
+	}
+
+	// Check for deployed resources
+	if clientset == nil {
+		return nil, nil
 	}
 
 	input := metav1.ListOptions{
@@ -162,7 +205,7 @@ func listK8sReplicaSets(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 		}
 
 		for _, item := range response.Items {
-			d.StreamListItem(ctx, item)
+			d.StreamListItem(ctx, ReplicaSet{item, "", 0, 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -178,6 +221,8 @@ func getK8sReplicaSet(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 	logger := plugin.Logger(ctx)
 	logger.Trace("getK8sReplicaSet")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
@@ -191,17 +236,60 @@ func getK8sReplicaSet(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 		return nil, nil
 	}
 
+	// Get the manifest resource
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "ReplicaSet")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		replicaSet := content.Data.(*v1.ReplicaSet)
+
+		if replicaSet.Name == name && replicaSet.Namespace == namespace {
+			return ReplicaSet{*replicaSet, content.Path, content.StartLine, content.EndLine}, nil
+		}
+	}
+
+	// Get the deployed resource
+	if clientset == nil {
+		return nil, nil
+	}
+
 	rs, err := clientset.AppsV1().ReplicaSets(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
 		return nil, err
 	}
 
-	return *rs, nil
+	return ReplicaSet{*rs, "", 0, 0}, nil
+}
+
+func getReplicaSetResourceAdditionalData(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+	obj := h.Item.(ReplicaSet)
+
+	data := map[string]interface{}{
+		"SourceType": "deployed",
+	}
+
+	// Set the source_type as manifest, if path is not empty
+	// also, set the context_name as nil
+	if obj.Path != "" {
+		data["SourceType"] = "manifest"
+		return data, nil
+	}
+
+	// Else, set the current context as context_name
+	currentContext, err := getKubectlContext(ctx, d, nil)
+	if err != nil {
+		return data, nil
+	}
+	data["ContextName"] = currentContext.(string)
+
+	return data, nil
 }
 
 //// TRANSFORM FUNCTIONS
 
 func transformReplicaSetTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	obj := d.HydrateItem.(v1.ReplicaSet)
+	obj := d.HydrateItem.(ReplicaSet)
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }

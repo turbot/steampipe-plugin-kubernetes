@@ -125,6 +125,18 @@ func tableKubernetesDaemonset(ctx context.Context) *plugin.Table {
 				Description: "Represents the latest available observations of a DaemonSet's current state.",
 				Transform:   transform.FromField("Status.Conditions"),
 			},
+			{
+				Name:        "context_name",
+				Type:        proto.ColumnType_STRING,
+				Description: "Kubectl config context name.",
+				Hydrate:     getDaemonSetResourceAdditionalData,
+			},
+			{
+				Name:        "source_type",
+				Type:        proto.ColumnType_STRING,
+				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
+				Hydrate:     getDaemonSetResourceAdditionalData,
+			},
 
 			//// Steampipe Standard Columns
 			{
@@ -143,15 +155,46 @@ func tableKubernetesDaemonset(ctx context.Context) *plugin.Table {
 	}
 }
 
+type DaemonSet struct {
+	v1.DaemonSet
+	Path      string
+	StartLine int
+	EndLine   int
+}
+
 //// HYDRATE FUNCTIONS
 
 func listK8sDaemonSets(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
 	logger := plugin.Logger(ctx)
 	logger.Trace("listK8sDaemonSets")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
+	}
+
+	// Check for manifest files
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "DaemonSet")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		daemonSet := content.Data.(*v1.DaemonSet)
+
+		d.StreamListItem(ctx, DaemonSet{*daemonSet, content.Path, content.StartLine, content.EndLine})
+
+		// Context can be cancelled due to manual cancellation or the limit has been hit
+		if d.RowsRemaining(ctx) == 0 {
+			return nil, nil
+		}
+	}
+
+	// Check for deployed resources
+	if clientset == nil {
+		return nil, nil
 	}
 
 	input := metav1.ListOptions{
@@ -192,7 +235,7 @@ func listK8sDaemonSets(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 		}
 
 		for _, daemonSet := range response.Items {
-			d.StreamListItem(ctx, daemonSet)
+			d.StreamListItem(ctx, DaemonSet{daemonSet, "", 0, 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -208,6 +251,8 @@ func getK8sDaemonSet(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 	logger := plugin.Logger(ctx)
 	logger.Trace("getK8sDaemonSet")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
@@ -221,17 +266,60 @@ func getK8sDaemonSet(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 		return nil, nil
 	}
 
+	// Get the manifest resource
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "DaemonSet")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		daemonSet := content.Data.(*v1.DaemonSet)
+
+		if daemonSet.Name == name && daemonSet.Namespace == namespace {
+			return DaemonSet{*daemonSet, content.Path, content.StartLine, content.EndLine}, nil
+		}
+	}
+
+	// Get the deployed resource
+	if clientset == nil {
+		return nil, nil
+	}
+
 	daemonSet, err := clientset.AppsV1().DaemonSets(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
 		return nil, err
 	}
 
-	return *daemonSet, nil
+	return DaemonSet{*daemonSet, "", 0, 0}, nil
+}
+
+func getDaemonSetResourceAdditionalData(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+	obj := h.Item.(DaemonSet)
+
+	data := map[string]interface{}{
+		"SourceType": "deployed",
+	}
+
+	// Set the source_type as manifest, if path is not empty
+	// also, set the context_name as nil
+	if obj.Path != "" {
+		data["SourceType"] = "manifest"
+		return data, nil
+	}
+
+	// Else, set the current context as context_name
+	currentContext, err := getKubectlContext(ctx, d, nil)
+	if err != nil {
+		return data, nil
+	}
+	data["ContextName"] = currentContext.(string)
+
+	return data, nil
 }
 
 //// TRANSFORM FUNCTIONS
 
 func transformDaemonSetTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	obj := d.HydrateItem.(v1.DaemonSet)
+	obj := d.HydrateItem.(DaemonSet)
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }

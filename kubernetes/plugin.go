@@ -83,12 +83,13 @@ func pluginTableDefinitions(ctx context.Context, d *plugin.TableMapData) (map[st
 	crds, err := listK8sDynamicCRDs(ctx, d.ConnectionCache, d.Connection)
 	if err != nil {
 		plugin.Logger(ctx).Error("listK8sDynamicCRDs", "crds", err)
-		return nil, err
+		return tables, nil
 	}
 
 	for _, crd := range crds {
 		ctx = context.WithValue(ctx, contextKey("CRDName"), crd.Name)
 		ctx = context.WithValue(ctx, contextKey("CustomResourceName"), crd.Spec.Names.Plural)
+		ctx = context.WithValue(ctx, contextKey("CustomResourceNameSingular"), crd.Spec.Names.Singular)
 		ctx = context.WithValue(ctx, contextKey("GroupName"), crd.Spec.Group)
 		for _, version := range crd.Spec.Versions {
 			if version.Served {
@@ -121,6 +122,13 @@ func pluginTableDefinitions(ctx context.Context, d *plugin.TableMapData) (map[st
 }
 
 func listK8sDynamicCRDs(ctx context.Context, cn *connection.ConnectionCache, c *plugin.Connection) ([]v1.CustomResourceDefinition, error) {
+	// get the crds from config if any
+	kubernetesConfig := GetConfig(c)
+	filterCrds := kubernetesConfig.CustomResourceTables
+	if len(filterCrds) == 0 {
+		return nil, nil
+	}
+
 	clientset, err := GetNewClientCRDRaw(ctx, cn, c)
 	if err != nil {
 		plugin.Logger(ctx).Error("listK8sDynamicCRDs", "GetNewClientCRDRaw", err)
@@ -129,49 +137,78 @@ func listK8sDynamicCRDs(ctx context.Context, cn *connection.ConnectionCache, c *
 		return nil, nil
 	}
 
-	input := metav1.ListOptions{
-		Limit:          500,
-		TimeoutSeconds: types.Int64(5),
-	}
-
 	crds := []v1.CustomResourceDefinition{}
 	temp_crd_names := []string{}
 
-	// get the crds from config if any
-	kubernetesConfig := GetConfig(c)
-	filterCrds := kubernetesConfig.CustomResourceTables
-	if len(filterCrds) == 0 {
-		return nil, nil
+	// Build the queryData
+	queryData := &plugin.QueryData{
+		Connection:      c,
+		ConnectionCache: cn,
 	}
 
-	pageLeft := true
-	for pageLeft {
-		response, err := clientset.ApiextensionsV1().CustomResourceDefinitions().List(ctx, input)
-		if err != nil {
-			// At the plugin load time, if the config is not setup properly, return nil
-			if strings.Contains(err.Error(), "/apis/apiextensions.k8s.io/v1/customresourcedefinitions?limit=500") {
-				return nil, nil
+	// Parse the manifest file content based on the kind, e.g. CustomResourceDefinition
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, queryData, "CustomResourceDefinition")
+	if err != nil {
+		return nil, err
+	}
+
+	// Match the CRDs based on the pattern/list of custom resource name provided in the config.
+	// Return only those CRDs which are matched with the pattern provided.
+	// Also, skip the duplicate CRDs to avoid the conflicts.
+	for _, pattern := range filterCrds {
+		for _, item := range parsedContents {
+			crd := item.Data.(*v1.CustomResourceDefinition)
+
+			if helpers.StringSliceContains(temp_crd_names, crd.Name) {
+				continue
+			} else if ok, _ := path.Match(pattern, crd.Name); ok {
+				crds = append(crds, *crd)
+				temp_crd_names = append(temp_crd_names, crd.Name)
+			} else if ok, _ := path.Match(pattern, crd.Spec.Names.Singular); ok {
+				crds = append(crds, *crd)
+				temp_crd_names = append(temp_crd_names, crd.Name)
 			}
-			plugin.Logger(ctx).Error("listK8sDynamicCRDs", "list_err", err)
-			return nil, err
+		}
+	}
+
+	// clientset provides the kubernetes API client to list the deployed resources.
+	// If the source_type is set to "manifest" in the config file, clientset value will be nil, since
+	// the deployed resources are not expected when the source_type is "manifest".
+	if clientset != nil {
+		input := metav1.ListOptions{
+			Limit:          500,
+			TimeoutSeconds: types.Int64(5),
 		}
 
-		if response.GetContinue() != "" {
-			input.Continue = response.Continue
-		} else {
-			pageLeft = false
-		}
+		pageLeft := true
+		for pageLeft {
+			response, err := clientset.ApiextensionsV1().CustomResourceDefinitions().List(ctx, input)
+			if err != nil {
+				// At the plugin load time, if the config is not setup properly, return nil
+				if strings.Contains(err.Error(), "/apis/apiextensions.k8s.io/v1/customresourcedefinitions?limit=500") {
+					return nil, nil
+				}
+				plugin.Logger(ctx).Error("listK8sDynamicCRDs", "list_err", err)
+				return nil, err
+			}
 
-		for _, pattern := range filterCrds {
-			for _, item := range response.Items {
-				if helpers.StringSliceContains(temp_crd_names, item.Name) {
-					continue
-				} else if ok, _ := path.Match(pattern, item.Name); ok {
-					crds = append(crds, item)
-					temp_crd_names = append(temp_crd_names, item.Name)
-				} else if ok, _ := path.Match(pattern, item.Spec.Names.Singular); ok {
-					crds = append(crds, item)
-					temp_crd_names = append(temp_crd_names, item.Name)
+			if response.GetContinue() != "" {
+				input.Continue = response.Continue
+			} else {
+				pageLeft = false
+			}
+
+			for _, pattern := range filterCrds {
+				for _, item := range response.Items {
+					if helpers.StringSliceContains(temp_crd_names, item.Name) {
+						continue
+					} else if ok, _ := path.Match(pattern, item.Name); ok {
+						crds = append(crds, item)
+						temp_crd_names = append(temp_crd_names, item.Name)
+					} else if ok, _ := path.Match(pattern, item.Spec.Names.Singular); ok {
+						crds = append(crds, item)
+						temp_crd_names = append(temp_crd_names, item.Name)
+					}
 				}
 			}
 		}

@@ -42,7 +42,7 @@ func tableKubernetesDeployment(ctx context.Context) *plugin.Table {
 			{
 				Name:        "selector",
 				Type:        proto.ColumnType_JSON,
-				Description: " Label selector for pods. A label selector is a label query over a set of resources.",
+				Description: "Label selector for pods. A label selector is a label query over a set of resources.",
 				Transform:   transform.FromField("Spec.Selector"),
 			},
 			{
@@ -131,6 +131,18 @@ func tableKubernetesDeployment(ctx context.Context) *plugin.Table {
 				Description: "Count of hash collisions for the Deployment. The Deployment controller uses this field as a collision avoidance mechanism when it needs to create the name for the newest ReplicaSet.",
 				Transform:   transform.FromField("Status.CollisionCount"),
 			},
+			{
+				Name:        "context_name",
+				Type:        proto.ColumnType_STRING,
+				Description: "Kubectl config context name.",
+				Hydrate:     getDeploymentResourceAdditionalData,
+			},
+			{
+				Name:        "source_type",
+				Type:        proto.ColumnType_STRING,
+				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
+				Hydrate:     getDeploymentResourceAdditionalData,
+			},
 
 			//// Steampipe Standard Columns
 			{
@@ -149,15 +161,46 @@ func tableKubernetesDeployment(ctx context.Context) *plugin.Table {
 	}
 }
 
+type Deployment struct {
+	v1.Deployment
+	Path      string
+	StartLine int
+	EndLine   int
+}
+
 //// HYDRATE FUNCTIONS
 
 func listK8sDeployments(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
 	logger := plugin.Logger(ctx)
 	logger.Trace("listK8sDeployments")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
+	}
+
+	// Check for manifest files
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "Deployment")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		deployment := content.Data.(*v1.Deployment)
+
+		d.StreamListItem(ctx, Deployment{*deployment, content.Path, content.StartLine, content.EndLine})
+
+		// Context can be cancelled due to manual cancellation or the limit has been hit
+		if d.RowsRemaining(ctx) == 0 {
+			return nil, nil
+		}
+	}
+
+	// Check for deployed resources
+	if clientset == nil {
+		return nil, nil
 	}
 
 	input := metav1.ListOptions{
@@ -199,7 +242,7 @@ func listK8sDeployments(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 		}
 
 		for _, item := range response.Items {
-			d.StreamListItem(ctx, item)
+			d.StreamListItem(ctx, Deployment{item, "", 0, 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -215,6 +258,8 @@ func getK8sDeployment(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 	logger := plugin.Logger(ctx)
 	logger.Trace("getK8sDeployment")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
@@ -228,17 +273,60 @@ func getK8sDeployment(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 		return nil, nil
 	}
 
+	// Get the manifest resource
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "Deployment")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		deployment := content.Data.(*v1.Deployment)
+
+		if deployment.Name == name && deployment.Namespace == namespace {
+			return Deployment{*deployment, content.Path, content.StartLine, content.EndLine}, nil
+		}
+	}
+
+	// Get the deployed resource
+	if clientset == nil {
+		return nil, nil
+	}
+
 	deployment, err := clientset.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
 		return nil, err
 	}
 
-	return *deployment, nil
+	return Deployment{*deployment, "", 0, 0}, nil
+}
+
+func getDeploymentResourceAdditionalData(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+	obj := h.Item.(Deployment)
+
+	data := map[string]interface{}{
+		"SourceType": "deployed",
+	}
+
+	// Set the source_type as manifest, if path is not empty
+	// also, set the context_name as nil
+	if obj.Path != "" {
+		data["SourceType"] = "manifest"
+		return data, nil
+	}
+
+	// Else, set the current context as context_name
+	currentContext, err := getKubectlContext(ctx, d, nil)
+	if err != nil {
+		return data, nil
+	}
+	data["ContextName"] = currentContext.(string)
+
+	return data, nil
 }
 
 //// TRANSFORM FUNCTIONS
 
 func transformDeploymentTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	obj := d.HydrateItem.(v1.Deployment)
+	obj := d.HydrateItem.(Deployment)
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }

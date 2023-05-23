@@ -33,3 +33,21 @@ from
 where
   update_strategy ->> 'type' = 'OnDelete';
 ```
+
+### List manifest resources
+
+```sql
+select
+  name,
+  namespace,
+  service_name,
+  replicas,
+  path
+from
+  kubernetes_stateful_set
+where
+  path is not null
+order by
+  namespace,
+  name;
+```

@@ -47,3 +47,19 @@ from
 where
   volume_binding_mode = 'Immediate';
 ```
+
+### List manifest resources
+
+```sql
+select
+  name,
+  provisioner,
+  reclaim_policy,
+  parameters,
+  mount_options,
+  path
+from
+  kubernetes_storage_class
+where
+  path is not null;
+```
