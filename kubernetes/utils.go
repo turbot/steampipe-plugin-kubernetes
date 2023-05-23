@@ -935,9 +935,26 @@ func getHelmChartOverrideValues(ctx context.Context, d *plugin.QueryData, chart 
 	values := chart.Chart.Values
 
 	// Check for value override files configured in the connection config
-	var valueFiles []string
+	var matches, valueFiles []string
 	if helmConfig.HelmValueOverride != nil {
-		valueFiles = helmConfig.HelmValueOverride
+		for _, i := range helmConfig.HelmValueOverride {
+			// List the files in the given source directory
+			files, err := d.GetSourceFiles(i)
+			if err != nil {
+				return nil, err
+			}
+			matches = append(matches, files...)
+		}
+
+		// Sanitize the matches to ignore the directories
+		for _, i := range matches {
+
+			// Ignore directories
+			if filehelpers.DirectoryExists(i) {
+				continue
+			}
+			valueFiles = append(valueFiles, i)
+		}
 	}
 
 	// If any value override files provided in the config, use those value to render the templates
