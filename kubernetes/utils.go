@@ -13,6 +13,7 @@ import (
 	goYaml "gopkg.in/yaml.v3"
 
 	filehelpers "github.com/turbot/go-kit/files"
+	"github.com/turbot/go-kit/helpers"
 	apiextension "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -45,6 +46,7 @@ type SourceType string
 
 const (
 	Deployed SourceType = "deployed"
+	Helm     SourceType = "helm"
 	Manifest SourceType = "manifest"
 	All      SourceType = "all"
 )
@@ -52,7 +54,7 @@ const (
 // Validate the source type.
 func (sourceType SourceType) IsValid() error {
 	switch sourceType {
-	case Deployed, Manifest, All:
+	case Deployed, Helm, Manifest, All:
 		return nil
 	}
 	return fmt.Errorf("invalid source type: %s", sourceType)
@@ -308,7 +310,6 @@ func GetNewClientDynamic(ctx context.Context, d *plugin.QueryData) (dynamic.Inte
 	d.ConnectionManager.Cache.Set(serviceCacheKey, clientset)
 
 	return clientset, err
-
 }
 
 func inClusterConfigCRDDynamic(ctx context.Context) (dynamic.Interface, error) {
@@ -353,11 +354,13 @@ func getK8Config(ctx context.Context, d *plugin.QueryData) (clientcmd.ClientConf
 		}
 	}
 
-	// By default source type is set to "all", which indicates querying the table will return both deployed and manifest resources.
-	// If the source type is explicitly set to "manifest", the table will only return the manifest resources.
+	// By default source type is set to "all", which indicates querying the table will return both deployed, helm and manifest resources.
+	// If the source type is explicitly set, other plugin will list resources based on that. For example:
+	// If set to "manifest", the table will only return the manifest resources.
+	// If set to "helm", the table will return the resources after rendering the templates defined in the configured chart.
 	// Similarly, setting the value as "deployed" will return all the deployed resources.
-	if source.String() == "manifest" {
-		plugin.Logger(ctx).Debug("getK8Config", "The source_type set to 'manifest'. Returning nil for API server client.", "connection", d.Connection.Name)
+	if source.String() == "manifest" || source.String() == "helm" {
+		plugin.Logger(ctx).Debug("getK8Config", "Returning nil for API server client.", "Source type", source.String(), "connection", d.Connection.Name)
 		return nil, nil
 	}
 
@@ -435,11 +438,13 @@ func getK8ConfigRaw(ctx context.Context, cc *connection.ConnectionCache, c *plug
 		}
 	}
 
-	// By default source type is set to "all", which indicates querying the table will return both deployed and manifest resources.
-	// If the source type is explicitly set to "manifest", the table will only return the manifest resources.
+	// By default source type is set to "all", which indicates querying the table will return all the deployed, helm and manifest resources.
+	// If the source type is explicitly set, other plugin will list resources based on that. For example:
+	// If set to "manifest", the table will only return the manifest resources.
+	// If set to "helm", the table will return the resources after rendering the templates defined in the configured chart.
 	// Similarly, setting the value as "deployed" will return all the deployed resources.
-	if source.String() == "manifest" {
-		plugin.Logger(ctx).Debug("getK8ConfigRaw", "The source_type set to 'manifest'. Returning nil for API server client.", "connection", c.Name)
+	if source.String() == "manifest" || source.String() == "helm" {
+		plugin.Logger(ctx).Debug("getK8ConfigRaw", "Returning nil for API server client.", "Source type", source.String(), "connection", c.Name)
 		return nil, nil
 	}
 
@@ -695,7 +700,7 @@ var parsedManifestFileContentCached = plugin.HydrateFunc(parsedManifestFileConte
 // be run only once per connection. Do not call this directly, use
 // getParsedManifestFileContent instead.
 func parsedManifestFileContentUncached(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (any, error) {
-	plugin.Logger(ctx).Debug("parsedManifestFileContentUncached", "Parsing file content...", "connection", d.Connection.Name)
+	plugin.Logger(ctx).Debug("parsedManifestFileContentUncached", "Parsing file content", "connection", d.Connection.Name)
 
 	// Read the config
 	resolvedPaths, err := resolveManifestFilePaths(ctx, d)
@@ -782,9 +787,9 @@ func resolveManifestFilePaths(ctx context.Context, d *plugin.QueryData) ([]strin
 	// Read the config
 	k8sConfig := GetConfig(d.Connection)
 
-	// Return nil, if the source_type is set to "deployed"
+	// Return nil, if the source_type is set other than "manifest", or "all"
 	if k8sConfig.SourceType != nil &&
-		*k8sConfig.SourceType == "deployed" {
+		!helpers.StringSliceContains([]string{"all", "manifest"}, *k8sConfig.SourceType) {
 		return nil, nil
 	}
 
@@ -833,7 +838,11 @@ func getParsedHelmChart(ctx context.Context, d *plugin.QueryData) (*parsedHelmCh
 	if err != nil {
 		return nil, err
 	}
-	return conn.(*parsedHelmChart), nil
+
+	if conn != nil {
+		return conn.(*parsedHelmChart), nil
+	}
+	return nil, nil
 }
 
 // Cached form of the parsed Helm chart.
@@ -846,12 +855,25 @@ func parsedHelmChartUncached(ctx context.Context, d *plugin.QueryData, _ *plugin
 	// Read the config
 	helmConfig := GetConfig(d.Connection)
 
-	chartDir := helmConfig.HelmChartDir
+	// Return nil, if the source_type is set to other than "all" or "helm"
+	if helmConfig.SourceType != nil &&
+		!helpers.StringSliceContains([]string{"all", "helm"}, *helmConfig.SourceType) {
+		return nil, nil
+	}
+
+	// Return error if source_tpe arg is explicitly set to "helm" in the config, but
+	// helm_chart_dir arg is not set.
+	if helmConfig.SourceType != nil &&
+		*helmConfig.SourceType == "helm" &&
+		helmConfig.HelmChartDir == nil {
+		return nil, errors.New("helm_chart_dir must be set in the config while the source_type is 'helm'")
+	}
 
 	// Return empty parsedHelmChart object if no Helm chart directory path provided in the config
+	chartDir := helmConfig.HelmChartDir
 	if chartDir == nil {
 		plugin.Logger(ctx).Debug("parsedHelmChartUncached", "helm_chart_dir not configured in the config", "connection", d.Connection.Name)
-		return &parsedHelmChart{}, nil
+		return nil, nil
 	}
 	plugin.Logger(ctx).Debug("parsedHelmChartUncached", "Parsing Helm chart", chartDir, "connection", d.Connection.Name)
 
@@ -894,7 +916,7 @@ func parsedHelmRenderedTemplatesUncached(ctx context.Context, d *plugin.QueryDat
 	}
 
 	// Return nil, if the config doesn't have any chart path configured
-	if chart.Chart == nil {
+	if chart == nil {
 		plugin.Logger(ctx).Debug("parsedHelmRenderedTemplatesUncached", "no chart configuration found", "connection", d.Connection.Name)
 		return nil, nil
 	}
@@ -981,7 +1003,7 @@ func getHelmChartOverrideValues(ctx context.Context, d *plugin.QueryData, chart 
 
 // Get the parsed contents of the given files.
 func getRenderedHelmTemplateContent(ctx context.Context, d *plugin.QueryData) ([]parsedContent, error) {
-	conn, err := RenderedHelmTemplateContentCached(ctx, d, nil)
+	conn, err := renderedHelmTemplateContentCached(ctx, d, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -989,14 +1011,12 @@ func getRenderedHelmTemplateContent(ctx context.Context, d *plugin.QueryData) ([
 }
 
 // Cached form of the parsed file content.
-var RenderedHelmTemplateContentCached = plugin.HydrateFunc(RenderedHelmTemplateContentUncached).Memoize()
+var renderedHelmTemplateContentCached = plugin.HydrateFunc(renderedHelmTemplateContentUncached).Memoize()
 
-// RenderedHelmTemplateContentUncached is the actual implementation of getRenderedHelmTemplateContent, which should
+// renderedHelmTemplateContentUncached is the actual implementation of getRenderedHelmTemplateContent, which should
 // be run only once per connection. Do not call this directly, use
 // getRenderedHelmTemplateContent instead.
-func RenderedHelmTemplateContentUncached(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (any, error) {
-	plugin.Logger(ctx).Debug("RenderedHelmTemplateContentUncached", "Parsing file content...", "connection", d.Connection.Name)
-
+func renderedHelmTemplateContentUncached(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (any, error) {
 	// Read the config
 	renderedTemplates, err := getHelmRenderedTemplates(ctx, d, nil)
 	if err != nil {
@@ -1009,7 +1029,7 @@ func RenderedHelmTemplateContentUncached(ctx context.Context, d *plugin.QueryDat
 		obj := &unstructured.Unstructured{}
 		err = yaml.Unmarshal([]byte(template), obj)
 		if err != nil {
-			plugin.Logger(ctx).Error("RenderedHelmTemplateContentUncached", "unmarshal_error", err)
+			plugin.Logger(ctx).Error("renderedHelmTemplateContentUncached", "unmarshal_error", err)
 			return nil, err
 		}
 
