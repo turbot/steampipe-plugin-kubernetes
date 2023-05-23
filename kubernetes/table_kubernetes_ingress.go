@@ -54,13 +54,12 @@ func tableKubernetesIngress(ctx context.Context) *plugin.Table {
 				Name:        "context_name",
 				Type:        proto.ColumnType_STRING,
 				Description: "Kubectl config context name.",
-				Hydrate:     getIngressResourceAdditionalData,
+				Hydrate:     getIngressResourceContext,
 			},
 			{
 				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Hydrate:     getIngressResourceAdditionalData,
 			},
 
 			//// IngressStatus columns
@@ -90,9 +89,7 @@ func tableKubernetesIngress(ctx context.Context) *plugin.Table {
 
 type Ingress struct {
 	v1.Ingress
-	Path      string
-	StartLine int
-	EndLine   int
+	parsedContent
 }
 
 //// HYDRATE FUNCTIONS
@@ -117,7 +114,7 @@ func listK8sIngresses(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 	for _, content := range parsedContents {
 		ingress := content.Data.(*v1.Ingress)
 
-		d.StreamListItem(ctx, Ingress{*ingress, content.Path, content.StartLine, content.EndLine})
+		d.StreamListItem(ctx, Ingress{*ingress, content})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -168,7 +165,7 @@ func listK8sIngresses(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 		}
 
 		for _, ingress := range response.Items {
-			d.StreamListItem(ctx, Ingress{ingress, "", 0, 0})
+			d.StreamListItem(ctx, Ingress{ingress, parsedContent{SourceType: "deployed"}})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -209,7 +206,7 @@ func getK8sIngress(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDa
 		ingress := content.Data.(*v1.Ingress)
 
 		if ingress.Name == name && ingress.Namespace == namespace {
-			return Ingress{*ingress, content.Path, content.StartLine, content.EndLine}, nil
+			return Ingress{*ingress, content}, nil
 		}
 	}
 
@@ -223,20 +220,15 @@ func getK8sIngress(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDa
 		return nil, err
 	}
 
-	return Ingress{*ingress, "", 0, 0}, nil
+	return Ingress{*ingress, parsedContent{SourceType: "deployed"}}, nil
 }
 
-func getIngressResourceAdditionalData(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+func getIngressResourceContext(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 	obj := h.Item.(Ingress)
 
-	data := map[string]interface{}{
-		"SourceType": "deployed",
-	}
-
-	// Set the source_type as manifest, if path is not empty
-	// also, set the context_name as nil
+	// Set the context_name as nil
+	data := map[string]interface{}{}
 	if obj.Path != "" {
-		data["SourceType"] = "manifest"
 		return data, nil
 	}
 

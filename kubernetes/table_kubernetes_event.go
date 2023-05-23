@@ -97,7 +97,7 @@ func tableKubernetesEvent(ctx context.Context) *plugin.Table {
 				Description: "Data about the event series this event represents.",
 			},
 			{
-				Name:        "source_type",
+				Name:        "source",
 				Type:        proto.ColumnType_JSON,
 				Description: "The component reporting this event.",
 			},
@@ -105,13 +105,12 @@ func tableKubernetesEvent(ctx context.Context) *plugin.Table {
 				Name:        "context_name",
 				Type:        proto.ColumnType_STRING,
 				Description: "Kubectl config context name.",
-				Hydrate:     getEventResourceAdditionalData,
+				Hydrate:     getEventResourceContext,
 			},
 			{
-				Name:        "config_source",
+				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Hydrate:     getEventResourceAdditionalData,
 			},
 		}),
 	}
@@ -119,9 +118,7 @@ func tableKubernetesEvent(ctx context.Context) *plugin.Table {
 
 type Event struct {
 	v1.Event
-	Path      string
-	StartLine int
-	EndLine   int
+	parsedContent
 }
 
 //// HYDRATE FUNCTIONS
@@ -145,7 +142,7 @@ func listK8sEvents(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDa
 	for _, content := range parsedContents {
 		event := content.Data.(*v1.Event)
 
-		d.StreamListItem(ctx, Event{*event, content.Path, content.StartLine, content.EndLine})
+		d.StreamListItem(ctx, Event{*event, content})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -197,7 +194,7 @@ func listK8sEvents(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDa
 		}
 
 		for _, event := range response.Items {
-			d.StreamListItem(ctx, Event{event, "", 0, 0})
+			d.StreamListItem(ctx, Event{event, parsedContent{SourceType: "deployed"}})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -237,7 +234,7 @@ func getK8sEvent(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 		event := content.Data.(*v1.Event)
 
 		if event.Name == name && event.Namespace == namespace {
-			return Event{*event, content.Path, content.StartLine, content.EndLine}, nil
+			return Event{*event, content}, nil
 		}
 	}
 
@@ -252,20 +249,15 @@ func getK8sEvent(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 		return nil, err
 	}
 
-	return Event{*event, "", 0, 0}, nil
+	return Event{*event, parsedContent{SourceType: "deployed"}}, nil
 }
 
-func getEventResourceAdditionalData(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+func getEventResourceContext(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 	obj := h.Item.(Event)
 
-	data := map[string]interface{}{
-		"SourceType": "deployed",
-	}
-
-	// Set the source_type as manifest, if path is not empty
-	// also, set the context_name as nil
+	// Set the context_name as nil
+	data := map[string]interface{}{}
 	if obj.Path != "" {
-		data["SourceType"] = "manifest"
 		return data, nil
 	}
 

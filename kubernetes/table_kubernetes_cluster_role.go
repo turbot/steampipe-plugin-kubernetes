@@ -38,13 +38,12 @@ func tableKubernetesClusterRole(ctx context.Context) *plugin.Table {
 				Name:        "context_name",
 				Type:        proto.ColumnType_STRING,
 				Description: "Kubectl config context name.",
-				Hydrate:     getClusterRoleResourceAdditionalData,
+				Hydrate:     getClusterRoleResourceContext,
 			},
 			{
 				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Hydrate:     getClusterRoleResourceAdditionalData,
 			},
 
 			//// Steampipe Standard Columns
@@ -66,9 +65,7 @@ func tableKubernetesClusterRole(ctx context.Context) *plugin.Table {
 
 type ClusterRole struct {
 	v1.ClusterRole
-	Path      string
-	StartLine int
-	EndLine   int
+	parsedContent
 }
 
 //// HYDRATE FUNCTIONS
@@ -93,7 +90,7 @@ func listK8sClusterRoles(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 	for _, content := range parsedContents {
 		clusterRole := content.Data.(*v1.ClusterRole)
 
-		d.StreamListItem(ctx, ClusterRole{*clusterRole, content.Path, content.StartLine, content.EndLine})
+		d.StreamListItem(ctx, ClusterRole{*clusterRole, content})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -137,7 +134,7 @@ func listK8sClusterRoles(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 		}
 
 		for _, clusterRole := range response.Items {
-			d.StreamListItem(ctx, ClusterRole{clusterRole, "", 0, 0})
+			d.StreamListItem(ctx, ClusterRole{clusterRole, parsedContent{SourceType: "deployed"}})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -177,7 +174,7 @@ func getK8sClusterRole(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 		clusterRole := content.Data.(*v1.ClusterRole)
 
 		if clusterRole.Name == name {
-			return ClusterRole{*clusterRole, content.Path, content.StartLine, content.EndLine}, nil
+			return ClusterRole{*clusterRole, content}, nil
 		}
 	}
 
@@ -191,20 +188,15 @@ func getK8sClusterRole(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 		return nil, err
 	}
 
-	return ClusterRole{*clusterRole, "", 0, 0}, nil
+	return ClusterRole{*clusterRole, parsedContent{SourceType: "deployed"}}, nil
 }
 
-func getClusterRoleResourceAdditionalData(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+func getClusterRoleResourceContext(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 	obj := h.Item.(ClusterRole)
 
-	data := map[string]interface{}{
-		"SourceType": "deployed",
-	}
-
-	// Set the source_type as manifest, if path is not empty
-	// also, set the context_name as nil
+	// Set the context_name as nil
+	data := map[string]interface{}{}
 	if obj.Path != "" {
-		data["SourceType"] = "manifest"
 		return data, nil
 	}
 

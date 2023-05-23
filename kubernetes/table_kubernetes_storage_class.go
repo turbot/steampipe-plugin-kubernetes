@@ -65,13 +65,12 @@ func tableKubernetesStorageClass(ctx context.Context) *plugin.Table {
 				Name:        "context_name",
 				Type:        proto.ColumnType_STRING,
 				Description: "Kubectl config context name.",
-				Hydrate:     getStorageClassResourceAdditionalData,
+				Hydrate:     getStorageClassResourceContext,
 			},
 			{
 				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Hydrate:     getStorageClassResourceAdditionalData,
 			},
 
 			//// Steampipe Standard Columns
@@ -87,9 +86,7 @@ func tableKubernetesStorageClass(ctx context.Context) *plugin.Table {
 
 type StorageClass struct {
 	v1.StorageClass
-	Path      string
-	StartLine int
-	EndLine   int
+	parsedContent
 }
 
 //// HYDRATE FUNCTIONS
@@ -112,7 +109,7 @@ func listK8sStorageClasses(ctx context.Context, d *plugin.QueryData, _ *plugin.H
 	for _, content := range parsedContents {
 		storageClass := content.Data.(*v1.StorageClass)
 
-		d.StreamListItem(ctx, StorageClass{*storageClass, content.Path, content.StartLine, content.EndLine})
+		d.StreamListItem(ctx, StorageClass{*storageClass, content})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -160,7 +157,7 @@ func listK8sStorageClasses(ctx context.Context, d *plugin.QueryData, _ *plugin.H
 		}
 
 		for _, item := range response.Items {
-			d.StreamListItem(ctx, StorageClass{item, "", 0, 0})
+			d.StreamListItem(ctx, StorageClass{item, parsedContent{SourceType: "deployed"}})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -198,7 +195,7 @@ func getK8sStorageClass(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 		storageClass := content.Data.(*v1.StorageClass)
 
 		if storageClass.Name == name {
-			return StorageClass{*storageClass, content.Path, content.StartLine, content.EndLine}, nil
+			return StorageClass{*storageClass, content}, nil
 		}
 	}
 
@@ -213,22 +210,17 @@ func getK8sStorageClass(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 		return nil, err
 	}
 
-	return StorageClass{*rs, "", 0, 0}, nil
+	return StorageClass{*rs, parsedContent{SourceType: "deployed"}}, nil
 }
 
 //// TRANSFORM FUNCTIONS
 
-func getStorageClassResourceAdditionalData(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+func getStorageClassResourceContext(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 	obj := h.Item.(StorageClass)
 
-	data := map[string]interface{}{
-		"SourceType": "deployed",
-	}
-
-	// Set the source_type as manifest, if path is not empty
-	// also, set the context_name as nil
+	// Set the context_name as nil
+	data := map[string]interface{}{}
 	if obj.Path != "" {
-		data["SourceType"] = "manifest"
 		return data, nil
 	}
 

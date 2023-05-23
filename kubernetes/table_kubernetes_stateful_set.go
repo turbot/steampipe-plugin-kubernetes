@@ -120,13 +120,12 @@ func tableKubernetesStatefulSet(ctx context.Context) *plugin.Table {
 				Name:        "context_name",
 				Type:        proto.ColumnType_STRING,
 				Description: "Kubectl config context name.",
-				Hydrate:     getStatefulSetResourceAdditionalData,
+				Hydrate:     getStatefulSetResourceContext,
 			},
 			{
 				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Hydrate:     getStatefulSetResourceAdditionalData,
 			},
 
 			// Steampipe Standard Columns
@@ -148,9 +147,7 @@ func tableKubernetesStatefulSet(ctx context.Context) *plugin.Table {
 
 type StatefulSet struct {
 	v1.StatefulSet
-	Path      string
-	StartLine int
-	EndLine   int
+	parsedContent
 }
 
 //// HYDRATE FUNCTIONS
@@ -175,7 +172,7 @@ func listK8sStatefulSets(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 	for _, content := range parsedContents {
 		statefulSet := content.Data.(*v1.StatefulSet)
 
-		d.StreamListItem(ctx, StatefulSet{*statefulSet, content.Path, content.StartLine, content.EndLine})
+		d.StreamListItem(ctx, StatefulSet{*statefulSet, content})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -226,7 +223,7 @@ func listK8sStatefulSets(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 		}
 
 		for _, statefulSet := range response.Items {
-			d.StreamListItem(ctx, StatefulSet{statefulSet, "", 0, 0})
+			d.StreamListItem(ctx, StatefulSet{statefulSet, parsedContent{SourceType: "deployed"}})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -267,7 +264,7 @@ func getK8sStatefulSet(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 		statefulSet := content.Data.(*v1.StatefulSet)
 
 		if statefulSet.Name == name && statefulSet.Namespace == namespace {
-			return StatefulSet{*statefulSet, content.Path, content.StartLine, content.EndLine}, nil
+			return StatefulSet{*statefulSet, content}, nil
 		}
 	}
 
@@ -282,20 +279,15 @@ func getK8sStatefulSet(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 		return nil, err
 	}
 
-	return StatefulSet{*statefulSet, "", 0, 0}, nil
+	return StatefulSet{*statefulSet, parsedContent{SourceType: "deployed"}}, nil
 }
 
-func getStatefulSetResourceAdditionalData(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+func getStatefulSetResourceContext(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 	obj := h.Item.(StatefulSet)
 
-	data := map[string]interface{}{
-		"SourceType": "deployed",
-	}
-
-	// Set the source_type as manifest, if path is not empty
-	// also, set the context_name as nil
+	// Set the context_name as nil
+	data := map[string]interface{}{}
 	if obj.Path != "" {
-		data["SourceType"] = "manifest"
 		return data, nil
 	}
 
