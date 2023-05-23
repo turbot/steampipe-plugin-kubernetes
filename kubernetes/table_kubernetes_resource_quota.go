@@ -108,9 +108,7 @@ func listK8sResourceQuotas(ctx context.Context, d *plugin.QueryData, h *plugin.H
 		return nil, err
 	}
 
-	//
 	// Check for manifest files
-	//
 	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "ResourceQuota")
 	if err != nil {
 		return nil, err
@@ -127,9 +125,7 @@ func listK8sResourceQuotas(ctx context.Context, d *plugin.QueryData, h *plugin.H
 		}
 	}
 
-	//
 	// Check for deployed resources
-	//
 	if clientset == nil {
 		return nil, nil
 	}
@@ -202,9 +198,7 @@ func getK8sResourceQuota(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 		return nil, nil
 	}
 
-	//
 	// Get the manifest resource
-	//
 	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "ResourceQuota")
 	if err != nil {
 		return nil, err
@@ -218,9 +212,7 @@ func getK8sResourceQuota(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 		}
 	}
 
-	//
 	// Get the deployed resource
-	//
 	if clientset == nil {
 		return nil, nil
 	}

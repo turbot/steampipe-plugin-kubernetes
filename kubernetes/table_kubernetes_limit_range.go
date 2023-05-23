@@ -82,9 +82,7 @@ func listK8sLimitRanges(ctx context.Context, d *plugin.QueryData, h *plugin.Hydr
 		return nil, err
 	}
 
-	//
 	// Check for manifest files
-	//
 	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "LimitRange")
 	if err != nil {
 		return nil, err
@@ -101,9 +99,7 @@ func listK8sLimitRanges(ctx context.Context, d *plugin.QueryData, h *plugin.Hydr
 		}
 	}
 
-	//
 	// Check for deployed resources
-	//
 	if clientset == nil {
 		return nil, nil
 	}
@@ -176,9 +172,7 @@ func getK8sLimitRange(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 		return nil, nil
 	}
 
-	//
 	// Get the manifest resource
-	//
 	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "LimitRange")
 	if err != nil {
 		return nil, err
@@ -192,9 +186,7 @@ func getK8sLimitRange(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 		}
 	}
 
-	//
 	// Get the deployed resource
-	//
 	if clientset == nil {
 		return nil, nil
 	}

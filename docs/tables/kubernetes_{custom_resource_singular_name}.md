@@ -1,4 +1,4 @@
-# Table: kubernetes\_{custom_resource_singular_name}
+# Table: kubernetes_{custom_resource_singular_name}
 
 Query data from the custom resource called `kubernetes_{custom_resource_singular_name}`, e.g., `kubernetes_certificate`, `kubernetes_capacityrequest`. A table is automatically created to represent each custom resource.
 

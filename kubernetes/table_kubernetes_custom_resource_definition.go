@@ -65,9 +65,7 @@ func listK8sCustomResourceDefinitions(ctx context.Context, d *plugin.QueryData, 
 		return nil, err
 	}
 
-	//
 	// Check for manifest files
-	//
 	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "CustomResourceDefinition")
 	if err != nil {
 		return nil, err
@@ -84,9 +82,7 @@ func listK8sCustomResourceDefinitions(ctx context.Context, d *plugin.QueryData, 
 		}
 	}
 
-	//
 	// Check for deployed resources
-	//
 	if clientset == nil {
 		return nil, nil
 	}
@@ -148,9 +144,7 @@ func getK8sCustomResourceDefinition(ctx context.Context, d *plugin.QueryData, _ 
 		return nil, err
 	}
 
-	//
 	// Get the manifest resource
-	//
 	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "CustomResourceDefinition")
 	if err != nil {
 		return nil, err
@@ -164,9 +158,7 @@ func getK8sCustomResourceDefinition(ctx context.Context, d *plugin.QueryData, _ 
 		}
 	}
 
-	//
 	// Get the deployed resource
-	//
 	if clientset == nil {
 		return nil, nil
 	}

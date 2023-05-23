@@ -99,9 +99,7 @@ func listK8sSecrets(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateD
 		return nil, err
 	}
 
-	//
 	// Check for manifest files
-	//
 	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "Secret")
 	if err != nil {
 		return nil, err
@@ -118,9 +116,7 @@ func listK8sSecrets(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateD
 		}
 	}
 
-	//
 	// Check for deployed resources
-	//
 	if clientset == nil {
 		return nil, nil
 	}
@@ -198,9 +194,7 @@ func getK8sSecret(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 		return nil, nil
 	}
 
-	//
 	// Get the manifest resource
-	//
 	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "Secret")
 	if err != nil {
 		return nil, err
@@ -214,9 +208,7 @@ func getK8sSecret(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 		}
 	}
 
-	//
 	// Get the deployed resource
-	//
 	if clientset == nil {
 		return nil, nil
 	}

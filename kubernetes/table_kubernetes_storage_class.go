@@ -103,9 +103,7 @@ func listK8sStorageClasses(ctx context.Context, d *plugin.QueryData, _ *plugin.H
 		return nil, err
 	}
 
-	//
 	// Check for manifest files
-	//
 	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "StorageClass")
 	if err != nil {
 		return nil, err
@@ -122,9 +120,7 @@ func listK8sStorageClasses(ctx context.Context, d *plugin.QueryData, _ *plugin.H
 		}
 	}
 
-	//
 	// Check for deployed resources
-	//
 	if clientset == nil {
 		return nil, nil
 	}
@@ -192,9 +188,7 @@ func getK8sStorageClass(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 		return nil, nil
 	}
 
-	//
 	// Get the manifest resource
-	//
 	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "StorageClass")
 	if err != nil {
 		return nil, err
@@ -208,9 +202,7 @@ func getK8sStorageClass(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 		}
 	}
 
-	//
 	// Get the deployed resource
-	//
 	if clientset == nil {
 		return nil, nil
 	}

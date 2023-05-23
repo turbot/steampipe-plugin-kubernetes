@@ -80,9 +80,7 @@ func listK8sRoles(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 		return nil, err
 	}
 
-	//
 	// Check for manifest files
-	//
 	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "Role")
 	if err != nil {
 		return nil, err
@@ -99,9 +97,7 @@ func listK8sRoles(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 		}
 	}
 
-	//
 	// Check for deployed resources
-	//
 	if clientset == nil {
 		return nil, nil
 	}
@@ -175,9 +171,7 @@ func getK8sRole(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData)
 		return nil, nil
 	}
 
-	//
 	// Get the manifest resource
-	//
 	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "Role")
 	if err != nil {
 		return nil, err
@@ -191,9 +185,7 @@ func getK8sRole(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData)
 		}
 	}
 
-	//
 	// Get the deployed resource
-	//
 	if clientset == nil {
 		return nil, nil
 	}

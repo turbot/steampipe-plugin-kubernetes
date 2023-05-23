@@ -145,9 +145,7 @@ func listK8sReplicaControllers(ctx context.Context, d *plugin.QueryData, _ *plug
 		return nil, err
 	}
 
-	//
 	// Check for manifest files
-	//
 	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "ReplicationController")
 	if err != nil {
 		return nil, err
@@ -164,9 +162,7 @@ func listK8sReplicaControllers(ctx context.Context, d *plugin.QueryData, _ *plug
 		}
 	}
 
-	//
 	// Check for deployed resources
-	//
 	if clientset == nil {
 		return nil, nil
 	}
@@ -240,9 +236,7 @@ func getK8sReplicaController(ctx context.Context, d *plugin.QueryData, _ *plugin
 		return nil, nil
 	}
 
-	//
 	// Get the manifest resource
-	//
 	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "ReplicationController")
 	if err != nil {
 		return nil, err
@@ -256,9 +250,7 @@ func getK8sReplicaController(ctx context.Context, d *plugin.QueryData, _ *plugin
 		}
 	}
 
-	//
 	// Get the deployed resource
-	//
 	if clientset == nil {
 		return nil, nil
 	}

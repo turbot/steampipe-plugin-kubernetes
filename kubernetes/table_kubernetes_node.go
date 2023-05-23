@@ -179,9 +179,7 @@ func listK8sNodes(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 		return nil, err
 	}
 
-	//
 	// Check for manifest files
-	//
 	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "Node")
 	if err != nil {
 		return nil, err
@@ -198,9 +196,7 @@ func listK8sNodes(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 		}
 	}
 
-	//
 	// Check for deployed resources
-	//
 	if clientset == nil {
 		return nil, nil
 	}
@@ -267,9 +263,7 @@ func getK8sNode(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData)
 		return nil, nil
 	}
 
-	//
 	// Get the manifest resource
-	//
 	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "Node")
 	if err != nil {
 		return nil, err
@@ -283,9 +277,7 @@ func getK8sNode(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData)
 		}
 	}
 
-	//
 	// Get the deployed resource
-	//
 	if clientset == nil {
 		return nil, nil
 	}

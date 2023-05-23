@@ -90,9 +90,7 @@ func listK8sEnpointSlices(ctx context.Context, d *plugin.QueryData, _ *plugin.Hy
 		return nil, err
 	}
 
-	//
 	// Check for manifest files
-	//
 	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "EndpointSlice")
 	if err != nil {
 		return nil, err
@@ -109,9 +107,7 @@ func listK8sEnpointSlices(ctx context.Context, d *plugin.QueryData, _ *plugin.Hy
 		}
 	}
 
-	//
 	// Check for deployed resources
-	//
 	if clientset == nil {
 		return nil, nil
 	}
@@ -185,9 +181,7 @@ func getK8sEnpointSlice(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 		return nil, nil
 	}
 
-	//
 	// Get the manifest resource
-	//
 	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "EndpointSlice")
 	if err != nil {
 		return nil, err
@@ -201,9 +195,7 @@ func getK8sEnpointSlice(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 		}
 	}
 
-	//
 	// Get the deployed resource
-	//
 	if clientset == nil {
 		return nil, nil
 	}

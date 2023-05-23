@@ -80,9 +80,7 @@ func listK8sEnpoints(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 		return nil, err
 	}
 
-	//
 	// Check for manifest files
-	//
 	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "Endpoints")
 	if err != nil {
 		return nil, err
@@ -99,9 +97,7 @@ func listK8sEnpoints(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 		}
 	}
 
-	//
 	// Check for deployed resources
-	//
 	if clientset == nil {
 		return nil, nil
 	}
@@ -175,9 +171,7 @@ func getK8sEndpoint(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateD
 		return nil, nil
 	}
 
-	//
 	// Get the manifest resource
-	//
 	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "Endpoints")
 	if err != nil {
 		return nil, err
@@ -191,9 +185,7 @@ func getK8sEndpoint(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateD
 		}
 	}
 
-	//
 	// Get the deployed resource
-	//
 	if clientset == nil {
 		return nil, nil
 	}
