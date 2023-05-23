@@ -205,7 +205,7 @@ Kubernetes also supports creating [Custom Resource Definitions](https://kubernet
 
 Refer [Custom Resource](https://hub.steampipe.io/plugins/turbot/kubernetes/tables/kubernetes_%7Bcustom_resource_singular_name%7D#table-kubernetes_custom_resource_singular_name) table to get more information about how the plugin handles CRD and custom resources.
 
-### Supported Path Formats
+## Supported Manifest File Path Formats
 
 The `manifest_file_paths` config argument is flexible and can search for Kubernetes manifest files from several different sources, e.g., local directory paths, Git, S3.
 
@@ -233,7 +233,7 @@ connection "kubernetes" {
 
 **Note**: If any path matches on `*` without `.yml` or `.yaml`, all files (including non-Kubernetes manifest files) in the directory will be matched, which may cause errors if incompatible file types exist.
 
-#### Configuring Local File Paths
+### Configuring Local File Paths
 
 You can define a list of local directory paths to search for Kubernetes manifest files. Paths are resolved relative to the current working directory. For example:
 
@@ -254,7 +254,7 @@ connection "kubernetes" {
 }
 ```
 
-#### Configuring Remote Git Repository URLs
+### Configuring Remote Git Repository URLs
 
 You can also configure `manifest_file_paths` with any Git remote repository URLs, e.g., GitHub, BitBucket, GitLab. The plugin will then attempt to retrieve any Kubernetes manifest files from the remote repositories.
 
@@ -275,11 +275,11 @@ connection "kubernetes" {
 }
 ```
 
-#### Configuring S3 URLs
+### Configuring S3 URLs
 
 You can also query all Kubernetes manifest files stored inside an S3 bucket (public or private) using the bucket URL.
 
-##### Accessing a Private Bucket
+#### Accessing a Private Bucket
 
 In order to access your files in a private S3 bucket, you will need to configure your credentials. You can use your configured AWS profile from local `~/.aws/config`, or pass the credentials using the standard AWS environment variables, e.g., `AWS_PROFILE`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`.
 
@@ -327,7 +327,7 @@ If the bucket is in another AWS account, the bucket policy will need to grant ac
 }
 ```
 
-##### Accessing a Public Bucket
+#### Accessing a Public Bucket
 
 Public access granted to buckets and objects through ACLs and bucket policies allows any user access to data in the bucket. We do not recommend making S3 buckets public, but if there are specific objects you'd like to make public, please see [How can I grant public read access to some objects in my Amazon S3 bucket?](https://aws.amazon.com/premiumsupport/knowledge-center/read-access-objects-s3-bucket/).
 
