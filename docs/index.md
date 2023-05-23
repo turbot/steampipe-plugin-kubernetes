@@ -241,7 +241,7 @@ You can define a list of local directory paths to search for Kubernetes manifest
 - `**/*.yml` or `**/*.yaml` matches all Kubernetes manifest files in the CWD and all sub-directories.
 - `../*.yml` or `../*.yaml` matches all Kubernetes manifest files in the CWD's parent directory.
 - `steampipe*.yml` or `steampipe*.yaml` matches all Kubernetes manifest files starting with "steampipe" in the CWD.
-- `/path/to/dir/*.yml` or `/path/to/dir/*.yaml` matches all Kubernetes manifest files in a specific directory. For example:
+- `/path/to/dir/*.yml` or `/path/to/dir/*.yaml` matches all Kubernetes manifest files in a specific directory.
 - `~/*.yml` or `~/*.yaml` matches all Kubernetes manifest files in the home directory.
 - `~/**/*.yml` or `~/**/*.yaml` matches all Kubernetes manifest files recursively in the home directory.
 - `/path/to/dir/main.yml` or `/path/to/dir/main.yaml` matches a specific file.
