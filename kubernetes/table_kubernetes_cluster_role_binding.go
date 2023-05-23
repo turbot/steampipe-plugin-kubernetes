@@ -98,9 +98,7 @@ func listK8sClusterRoleBindings(ctx context.Context, d *plugin.QueryData, _ *plu
 		return nil, err
 	}
 
-	//
 	// Check for manifest files
-	//
 	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "ClusterRoleBinding")
 	if err != nil {
 		return nil, err
@@ -117,9 +115,7 @@ func listK8sClusterRoleBindings(ctx context.Context, d *plugin.QueryData, _ *plu
 		}
 	}
 
-	//
 	// Check for deployed resources
-	//
 	if clientset == nil {
 		return nil, nil
 	}
@@ -186,9 +182,7 @@ func getK8sClusterRoleBinding(ctx context.Context, d *plugin.QueryData, _ *plugi
 		return nil, nil
 	}
 
-	//
 	// Get the manifest resource
-	//
 	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "ClusterRoleBinding")
 	if err != nil {
 		return nil, err
@@ -202,9 +196,7 @@ func getK8sClusterRoleBinding(ctx context.Context, d *plugin.QueryData, _ *plugi
 		}
 	}
 
-	//
 	// Get the deployed resource
-	//
 	if clientset == nil {
 		return nil, nil
 	}

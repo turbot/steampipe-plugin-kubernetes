@@ -144,9 +144,7 @@ func listK8sPVCs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 		return nil, err
 	}
 
-	//
 	// Check for manifest files
-	//
 	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "PersistentVolumeClaim")
 	if err != nil {
 		return nil, err
@@ -163,9 +161,7 @@ func listK8sPVCs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 		}
 	}
 
-	//
 	// Check for deployed resources
-	//
 	if clientset == nil {
 		return nil, nil
 	}
@@ -239,9 +235,7 @@ func getK8sPVC(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) 
 		return nil, nil
 	}
 
-	//
 	// Get the manifest resource
-	//
 	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "PersistentVolumeClaim")
 	if err != nil {
 		return nil, err
@@ -255,9 +249,7 @@ func getK8sPVC(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) 
 		}
 	}
 
-	//
 	// Get the deployed resource
-	//
 	if clientset == nil {
 		return nil, nil
 	}
