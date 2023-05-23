@@ -97,7 +97,7 @@ func tableKubernetesEvent(ctx context.Context) *plugin.Table {
 				Description: "Data about the event series this event represents.",
 			},
 			{
-				Name:        "source_type",
+				Name:        "source",
 				Type:        proto.ColumnType_JSON,
 				Description: "The component reporting this event.",
 			},
@@ -108,7 +108,7 @@ func tableKubernetesEvent(ctx context.Context) *plugin.Table {
 				Hydrate:     getEventResourceAdditionalData,
 			},
 			{
-				Name:        "config_source",
+				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
 				Hydrate:     getEventResourceAdditionalData,
