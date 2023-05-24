@@ -128,7 +128,7 @@ connection "kubernetes" {
 
 Steampipe will automatically create the `kubernetes_certificate` table, which can then be inspected and queried like other tables:
 
-```bash
+```
 .inspect kubernetes_certificate;
 +--------------------+--------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 | column             | type                     | description                                                                                                                                                        |
