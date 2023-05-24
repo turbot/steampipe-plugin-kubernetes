@@ -1,3 +1,9 @@
+## v0.20.0 [2023-05-24]
+
+_What's new?_
+
+- Added support to query Kubernetes manifest files. This can be set using the `manifest_file_paths` config argument in the `kubernetes.spc` file. Please check the [Supported Manifest File Path Formats](https://hub.steampipe.io/plugins/turbot/kubernetes#supported-manifest-file-path-formats) section for more information. ([#129](https://github.com/turbot/steampipe-plugin-kubernetes/pull/129))
+
 ## v0.19.0 [2023-05-11]
 
 _Dependencies_
