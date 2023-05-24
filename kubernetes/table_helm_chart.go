@@ -46,7 +46,10 @@ func listHelmCharts(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateD
 	if err != nil {
 		return nil, err
 	}
-	d.StreamListItem(ctx, chart.Chart.Metadata)
+
+	if chart != nil {
+		d.StreamListItem(ctx, chart.Chart.Metadata)
+	}
 
 	return nil, nil
 }

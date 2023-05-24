@@ -67,6 +67,11 @@ func listHelmReleases(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 		return nil, err
 	}
 
+	// Return nil, if no chart configured in the connection
+	if chart == nil {
+		return nil, nil
+	}
+
 	releaseState := action.ListAll
 	if d.EqualsQuals["status"] != nil {
 		givenState := d.EqualsQualString("status")
