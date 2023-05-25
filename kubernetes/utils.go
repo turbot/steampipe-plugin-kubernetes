@@ -738,7 +738,7 @@ func parsedManifestFileContentUncached(ctx context.Context, d *plugin.QueryData,
 			}
 
 			// skip if no kind defined
-			if !strings.Contains(resource, "kind:") {
+			if !(strings.Contains(resource, "kind:") || strings.Contains(resource, "\"kind\":")) {
 				pos = pos + len(blockLength) + 1
 				continue
 			}
