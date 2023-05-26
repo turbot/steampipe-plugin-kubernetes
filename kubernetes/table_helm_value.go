@@ -39,46 +39,47 @@ func tableHelmValue(ctx context.Context) *plugin.Table {
 //// LIST FUNCTION
 
 func listHelmValues(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
-	chart, err := getParsedHelmChart(ctx, d)
+	charts, err := getParsedHelmChart(ctx, d)
 	if err != nil {
 		return nil, err
 	}
-
 	config := GetConfig(d.Connection)
 
-	// Get values from default values.yaml
-	result, err := getRows(ctx, chart.Chart.Values)
-	if err != nil {
-		plugin.Logger(ctx).Error("helm_value.listHelmValues", "parse_error", err, "path", chart.Path)
-		return nil, err
-	}
+	for _, chart := range charts {
+		defaultValues, err := getRows(ctx, chart.Chart.Values)
+		if err != nil {
+			plugin.Logger(ctx).Error("helm_value.listHelmValues", "parse_error", err, "path", chart.Path)
+			return nil, err
+		}
 
-	for _, r := range result {
-		r.Path = chart.Path
-		d.StreamListItem(ctx, r)
-	}
+		for _, r := range defaultValues {
+			r.Path = chart.Path
+			d.StreamListItem(ctx, r)
+		}
 
-	if config.HelmValueOverride != nil {
-		for _, path := range config.HelmValueOverride {
-			content, err := os.ReadFile(path)
-			if err != nil {
-				return nil, err
-			}
+		for _, v := range config.HelmRenderedCharts {
+			for _, path := range v.ValuesPath {
+				content, err := os.ReadFile(path)
+				if err != nil {
+					return nil, err
+				}
 
-			var values map[string]interface{}
-			err = yaml.Unmarshal(content, &values)
-			if err != nil {
-				return nil, err
-			}
+				var values map[string]interface{}
+				err = yaml.Unmarshal(content, &values)
+				if err != nil {
+					return nil, err
+				}
 
-			data, err := getRows(ctx, values)
-			if err != nil {
-				return nil, err
-			}
+				overrideValues, err := getRows(ctx, values)
+				if err != nil {
+					return nil, err
+				}
 
-			for _, r := range data {
-				r.Path = path
-				d.StreamListItem(ctx, r)
+				for _, r := range overrideValues {
+					r.Path = path
+					d.StreamListItem(ctx, r)
+				}
+
 			}
 		}
 	}

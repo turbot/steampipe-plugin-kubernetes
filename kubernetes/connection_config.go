@@ -2,53 +2,21 @@ package kubernetes
 
 import (
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
-	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/schema"
 )
 
 type kubernetesConfig struct {
-	ConfigPaths          []string `cty:"config_paths"`
-	ConfigPath           *string  `cty:"config_path"`
-	ConfigContext        *string  `cty:"config_context"`
-	CustomResourceTables []string `cty:"custom_resource_tables"`
-	ManifestFilePaths    []string `cty:"manifest_file_paths" steampipe:"watch"`
-	HelmChartDir         *string  `cty:"helm_chart_dir" steampipe:"watch"`
-	HelmValueOverride    []string `cty:"helm_value_override" steampipe:"watch"`
-	SourceType           *string  `cty:"source_type"`
+	ConfigPaths          []string               `hcl:"config_paths,optional"`
+	ConfigPath           *string                `hcl:"config_path,optional"`
+	ConfigContext        *string                `hcl:"config_context,optional"`
+	CustomResourceTables []string               `hcl:"custom_resource_tables,optional"`
+	ManifestFilePaths    []string               `hcl:"manifest_file_paths,optional" steampipe:"watch"`
+	SourceType           *string                `hcl:"source_type,optional"`
+	HelmRenderedCharts   map[string]chartConfig `hcl:"helm_rendered_charts,optional"`
 }
 
-var ConfigSchema = map[string]*schema.Attribute{
-	"config_paths": {
-		Type: schema.TypeList,
-		Elem: &schema.Attribute{Type: schema.TypeString},
-	},
-	"config_path": {
-		Type: schema.TypeString,
-	},
-	"config_context": {
-		Type: schema.TypeString,
-	},
-	"custom_resource_tables": {
-		Type: schema.TypeList,
-		Elem: &schema.Attribute{Type: schema.TypeString},
-	},
-	"manifest_file_paths": {
-		Type: schema.TypeList,
-		Elem: &schema.Attribute{Type: schema.TypeString},
-	},
-	"helm_chart_dir": {
-		Type: schema.TypeString,
-	},
-	"helm_value_override": {
-		Type: schema.TypeList,
-		Elem: &schema.Attribute{Type: schema.TypeString},
-	},
-	"source_type": {
-		Type: schema.TypeString,
-	},
-}
-
-func ConfigInstance() interface{} {
-	return &kubernetesConfig{}
+type chartConfig struct {
+	ChartPath  string   `hcl:"chart_path" cty:"chart_path"`
+	ValuesPath []string `hcl:"values_paths" cty:"values_paths"`
 }
 
 // GetConfig :: retrieve and cast connection config from query data

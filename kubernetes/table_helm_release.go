@@ -72,26 +72,28 @@ func listHelmReleases(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 		return nil, nil
 	}
 
-	releaseState := action.ListAll
-	if d.EqualsQuals["status"] != nil {
-		givenState := d.EqualsQualString("status")
-		releaseState = action.ListAll.FromName(givenState)
-	}
-
-	// Lists all releases for a specified namespace. By default it uses current namespace context, if nothing is set
-	releases, err := client.ListReleasesByStateMask(releaseState)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, release := range releases {
-		if release.Chart.Metadata.Name != chart.Chart.Metadata.Name {
-			continue
+	for _, c := range chart {
+		releaseState := action.ListAll
+		if d.EqualsQuals["status"] != nil {
+			givenState := d.EqualsQualString("status")
+			releaseState = action.ListAll.FromName(givenState)
 		}
-		d.StreamListItem(ctx, release)
 
-		if d.RowsRemaining(ctx) == 0 {
-			return nil, nil
+		// Lists all releases for a specified namespace. By default it uses current namespace context, if nothing is set
+		releases, err := client.ListReleasesByStateMask(releaseState)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, release := range releases {
+			if release.Chart.Metadata.Name != c.Chart.Metadata.Name {
+				continue
+			}
+			d.StreamListItem(ctx, release)
+
+			if d.RowsRemaining(ctx) == 0 {
+				return nil, nil
+			}
 		}
 	}
 

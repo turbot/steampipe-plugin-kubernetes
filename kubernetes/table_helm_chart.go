@@ -42,12 +42,12 @@ func tableHelmChart(ctx context.Context) *plugin.Table {
 //// LIST FUNCTION
 
 func listHelmCharts(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
-	chart, err := getParsedHelmChart(ctx, d)
+	charts, err := getParsedHelmChart(ctx, d)
 	if err != nil {
 		return nil, err
 	}
 
-	if chart != nil {
+	for _, chart := range charts {
 		d.StreamListItem(ctx, chart.Chart.Metadata)
 	}
 

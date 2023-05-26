@@ -835,14 +835,14 @@ type parsedHelmChart struct {
 }
 
 // Get the parsed contents of the given Helm chart.
-func getParsedHelmChart(ctx context.Context, d *plugin.QueryData) (*parsedHelmChart, error) {
+func getParsedHelmChart(ctx context.Context, d *plugin.QueryData) ([]*parsedHelmChart, error) {
 	conn, err := parsedHelmChartCached(ctx, d, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	if conn != nil {
-		return conn.(*parsedHelmChart), nil
+		return conn.([]*parsedHelmChart), nil
 	}
 	return nil, nil
 }
@@ -863,44 +863,50 @@ func parsedHelmChartUncached(ctx context.Context, d *plugin.QueryData, _ *plugin
 		return nil, nil
 	}
 
-	// Return error if source_tpe arg is explicitly set to "helm" in the config, but
-	// helm_chart_dir arg is not set.
-	if helmConfig.SourceType != nil &&
-		*helmConfig.SourceType == "helm" &&
-		helmConfig.HelmChartDir == nil {
-		return nil, errors.New("helm_chart_dir must be set in the config while the source_type is 'helm'")
+	var charts []*parsedHelmChart
+
+	for _, v := range helmConfig.HelmRenderedCharts {
+		// Return error if source_tpe arg is explicitly set to "helm" in the config, but
+		// helm_chart_dir arg is not set.
+		if helmConfig.SourceType != nil &&
+			*helmConfig.SourceType == "helm" &&
+			v.ChartPath == "" {
+			return nil, errors.New("helm_chart_dir must be set in the config while the source_type is 'helm'")
+		}
+
+		// Return empty parsedHelmChart object if no Helm chart directory path provided in the config
+		chartDir := v.ChartPath
+		if chartDir == "" {
+			plugin.Logger(ctx).Debug("parsedHelmChartUncached", "helm_chart_dir not configured in the config", "connection", d.Connection.Name)
+			return nil, nil
+		}
+		plugin.Logger(ctx).Debug("parsedHelmChartUncached", "Parsing Helm chart", chartDir, "connection", d.Connection.Name)
+
+		// Load the given chart directory
+		chart, err := loader.Load(chartDir)
+		if err != nil {
+			plugin.Logger(ctx).Error("parsedHelmChartUncached", "load_chart_error", err)
+			return nil, err
+		}
+
+		charts = append(charts, &parsedHelmChart{
+			Chart: chart,
+			Path:  chartDir,
+		})
 	}
 
-	// Return empty parsedHelmChart object if no Helm chart directory path provided in the config
-	chartDir := helmConfig.HelmChartDir
-	if chartDir == nil {
-		plugin.Logger(ctx).Debug("parsedHelmChartUncached", "helm_chart_dir not configured in the config", "connection", d.Connection.Name)
-		return nil, nil
-	}
-	plugin.Logger(ctx).Debug("parsedHelmChartUncached", "Parsing Helm chart", chartDir, "connection", d.Connection.Name)
-
-	// Load the given chart directory
-	chart, err := loader.Load(*chartDir)
-	if err != nil {
-		plugin.Logger(ctx).Error("parsedHelmChartUncached", "load_chart_error", err)
-		return nil, err
-	}
-
-	return &parsedHelmChart{
-		Chart: chart,
-		Path:  *chartDir,
-	}, nil
+	return charts, nil
 }
 
 // Get the rendered template contents.
-func getHelmRenderedTemplates(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (map[string]string, error) {
+func getHelmRenderedTemplates(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) ([]HelmRenderedTemplate, error) {
 	helmRenderedTemplates, err := parsedHelmRenderedTemplatesCached(ctx, d, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	if helmRenderedTemplates != nil {
-		return helmRenderedTemplates.(map[string]string), nil
+		return helmRenderedTemplates.([]HelmRenderedTemplate), nil
 	}
 	return nil, nil
 }
@@ -912,73 +918,90 @@ var parsedHelmRenderedTemplatesCached = plugin.HydrateFunc(parsedHelmRenderedTem
 // be run only once per connection. Do not call this directly, use
 // getHelmRenderedTemplates instead.
 func parsedHelmRenderedTemplatesUncached(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (any, error) {
-	chart, err := getParsedHelmChart(ctx, d)
+	charts, err := getParsedHelmChart(ctx, d)
 	if err != nil {
 		return nil, err
 	}
+	helmConfig := GetConfig(d.Connection)
 
-	// Return nil, if the config doesn't have any chart path configured
-	if chart == nil {
-		plugin.Logger(ctx).Debug("parsedHelmRenderedTemplatesUncached", "no chart configuration found", "connection", d.Connection.Name)
-		return nil, nil
+	var renderedTemplates []HelmRenderedTemplate
+	for _, chart := range charts {
+
+		// Return nil, if the config doesn't have any chart path configured
+		if chart == nil {
+			plugin.Logger(ctx).Debug("parsedHelmRenderedTemplatesUncached", "no chart configuration found", "connection", d.Connection.Name)
+			return nil, nil
+		}
+
+		for name, c := range helmConfig.HelmRenderedCharts {
+			if c.ChartPath == chart.Path {
+				// Get the values required to render the templates
+				values, err := getHelmChartOverrideValues(ctx, d, chart, c.ValuesPath)
+				if err != nil {
+					return nil, err
+				}
+
+				values = map[string]interface{}{
+					"Values": values,
+					"Release": map[string]interface{}{
+						"Service": "Helm",
+						"Name":    name, // Keeping it as same as the chart name for now. In CLI, either the value can be passed in the arg, or can be auto-generated.
+					},
+					"Chart":        chart.Chart.Metadata,
+					"Capabilities": chartutil.Capabilities{},
+					"Template": map[string]interface{}{
+						"BasePath": "/path/to/base",
+					},
+				}
+
+				renderedChart, err := engine.Render(chart.Chart, values)
+				if err != nil {
+					plugin.Logger(ctx).Error("parsedHelmRenderedTemplatesUncached", "connection", d.Connection.Name, "template_render_error", err)
+					return nil, err
+				}
+
+				renderedTemplates = append(renderedTemplates, HelmRenderedTemplate{
+					Data:  renderedChart,
+					Chart: chart.Chart,
+					Name:  name,
+				})
+			}
+		}
 	}
 
-	// Get the values required to render the templates
-	values, err := getHelmChartOverrideValues(ctx, d, chart)
-	if err != nil {
-		return nil, err
-	}
+	return renderedTemplates, nil
+}
 
-	values = map[string]interface{}{
-		"Values": values,
-		"Release": map[string]interface{}{
-			"Service": "Helm",
-			"Name":    chart.Chart.Metadata.Name, // Keeping it as same as the chart name for now. In CLI, either the value can be passed in the arg, or can be auto-generated.
-		},
-		"Chart":        chart.Chart.Metadata,
-		"Capabilities": chartutil.Capabilities{},
-		"Template": map[string]interface{}{
-			"BasePath": "/path/to/base",
-		},
-	}
-
-	renderedChart, err := engine.Render(chart.Chart, values)
-	if err != nil {
-		plugin.Logger(ctx).Error("parsedHelmRenderedTemplatesUncached", "connection", d.Connection.Name, "template_render_error", err)
-		return nil, err
-	}
-
-	return renderedChart, nil
+type HelmRenderedTemplate struct {
+	Data  map[string]string
+	Chart *chart.Chart
+	Name  string
 }
 
 // Return the values required to render the templates
-func getHelmChartOverrideValues(ctx context.Context, d *plugin.QueryData, chart *parsedHelmChart) (map[string]interface{}, error) {
-	helmConfig := GetConfig(d.Connection)
-
+func getHelmChartOverrideValues(ctx context.Context, d *plugin.QueryData, chart *parsedHelmChart, overrideValueFiles []string) (map[string]interface{}, error) {
 	// Get the default values defined in the values.yaml file
 	values := chart.Chart.Values
 
 	// Check for value override files configured in the connection config
 	var matches, valueFiles []string
-	if helmConfig.HelmValueOverride != nil {
-		for _, i := range helmConfig.HelmValueOverride {
-			// List the files in the given source directory
-			files, err := d.GetSourceFiles(i)
-			if err != nil {
-				return nil, err
-			}
-			matches = append(matches, files...)
+	for _, valuePath := range overrideValueFiles {
+		// List the files in the given source directory
+		files, err := d.GetSourceFiles(valuePath)
+		if err != nil {
+			return nil, err
 		}
+		matches = append(matches, files...)
+	}
 
-		// Sanitize the matches to ignore the directories
-		for _, i := range matches {
+	// Sanitize the matches to ignore the directories
+	for _, i := range matches {
 
-			// Ignore directories
-			if filehelpers.DirectoryExists(i) {
-				continue
-			}
-			valueFiles = append(valueFiles, i)
+		// Ignore directories
+		if filehelpers.DirectoryExists(i) {
+			continue
 		}
+		valueFiles = append(valueFiles, i)
 	}
 
 	// If any value override files provided in the config, use those value to render the templates
@@ -1026,48 +1049,50 @@ func renderedHelmTemplateContentUncached(ctx context.Context, d *plugin.QueryDat
 	}
 
 	var parsedContents []parsedContent
-	for path, template := range renderedTemplates {
-		for _, resource := range strings.Split(template, "---") {
-			// Skip empty documents, `Decode` will fail on them
-			// Also, increment the pos to include the separator position (e.g. ---)
-			if len(resource) == 0 {
-				continue
+	for _, chart := range renderedTemplates {
+		for path, template := range chart.Data {
+			for _, resource := range strings.Split(template, "---") {
+				// Skip empty documents, `Decode` will fail on them
+				// Also, increment the pos to include the separator position (e.g. ---)
+				if len(resource) == 0 {
+					continue
+				}
+
+				// Skip if no kind defined
+				if !(strings.Contains(resource, "kind:") || strings.Contains(resource, "\"kind\":")) {
+					continue
+				}
+
+				obj := &unstructured.Unstructured{}
+				err = yaml.Unmarshal([]byte(resource), obj)
+				if err != nil {
+					plugin.Logger(ctx).Error("renderedHelmTemplateContentUncached", "unmarshal_error", err)
+					return nil, err
+				}
+
+				obj.SetAPIVersion(obj.GetAPIVersion())
+				obj.SetKind(obj.GetKind())
+				gvk := obj.GetObjectKind().GroupVersionKind()
+				obj.SetGroupVersionKind(schema.GroupVersionKind{
+					Group:   gvk.Group,
+					Version: gvk.Version,
+					Kind:    gvk.Kind,
+				})
+
+				// Convert the content to concrete type based on the resource kind
+				targetObj, err := convertUnstructuredDataToType(obj)
+				if err != nil {
+					plugin.Logger(ctx).Error("RenderedHelmTemplateContentUncached", "failed to convert content into a concrete type", err, "path", path)
+					return nil, err
+				}
+
+				parsedContents = append(parsedContents, parsedContent{
+					Data:       targetObj,
+					Kind:       obj.GetKind(),
+					Path:       path,
+					SourceType: "helm",
+				})
 			}
-
-			// Skip if no kind defined
-			if !strings.Contains(resource, "kind:") {
-				continue
-			}
-
-			obj := &unstructured.Unstructured{}
-			err = yaml.Unmarshal([]byte(resource), obj)
-			if err != nil {
-				plugin.Logger(ctx).Error("renderedHelmTemplateContentUncached", "unmarshal_error", err)
-				return nil, err
-			}
-
-			obj.SetAPIVersion(obj.GetAPIVersion())
-			obj.SetKind(obj.GetKind())
-			gvk := obj.GetObjectKind().GroupVersionKind()
-			obj.SetGroupVersionKind(schema.GroupVersionKind{
-				Group:   gvk.Group,
-				Version: gvk.Version,
-				Kind:    gvk.Kind,
-			})
-
-			// Convert the content to concrete type based on the resource kind
-			targetObj, err := convertUnstructuredDataToType(obj)
-			if err != nil {
-				plugin.Logger(ctx).Error("RenderedHelmTemplateContentUncached", "failed to convert content into a concrete type", err, "path", path)
-				return nil, err
-			}
-
-			parsedContents = append(parsedContents, parsedContent{
-				Data:       targetObj,
-				Kind:       obj.GetKind(),
-				Path:       path,
-				SourceType: "helm",
-			})
 		}
 	}
 
