@@ -48,10 +48,22 @@ connection "kubernetes" {
   # Defaults to CWD
   # manifest_file_paths = [ "*.yml", "*.yaml", "*.json" ]
 
-  # Specify the source of the resource. Possible values: `deployed`, `manifest`, and `all`.
+  # Specify the source of the resource. Possible values: `deployed`, `helm`, `manifest`, and `all`.
   # Default set to `all`. Set the argument to override the default value.
   # If the value is set to `deployed`, tables will show all the deployed resources.
   # If set to `manifest`, tables will show all the resources from the kubernetes manifest. Make sure that the `manifest_file_paths` arg is set.
   # If `all`, tables will show all the deployed and manifest resources.
   # source_type = "all"
+
+  # Helm configuration
+  
+  # A map for Helm charts along with the path to the chart directory and the paths of the value override files (if any).
+  # Every map should have chart_path defined, and the values_path is optional.
+  # You can define multiple charts in the config.
+  # helm_rendered_charts = {
+  #   "chart_name" = {
+  #     chart_path   = "/path/to/chart/dir"
+  #     values_paths = ["/path/to/value/override/files.yaml"]
+  #   }
+  # }
 }
