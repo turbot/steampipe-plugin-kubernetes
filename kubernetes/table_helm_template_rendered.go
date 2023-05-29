@@ -21,7 +21,6 @@ func tableHelmTemplateRendered(ctx context.Context) *plugin.Table {
 			{Name: "name", Type: proto.ColumnType_STRING, Description: "Name is the path-like name of the template."},
 			{Name: "source_type", Type: proto.ColumnType_STRING, Description: "The source of the template."},
 			{Name: "rendered", Type: proto.ColumnType_STRING, Description: "Data is the template as byte data."},
-			{Name: "raw", Type: proto.ColumnType_STRING, Description: "Data is the template as byte data."},
 			{Name: "chart_name", Type: proto.ColumnType_STRING, Description: "The name of the chart."},
 		},
 	}
