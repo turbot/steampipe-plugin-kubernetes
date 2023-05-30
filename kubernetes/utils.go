@@ -945,7 +945,7 @@ func parsedHelmRenderedTemplatesUncached(ctx context.Context, d *plugin.QueryDat
 					"Values": values,
 					"Release": map[string]interface{}{
 						"Service": "Helm",
-						"Name":    name, // Keeping it as same as the chart name for now. In CLI, either the value can be passed in the arg, or can be auto-generated.
+						"Name":    name,
 					},
 					"Chart":        chart.Chart.Metadata,
 					"Capabilities": chartutil.Capabilities{},
@@ -1009,18 +1009,13 @@ func getHelmChartOverrideValues(ctx context.Context, d *plugin.QueryData, chart 
 	// For example, if both values.yaml and override.yaml
 	// contained a key called 'foo', the value set in override.yaml would take precedence.
 	for _, f := range valueFiles {
-		var override map[string]interface{}
-		// Read files
-		bs, err := os.ReadFile(f)
+		// Read the default values.yaml file of the chart
+		fileValues, err := chartutil.ReadValuesFile(f)
 		if err != nil {
 			plugin.Logger(ctx).Error("parsedHelmRenderedTemplatesUncached", "read_file_error", "connection_name", d.Connection.Name, "failed to read file %s: %v", f, err)
 			return nil, err
 		}
-		if err := goYaml.Unmarshal(bs, &override); err != nil {
-			plugin.Logger(ctx).Debug("getHelmChartOverrideValues", "unmarshal_error", "failed to unmarshal value override file", f, "error", err)
-			return nil, err
-		}
-		values = mergeMaps(values, override)
+		values = chartutil.CoalesceTables(values, fileValues)
 	}
 
 	return values, nil
@@ -1177,27 +1172,6 @@ func getHelmClient(ctx context.Context, namespace string) (helmClient.Client, er
 	}
 
 	return client, nil
-}
-
-// Returns combined values of two files.
-// The objects got merged, but same attributes gets replaced.
-func mergeMaps(a, b map[string]interface{}) map[string]interface{} {
-	out := make(map[string]interface{}, len(a))
-	for k, v := range a {
-		out[k] = v
-	}
-	for k, v := range b {
-		if v, ok := v.(map[string]interface{}); ok {
-			if bv, ok := out[k]; ok {
-				if bv, ok := bv.(map[string]interface{}); ok {
-					out[k] = mergeMaps(bv, v)
-					continue
-				}
-			}
-		}
-		out[k] = v
-	}
-	return out
 }
 
 //// HELM values

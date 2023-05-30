@@ -37,20 +37,34 @@ type helmTemplate struct {
 //// LIST FUNCTION
 
 func listHelmRenderedTemplates(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
-	renderedTemplates, err := getHelmRenderedTemplates(ctx, d, nil)
+	// renderedTemplates, err := getHelmRenderedTemplates(ctx, d, nil)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// for _, template := range renderedTemplates {
+	// 	for k, v := range template.Data {
+	// 		d.StreamListItem(ctx, helmTemplate{
+	// 			ChartName:  template.Chart.Metadata.Name,
+	// 			Name:       k,
+	// 			Rendered:   v,
+	// 			SourceType: fmt.Sprintf("helm_rendered:%s", template.Name),
+	// 		})
+	// 	}
+	// }
+
+	renderedTemplates, err := getHelmTemplatesUsingKics(ctx, d, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, template := range renderedTemplates {
-		for k, v := range template.Data {
-			d.StreamListItem(ctx, helmTemplate{
-				ChartName:  template.Chart.Metadata.Name,
-				Name:       k,
-				Rendered:   v,
-				SourceType: fmt.Sprintf("helm_rendered:%s", template.Name),
-			})
-		}
+		d.StreamListItem(ctx, helmTemplate{
+			ChartName:  template.Chart.Metadata.Name,
+			Name:       template.TemplateName,
+			Rendered:   template.Data,
+			SourceType: fmt.Sprintf("helm_rendered:%s", template.Name),
+		})
 	}
 
 	return nil, nil
