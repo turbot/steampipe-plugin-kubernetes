@@ -1084,7 +1084,7 @@ func renderedHelmTemplateContentUncached(ctx context.Context, d *plugin.QueryDat
 				Data:       targetObj,
 				Kind:       obj.GetKind(),
 				Path:       t.Path,
-				SourceType: "helm",
+				SourceType: fmt.Sprintf("helm_rendered:%s", t.ConfigKey),
 			})
 		}
 	}
