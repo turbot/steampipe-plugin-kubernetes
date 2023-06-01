@@ -73,7 +73,7 @@ func getHelmTemplatesUsingKics(ctx context.Context, d *plugin.QueryData, _ *plug
 				client.Namespace = "default" // TODO: Update this to use namespace defined in the current context
 
 				vals := &values.Options{
-					ValueFiles: c.ValuesPath,
+					ValueFiles: c.ValuesFilePaths,
 				}
 
 				manifest, _, err := runInstall([]string{c.ChartPath}, client, vals)

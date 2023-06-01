@@ -58,7 +58,7 @@ func listHelmValues(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateD
 		}
 
 		for _, v := range config.HelmRenderedCharts {
-			for _, path := range v.ValuesPath {
+			for _, path := range v.ValuesFilePaths {
 				content, err := os.ReadFile(path)
 				if err != nil {
 					return nil, err

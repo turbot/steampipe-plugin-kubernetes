@@ -936,7 +936,7 @@ func parsedHelmRenderedTemplatesUncached(ctx context.Context, d *plugin.QueryDat
 		for name, c := range helmConfig.HelmRenderedCharts {
 			if c.ChartPath == chart.Path {
 				// Get the values required to render the templates
-				values, err := getHelmChartOverrideValues(ctx, d, chart, c.ValuesPath)
+				values, err := getHelmChartOverrideValues(ctx, d, chart, c.ValuesFilePaths)
 				if err != nil {
 					return nil, err
 				}
@@ -1038,56 +1038,54 @@ var renderedHelmTemplateContentCached = plugin.HydrateFunc(renderedHelmTemplateC
 // getRenderedHelmTemplateContent instead.
 func renderedHelmTemplateContentUncached(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (any, error) {
 	// Read the config
-	renderedTemplates, err := getHelmRenderedTemplates(ctx, d, nil)
+	renderedTemplates, err := getHelmTemplatesUsingKics(ctx, d, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	var parsedContents []parsedContent
-	for _, chart := range renderedTemplates {
-		for path, template := range chart.Data {
-			for _, resource := range strings.Split(template, "---") {
-				// Skip empty documents, `Decode` will fail on them
-				// Also, increment the pos to include the separator position (e.g. ---)
-				if len(resource) == 0 {
-					continue
-				}
-
-				// Skip if no kind defined
-				if !(strings.Contains(resource, "kind:") || strings.Contains(resource, "\"kind\":")) {
-					continue
-				}
-
-				obj := &unstructured.Unstructured{}
-				err = yaml.Unmarshal([]byte(resource), obj)
-				if err != nil {
-					plugin.Logger(ctx).Error("renderedHelmTemplateContentUncached", "unmarshal_error", err)
-					return nil, err
-				}
-
-				obj.SetAPIVersion(obj.GetAPIVersion())
-				obj.SetKind(obj.GetKind())
-				gvk := obj.GetObjectKind().GroupVersionKind()
-				obj.SetGroupVersionKind(schema.GroupVersionKind{
-					Group:   gvk.Group,
-					Version: gvk.Version,
-					Kind:    gvk.Kind,
-				})
-
-				// Convert the content to concrete type based on the resource kind
-				targetObj, err := convertUnstructuredDataToType(obj)
-				if err != nil {
-					plugin.Logger(ctx).Error("RenderedHelmTemplateContentUncached", "failed to convert content into a concrete type", err, "path", path)
-					return nil, err
-				}
-
-				parsedContents = append(parsedContents, parsedContent{
-					Data:       targetObj,
-					Kind:       obj.GetKind(),
-					Path:       path,
-					SourceType: "helm",
-				})
+	for _, t := range renderedTemplates {
+		for _, resource := range strings.Split(t.Data, "---") {
+			// Skip empty documents, `Decode` will fail on them
+			// Also, increment the pos to include the separator position (e.g. ---)
+			if len(resource) == 0 {
+				continue
 			}
+
+			// Skip if no kind defined
+			if !(strings.Contains(resource, "kind:") || strings.Contains(resource, "\"kind\":")) {
+				continue
+			}
+
+			obj := &unstructured.Unstructured{}
+			err = yaml.Unmarshal([]byte(resource), obj)
+			if err != nil {
+				plugin.Logger(ctx).Error("renderedHelmTemplateContentUncached", "unmarshal_error", err)
+				return nil, err
+			}
+
+			obj.SetAPIVersion(obj.GetAPIVersion())
+			obj.SetKind(obj.GetKind())
+			gvk := obj.GetObjectKind().GroupVersionKind()
+			obj.SetGroupVersionKind(schema.GroupVersionKind{
+				Group:   gvk.Group,
+				Version: gvk.Version,
+				Kind:    gvk.Kind,
+			})
+
+			// Convert the content to concrete type based on the resource kind
+			targetObj, err := convertUnstructuredDataToType(obj)
+			if err != nil {
+				plugin.Logger(ctx).Error("RenderedHelmTemplateContentUncached", "failed to convert content into a concrete type", err, "path", t.TemplateName)
+				return nil, err
+			}
+
+			parsedContents = append(parsedContents, parsedContent{
+				Data:       targetObj,
+				Kind:       obj.GetKind(),
+				Path:       t.TemplateName,
+				SourceType: "helm",
+			})
 		}
 	}
 
