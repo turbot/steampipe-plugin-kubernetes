@@ -1076,14 +1076,14 @@ func renderedHelmTemplateContentUncached(ctx context.Context, d *plugin.QueryDat
 			// Convert the content to concrete type based on the resource kind
 			targetObj, err := convertUnstructuredDataToType(obj)
 			if err != nil {
-				plugin.Logger(ctx).Error("RenderedHelmTemplateContentUncached", "failed to convert content into a concrete type", err, "path", t.TemplateName)
+				plugin.Logger(ctx).Error("RenderedHelmTemplateContentUncached", "failed to convert content into a concrete type", err, "path", t.Path)
 				return nil, err
 			}
 
 			parsedContents = append(parsedContents, parsedContent{
 				Data:       targetObj,
 				Kind:       obj.GetKind(),
-				Path:       t.TemplateName,
+				Path:       t.Path,
 				SourceType: "helm",
 			})
 		}

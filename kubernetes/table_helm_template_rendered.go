@@ -18,10 +18,10 @@ func tableHelmTemplateRendered(ctx context.Context) *plugin.Table {
 			Hydrate: listHelmRenderedTemplates,
 		},
 		Columns: []*plugin.Column{
-			{Name: "name", Type: proto.ColumnType_STRING, Description: "Name is the path-like name of the template."},
+			{Name: "path", Type: proto.ColumnType_STRING, Description: "The path to the template file."},
+			{Name: "chart_name", Type: proto.ColumnType_STRING, Description: "The name of the chart."},
 			{Name: "source_type", Type: proto.ColumnType_STRING, Description: "The source of the template."},
 			{Name: "rendered", Type: proto.ColumnType_STRING, Description: "Data is the template as byte data."},
-			{Name: "chart_name", Type: proto.ColumnType_STRING, Description: "The name of the chart."},
 		},
 	}
 }
@@ -29,7 +29,7 @@ func tableHelmTemplateRendered(ctx context.Context) *plugin.Table {
 type helmTemplate struct {
 	// Path string
 	ChartName  string
-	Name       string
+	Path       string
 	Rendered   string
 	SourceType string
 }
@@ -61,9 +61,9 @@ func listHelmRenderedTemplates(ctx context.Context, d *plugin.QueryData, _ *plug
 	for _, template := range renderedTemplates {
 		d.StreamListItem(ctx, helmTemplate{
 			ChartName:  template.Chart.Metadata.Name,
-			Name:       template.TemplateName,
+			Path:       template.Path,
 			Rendered:   template.Data,
-			SourceType: fmt.Sprintf("helm_rendered:%s", template.Name),
+			SourceType: fmt.Sprintf("helm_rendered:%s", template.ConfigKey),
 		})
 	}
 

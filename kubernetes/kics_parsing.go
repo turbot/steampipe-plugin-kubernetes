@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -43,10 +44,10 @@ func newClient() *action.Install {
 }
 
 type HelmRenderedTemplate1 struct {
-	Data         string
-	Chart        *chart.Chart
-	TemplateName string
-	Name         string
+	Data      string
+	Chart     *chart.Chart
+	Path      string
+	ConfigKey string
 }
 
 func getHelmTemplatesUsingKics(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) ([]HelmRenderedTemplate1, error) {
@@ -83,17 +84,16 @@ func getHelmTemplatesUsingKics(ctx context.Context, d *plugin.QueryData, _ *plug
 				}
 
 				splitManifest := strings.Split(manifest.Manifest, "---")
-				for _, m := range splitManifest {
-					if len(m) == 0 {
+				for _, content := range splitManifest {
+					if len(content) == 0 {
 						continue
 					}
 
-					extractSource := strings.Split(m, "\n")
 					renderedTemplates = append(renderedTemplates, HelmRenderedTemplate1{
-						Data:         m,
-						Chart:        chart.Chart,
-						TemplateName: strings.Split(extractSource[1], "Source: ")[1],
-						Name:         name,
+						Data:      content,
+						Chart:     chart.Chart,
+						Path:      path.Join(c.ChartPath, extractTemplatePathFromContent(content)),
+						ConfigKey: name,
 					})
 				}
 			}
@@ -160,4 +160,16 @@ func getExcluded(charterino *chart.Chart, chartpath string) []string {
 	}
 
 	return excluded
+}
+
+func extractTemplatePathFromContent(content string) string {
+	splitContent := strings.Split(content, "\n")
+	sourceInfoFromManifest := splitContent[1]
+
+	source := strings.Split(sourceInfoFromManifest, "/")
+
+	if len(source) > 1 {
+		return strings.Join(source[1:], "/")
+	}
+	return ""
 }

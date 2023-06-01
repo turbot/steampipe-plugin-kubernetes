@@ -6,6 +6,8 @@ import (
 	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
+
+	"helm.sh/helm/v3/pkg/chart"
 )
 
 //// TABLE DEFINITION
@@ -35,20 +37,30 @@ func tableHelmChart(ctx context.Context) *plugin.Table {
 			{Name: "maintainers", Type: proto.ColumnType_JSON, Description: "A list of name and URL/email address combinations for the maintainer(s)."},
 			{Name: "annotations", Type: proto.ColumnType_JSON, Description: "Annotations are additional mappings uninterpreted by Helm, made available for inspection by other applications."},
 			{Name: "dependencies", Type: proto.ColumnType_JSON, Description: "Dependencies are a list of dependencies for a chart."},
+			{Name: "chart_path", Type: proto.ColumnType_STRING, Description: "The path to the directory where the chart is located."},
 		},
 	}
+}
+
+type HelmChartInfo struct {
+	chart.Metadata
+	ChartPath string
 }
 
 //// LIST FUNCTION
 
 func listHelmCharts(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
-	charts, err := getParsedHelmChart(ctx, d)
+	charts, err := getUniqueHelmCharts(ctx, d)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, chart := range charts {
-		d.StreamListItem(ctx, chart.Chart.Metadata)
+		d.StreamListItem(ctx, HelmChartInfo{*chart.Chart.Metadata, chart.Path})
+
+		if d.RowsRemaining(ctx) == 0 {
+			return nil, nil
+		}
 	}
 
 	return nil, nil
