@@ -1,9 +1,7 @@
 package kubernetes
 
 import (
-	"bytes"
 	"context"
-	"fmt"
 	"os"
 
 	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
@@ -39,11 +37,11 @@ func tableHelmValue(ctx context.Context) *plugin.Table {
 //// LIST FUNCTION
 
 func listHelmValues(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
-	charts, err := getParsedHelmChart(ctx, d)
+	// Stream all values from chart's values.yaml file
+	charts, err := getUniqueHelmCharts(ctx, d)
 	if err != nil {
 		return nil, err
 	}
-	config := GetConfig(d.Connection)
 
 	for _, chart := range charts {
 		defaultValues, err := getRows(ctx, chart.Chart.Values)
@@ -53,55 +51,36 @@ func listHelmValues(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateD
 		}
 
 		for _, r := range defaultValues {
+
 			r.Path = chart.Path
 			d.StreamListItem(ctx, r)
 		}
+	}
 
-		for _, v := range config.HelmRenderedCharts {
-			for _, path := range v.ValuesFilePaths {
-				content, err := os.ReadFile(path)
-				if err != nil {
-					return nil, err
-				}
+	// Stream values from the unique set of override value files provided in the config
+	overrideValueFiles := getUniqueValueFilesFromConfig(ctx, d)
+	for _, path := range overrideValueFiles {
+		content, err := os.ReadFile(path)
+		if err != nil {
+			return nil, err
+		}
 
-				var values map[string]interface{}
-				err = yaml.Unmarshal(content, &values)
-				if err != nil {
-					return nil, err
-				}
+		var values map[string]interface{}
+		err = yaml.Unmarshal(content, &values)
+		if err != nil {
+			return nil, err
+		}
 
-				overrideValues, err := getRows(ctx, values)
-				if err != nil {
-					return nil, err
-				}
+		overrideValues, err := getRows(ctx, values)
+		if err != nil {
+			return nil, err
+		}
 
-				for _, r := range overrideValues {
-					r.Path = path
-					d.StreamListItem(ctx, r)
-				}
-
-			}
+		for _, r := range overrideValues {
+			r.Path = path
+			d.StreamListItem(ctx, r)
 		}
 	}
 
 	return nil, nil
-}
-
-func getRows(ctx context.Context, values map[string]interface{}) (Rows, error) {
-	var root yaml.Node
-	buf := new(bytes.Buffer)
-	if err := yaml.NewEncoder(buf).Encode(values); err != nil {
-		return nil, err
-	}
-
-	decoder := yaml.NewDecoder(buf)
-	err := decoder.Decode(&root)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode content: %v", err)
-	}
-
-	var rows Rows
-	treeToList(&root, []string{}, &rows, nil, nil, nil)
-
-	return rows, nil
 }

@@ -1155,11 +1155,15 @@ func renderedHelmTemplateContentUncached(ctx context.Context, d *plugin.QueryDat
 
 // getHelmClient creates  the client for Helm
 func getHelmClient(ctx context.Context, namespace string) (helmClient.Client, error) {
+	// Return nil, if no namespace provided
+	if namespace == "" {
+		return nil, nil
+	}
+
 	// Set the namespace if specified.
 	// By default current namespace context is used.
-	options := &helmClient.Options{}
-	if namespace != "" {
-		options.Namespace = namespace
+	options := &helmClient.Options{
+		Namespace: namespace,
 	}
 
 	// Create client

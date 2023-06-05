@@ -20,7 +20,8 @@ func tableHelmRelease(ctx context.Context) *plugin.Table {
 		Name:        "helm_release",
 		Description: "List of Helm releases for a specified namespace",
 		List: &plugin.ListConfig{
-			Hydrate: listHelmReleases,
+			Hydrate:       listHelmReleases,
+			ParentHydrate: listK8sNamespaces,
 			KeyColumns: plugin.KeyColumnSlice{
 				{Name: "namespace", Require: plugin.Optional},
 				{Name: "status", Require: plugin.Optional},
@@ -53,8 +54,19 @@ func tableHelmRelease(ctx context.Context) *plugin.Table {
 
 //// LIST FUNCTION
 
-func listHelmReleases(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
-	namespace := d.EqualsQualString("namespace")
+func listHelmReleases(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+	// Get the namespace information
+	namespaceInfo := h.Item.(Namespace)
+	if namespaceInfo.SourceType != "deployed" {
+		return nil, nil
+	}
+
+	// By default the client uses the default namespace defined in the cluster context.
+	// So, use the namespace list as parent and get the releases from each of the namespaces available in the current cluster context.
+	namespace := namespaceInfo.Name
+	if d.EqualsQualString("namespace") != "" {
+		namespace = d.EqualsQualString("namespace")
+	}
 
 	// Create client
 	client, err := getHelmClient(ctx, namespace)
@@ -62,7 +74,13 @@ func listHelmReleases(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 		return nil, err
 	}
 
-	chart, err := getParsedHelmChart(ctx, d)
+	// Return nil, if client is nil
+	if client == nil {
+		return nil, nil
+	}
+
+	// List all the helm charts configured in the config
+	chart, err := getUniqueHelmCharts(ctx, d)
 	if err != nil {
 		return nil, err
 	}
