@@ -62,8 +62,8 @@ connection "kubernetes" {
   # You can define multiple charts in the config.
   # helm_rendered_charts = {
   #   "chart_name" = {
-  #     chart_path   = "/path/to/chart/dir"
-  #     values_paths = ["/path/to/value/override/files.yaml"]
+  #     chart_path        = "/path/to/chart/dir"
+  #     values_file_paths = ["/path/to/value/override/files.yaml"]
   #   }
   # }
 }

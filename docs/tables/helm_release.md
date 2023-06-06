@@ -12,9 +12,65 @@ select
   namespace,
   version,
   status,
-  last_deployed
+  first_deployed,
+  chart_name
 from
   helm_release;
+```
+
+### List kubernetes deployment resources deployed using a specific chart
+
+```sql
+select
+  d.name as deployment_name,
+  d.namespace,
+  d.uid,
+  r.name as release_name,
+  r.chart_name,
+  r.version as release_version,
+  r.first_deployed as deployed_at
+from
+  kubernetes_deployment as d
+  left join helm_release as r
+    on (
+      d.labels ->> 'app.kubernetes.io/managed-by' = 'Helm'
+      and d.labels ->> 'app.kubernetes.io/instance' = r.name
+    )
+where
+  r.chart_name = 'ingress-nginx'
+  and d.source_type = 'deployed';
+```
+
+### List all deployed releases of a specific chart
+
+```sql
+select
+  name,
+  namespace,
+  version,
+  status,
+  first_deployed,
+  chart_name
+from
+  helm_release
+where
+  chart_name = 'ingress-nginx';
+```
+
+### List releases from a specific namespace
+
+```sql
+select
+  name,
+  namespace,
+  version,
+  status,
+  last_deployed,
+  description
+from
+  helm_release
+where
+  namespace = 'steampipe';
 ```
 
 ### List all failed releases
@@ -79,35 +135,4 @@ from
   helm_release
 where
   name = 'brigade-github-app-1683552635';
-```
-
-### List releases for a specific namespace
-
-```sql
-select
-  name,
-  namespace,
-  version,
-  status,
-  last_deployed,
-  description
-from
-  helm_release
-where
-  namespace = 'steampipe';
-```
-
-### List releases information of a deployment
-
-```sql
-select
-  d.name as deployment_name,
-  d.namespace,
-  d.uid,
-  h.name as release_name,
-  h.version as release_version,
-  h.last_deployed as release_last_updated
-from
-  kubernetes_deployment as d
-  left join helm_release as h on (d.labels ->> 'release' = h.name and d.source_type = 'deployed');
 ```
