@@ -16,6 +16,12 @@ og_image: "/images/plugins/turbot/kubernetes-social-graphic.png"
 
 [Kubernetes](https://kubernetes.io) is an open-source system for automating deployment, scaling, and management of containerized applications.
 
+## Overview
+
+The Kubernetes plugin make it simpler to query the variety of Kubernetes resources deployed in a Kubernetes cluster using [Steampipe](https://steampipe.io).
+
+Apart from querying the deployed resources, the plugin also supports scanning the [Kubernetes manifest files](#supported-manifest-file-path-formats) from different sources, parsing the configured [Helm charts](#helm-configuration) and scanning all the templates to get the list of Kubernetes resources.
+
 For example:
 
 ```sql
@@ -112,6 +118,7 @@ connection "kubernetes" {
   # Specify the source of the resource. Possible values: `deployed`, `helm`, `manifest`, and `all`.
   # Default set to `all`. Set the argument to override the default value.
   # If the value is set to `deployed`, tables will show all the deployed resources.
+  # If set to `helm`, tables will only show resources from the configured helm charts.
   # If set to `manifest`, tables will show all the resources from the kubernetes manifest. Make sure that the `manifest_file_paths` arg is set.
   # If `all`, tables will show all the deployed and manifest resources.
   # source_type = "all"
@@ -119,12 +126,12 @@ connection "kubernetes" {
   # Helm configuration
 
   # A map for Helm charts along with the path to the chart directory and the paths of the value override files (if any).
-  # Every map should have chart_path defined, and the values_path is optional.
+  # Every map should have chart_path defined, and the values_file_paths is optional.
   # You can define multiple charts in the config.
   # helm_rendered_charts = {
   #   "chart_name" = {
-  #     chart_path   = "/path/to/chart/dir"
-  #     values_paths = ["/path/to/value/override/files.yaml"]
+  #     chart_path        = "/path/to/chart/dir"
+  #     values_file_paths = ["/path/to/value/override/files.yaml"]
   #   }
   # }
 }
@@ -134,9 +141,10 @@ connection "kubernetes" {
 - `config_path` - (Optional) The kubeconfig file path. If not set, the plugin will check `~/.kube/config`. Can also be set with the `KUBE_CONFIG_PATHS` or `KUBERNETES_MASTER` environment variables.
 - `custom_resource_tables` - (Optional) The custom resources to create as dynamic tables. If set to empty or not set, the plugin will not create any dynamic tables.
 - `manifest_file_paths` - (Optional) A list of locations to search for Kubernetes manifest files. If set, the plugin will read the resource configurations from the configured paths and list the resources in the respective tables.
-- `source_type` - (Optional) Specify the source of the resource. Default set to `all`. The possible values are: `deployed`, `manifest`, and `all`.
+- `source_type` - (Optional) Specify the source of the resource. Default set to `all`. The possible values are: `deployed`, `helm`, `manifest`, and `all`.
 
   - If the value is set to `deployed`, tables will show all the deployed resources.
+  - If set to `helm`, tables will only show resources from the configured helm charts.
   - If set to `manifest`, tables will show all the resources from the kubernetes manifest. Make sure that the `manifest_file_paths` arg is set.
 
 - `helm_rendered_charts` - (optional) A map of Helm charts along with the path to the chart directory and the paths of the value override files (if any). If set, the plugin can list the charts, the templates defined for the charts, and the list of released versions of charts.
@@ -358,6 +366,35 @@ connection "kubernetes" {
   ]
 }
 ```
+
+## Helm Configuration
+
+The plugin can also parse the configured Helm charts, as well as it can render all its templates to Kubernetes manifest and shows it in table format and make it easy to query especially when you are developing a new chart, making changes to the chart, debugging, and so on.
+
+For example:
+
+```hcl
+connection "kubernetes" {
+  plugin = "kubernetes"
+
+  helm_rendered_charts = {
+    "my-app-1" = {
+      chart_path        = "~/charts/my-app-1"
+      values_file_paths = "~/value/file/for/my-app-1.yaml"
+    }
+    "my-app-2" = {
+      chart_path        = "~/charts/my-app-2"
+      values_file_paths = "~/value/file/for/my-app-2.yaml"
+    }
+  }
+}
+```
+
+`helm_rendered_charts` - It takes a map of chart configurations. You can set more than 1 charts that you want to query. For example:
+
+- The above configuration has 2 charts configured: my-app-1 and my-app-2. The name `my-app-1` and `my-app-2` are considered as release name.
+- Every map should have a `chart_path` indicates the directory where the chart is located.
+- The map can have an optional values_file_paths indicates the override value files for rendering the templates. By default, the plugin uses the default `values.yaml` if no additional value files are passed.
 
 ## Get involved
 

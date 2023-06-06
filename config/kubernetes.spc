@@ -51,6 +51,7 @@ connection "kubernetes" {
   # Specify the source of the resource. Possible values: `deployed`, `helm`, `manifest`, and `all`.
   # Default set to `all`. Set the argument to override the default value.
   # If the value is set to `deployed`, tables will show all the deployed resources.
+  # If set to `helm`, tables will only show resources from the configured helm charts.
   # If set to `manifest`, tables will show all the resources from the kubernetes manifest. Make sure that the `manifest_file_paths` arg is set.
   # If `all`, tables will show all the deployed and manifest resources.
   # source_type = "all"
@@ -58,7 +59,7 @@ connection "kubernetes" {
   # Helm configuration
   
   # A map for Helm charts along with the path to the chart directory and the paths of the value override files (if any).
-  # Every map should have chart_path defined, and the values_path is optional.
+  # Every map should have chart_path defined, and the values_file_paths is optional.
   # You can define multiple charts in the config.
   # helm_rendered_charts = {
   #   "chart_name" = {

@@ -4,6 +4,8 @@
 
 Use SQL to query Kubernetes components.
 
+Apart from querying the deployed resources, the plugin also supports scanning the [Kubernetes manifest files](https://hub.steampipe.io/plugins/turbot/kubernetes#supported-manifest-file-path-formats) from different sources, parsing the configured [Helm charts](https://hub.steampipe.io/plugins/turbot/kubernetes#helm-configuration) and scanning all the templates to get the list of Kubernetes resources.
+
 - **[Get started →](https://hub.steampipe.io/plugins/turbot/kubernetes)**
 - Documentation: [Table definitions & examples](https://hub.steampipe.io/plugins/turbot/kubernetes/tables)
 - Community: [Slack Channel](https://steampipe.io/community/join)
@@ -75,19 +77,20 @@ connection "kubernetes" {
   # Specify the source of the resource. Possible values: `deployed`, `helm`, `manifest`, and `all`.
   # Default set to `all`. Set the argument to override the default value.
   # If the value is set to `deployed`, tables will show all the deployed resources.
+  # If set to `helm`, tables will only show resources from the configured helm charts.
   # If set to `manifest`, tables will show all the resources from the kubernetes manifest. Make sure that the `manifest_file_paths` arg is set.
   # If `all`, tables will show all the deployed and manifest resources.
   # source_type = "all"
 
   # Helm configuration
-  
+
   # A map for Helm charts along with the path to the chart directory and the paths of the value override files (if any).
-  # Every map should have chart_path defined, and the values_path is optional.
+  # Every map should have chart_path defined, and the values_file_paths is optional.
   # You can define multiple charts in the config.
   # helm_rendered_charts = {
   #   "chart_name" = {
-  #     chart_path   = "/path/to/chart/dir"
-  #     values_paths = ["/path/to/value/override/files.yaml"]
+  #     chart_path        = "/path/to/chart/dir"
+  #     values_file_paths = ["/path/to/value/override/files.yaml"]
   #   }
   # }
 }
