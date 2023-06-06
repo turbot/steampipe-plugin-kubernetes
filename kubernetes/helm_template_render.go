@@ -43,26 +43,47 @@ func newClient() *action.Install {
 	return client
 }
 
-type HelmRenderedTemplate1 struct {
+type HelmRenderedTemplate struct {
 	Data      string
 	Chart     *chart.Chart
 	Path      string
 	ConfigKey string
 }
 
-func getHelmTemplatesUsingKics(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) ([]HelmRenderedTemplate1, error) {
+// Get the rendered templates.
+func getHelmRenderedTemplates(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) ([]HelmRenderedTemplate, error) {
+	helmRenderedTemplates, err := getHelmRenderedTemplatesCached(ctx, d, nil)
+	if err != nil {
+		plugin.Logger(ctx).Error("getHelmRenderedTemplates", "template_render_error", err)
+		return nil, err
+	}
+
+	if helmRenderedTemplates != nil {
+		return helmRenderedTemplates.([]HelmRenderedTemplate), nil
+	}
+
+	return nil, nil
+}
+
+// Cached form of the rendered templates.
+var getHelmRenderedTemplatesCached = plugin.HydrateFunc(getHelmRenderedTemplatesUncached).Memoize()
+
+// getHelmRenderedTemplatesUncached is the actual implementation of getHelmRenderedTemplates, which should
+// be run only once per connection. Do not call this directly, use
+// getHelmRenderedTemplates instead.
+func getHelmRenderedTemplatesUncached(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (any, error) {
 	charts, err := getParsedHelmChart(ctx, d)
 	if err != nil {
 		return nil, err
 	}
 	helmConfig := GetConfig(d.Connection)
 
-	var renderedTemplates []HelmRenderedTemplate1
+	var renderedTemplates []HelmRenderedTemplate
 	for _, chart := range charts {
 
 		// Return nil, if the config doesn't have any chart path configured
 		if chart == nil {
-			plugin.Logger(ctx).Debug("parsedHelmRenderedTemplatesUncached", "no chart configuration found", "connection", d.Connection.Name)
+			plugin.Logger(ctx).Debug("getHelmRenderedTemplatesUncached", "no chart configuration found", "connection", d.Connection.Name)
 			return nil, nil
 		}
 
@@ -79,7 +100,7 @@ func getHelmTemplatesUsingKics(ctx context.Context, d *plugin.QueryData, _ *plug
 
 				manifest, _, err := runInstall([]string{c.ChartPath}, client, vals)
 				if err != nil {
-					plugin.Logger(ctx).Debug("parsedHelmRenderedTemplatesUncached", "run_install_error", err, "connection", d.Connection.Name)
+					plugin.Logger(ctx).Debug("getHelmRenderedTemplatesUncached", "run_install_error", err, "connection", d.Connection.Name)
 					return nil, err
 				}
 
@@ -89,7 +110,7 @@ func getHelmTemplatesUsingKics(ctx context.Context, d *plugin.QueryData, _ *plug
 						continue
 					}
 
-					renderedTemplates = append(renderedTemplates, HelmRenderedTemplate1{
+					renderedTemplates = append(renderedTemplates, HelmRenderedTemplate{
 						Data:      content,
 						Chart:     chart.Chart,
 						Path:      path.Join(c.ChartPath, extractTemplatePathFromContent(content)),

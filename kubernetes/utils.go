@@ -31,8 +31,6 @@ import (
 
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chart/loader"
-	"helm.sh/helm/v3/pkg/chartutil"
-	"helm.sh/helm/v3/pkg/engine"
 
 	helmClient "github.com/mittwald/go-helm-client"
 
@@ -898,129 +896,6 @@ func parsedHelmChartUncached(ctx context.Context, d *plugin.QueryData, _ *plugin
 	return charts, nil
 }
 
-// Get the rendered template contents.
-func getHelmRenderedTemplates(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) ([]HelmRenderedTemplate, error) {
-	helmRenderedTemplates, err := parsedHelmRenderedTemplatesCached(ctx, d, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	if helmRenderedTemplates != nil {
-		return helmRenderedTemplates.([]HelmRenderedTemplate), nil
-	}
-	return nil, nil
-}
-
-// Cached form of the rendered template content.
-var parsedHelmRenderedTemplatesCached = plugin.HydrateFunc(parsedHelmRenderedTemplatesUncached).Memoize()
-
-// parsedHelmRenderedTemplatesUncached is the actual implementation of getHelmRenderedTemplates, which should
-// be run only once per connection. Do not call this directly, use
-// getHelmRenderedTemplates instead.
-func parsedHelmRenderedTemplatesUncached(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (any, error) {
-	charts, err := getParsedHelmChart(ctx, d)
-	if err != nil {
-		return nil, err
-	}
-	helmConfig := GetConfig(d.Connection)
-
-	var renderedTemplates []HelmRenderedTemplate
-	for _, chart := range charts {
-
-		// Return nil, if the config doesn't have any chart path configured
-		if chart == nil {
-			plugin.Logger(ctx).Debug("parsedHelmRenderedTemplatesUncached", "no chart configuration found", "connection", d.Connection.Name)
-			return nil, nil
-		}
-
-		for name, c := range helmConfig.HelmRenderedCharts {
-			if c.ChartPath == chart.Path {
-				// Get the values required to render the templates
-				values, err := getHelmChartOverrideValues(ctx, d, chart, c.ValuesFilePaths)
-				if err != nil {
-					return nil, err
-				}
-
-				values = map[string]interface{}{
-					"Values": values,
-					"Release": map[string]interface{}{
-						"Service": "Helm",
-						"Name":    name,
-					},
-					"Chart":        chart.Chart.Metadata,
-					"Capabilities": chartutil.Capabilities{},
-					"Template": map[string]interface{}{
-						"BasePath": "/path/to/base",
-					},
-				}
-
-				renderedChart, err := engine.Render(chart.Chart, values)
-				if err != nil {
-					plugin.Logger(ctx).Error("parsedHelmRenderedTemplatesUncached", "connection", d.Connection.Name, "template_render_error", err)
-					return nil, err
-				}
-
-				renderedTemplates = append(renderedTemplates, HelmRenderedTemplate{
-					Data:  renderedChart,
-					Chart: chart.Chart,
-					Name:  name,
-				})
-			}
-		}
-	}
-
-	return renderedTemplates, nil
-}
-
-type HelmRenderedTemplate struct {
-	Data  map[string]string
-	Chart *chart.Chart
-	Name  string
-}
-
-// Return the values required to render the templates
-func getHelmChartOverrideValues(ctx context.Context, d *plugin.QueryData, chart *parsedHelmChart, overrideValueFiles []string) (map[string]interface{}, error) {
-	// Get the default values defined in the values.yaml file
-	values := chart.Chart.Values
-
-	// Check for value override files configured in the connection config
-	var matches, valueFiles []string
-	for _, valuePath := range overrideValueFiles {
-		// List the files in the given source directory
-		files, err := d.GetSourceFiles(valuePath)
-		if err != nil {
-			return nil, err
-		}
-		matches = append(matches, files...)
-	}
-
-	// Sanitize the matches to ignore the directories
-	for _, i := range matches {
-
-		// Ignore directories
-		if filehelpers.DirectoryExists(i) {
-			continue
-		}
-		valueFiles = append(valueFiles, i)
-	}
-
-	// If any value override files provided in the config, use those value to render the templates
-	// The priority will be given to the last file specified.
-	// For example, if both values.yaml and override.yaml
-	// contained a key called 'foo', the value set in override.yaml would take precedence.
-	for _, f := range valueFiles {
-		// Read the default values.yaml file of the chart
-		fileValues, err := chartutil.ReadValuesFile(f)
-		if err != nil {
-			plugin.Logger(ctx).Error("parsedHelmRenderedTemplatesUncached", "read_file_error", "connection_name", d.Connection.Name, "failed to read file %s: %v", f, err)
-			return nil, err
-		}
-		values = chartutil.CoalesceTables(values, fileValues)
-	}
-
-	return values, nil
-}
-
 // Get the parsed contents of the given files.
 func getRenderedHelmTemplateContent(ctx context.Context, d *plugin.QueryData) ([]parsedContent, error) {
 	conn, err := renderedHelmTemplateContentCached(ctx, d, nil)
@@ -1038,7 +913,7 @@ var renderedHelmTemplateContentCached = plugin.HydrateFunc(renderedHelmTemplateC
 // getRenderedHelmTemplateContent instead.
 func renderedHelmTemplateContentUncached(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (any, error) {
 	// Read the config
-	renderedTemplates, err := getHelmTemplatesUsingKics(ctx, d, nil)
+	renderedTemplates, err := getHelmRenderedTemplates(ctx, d, nil)
 	if err != nil {
 		return nil, err
 	}

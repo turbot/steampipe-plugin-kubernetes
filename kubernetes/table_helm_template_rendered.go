@@ -53,7 +53,7 @@ func listHelmRenderedTemplates(ctx context.Context, d *plugin.QueryData, _ *plug
 	// 	}
 	// }
 
-	renderedTemplates, err := getHelmTemplatesUsingKics(ctx, d, nil)
+	renderedTemplates, err := getHelmRenderedTemplates(ctx, d, nil)
 	if err != nil {
 		return nil, err
 	}

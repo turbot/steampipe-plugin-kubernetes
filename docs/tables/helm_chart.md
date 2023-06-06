@@ -18,6 +18,26 @@ from
   helm_chart;
 ```
 
+### List all deployed charts
+
+```sql
+select
+  hc.name as chart_name,
+  hc.type as chart_type,
+  hc.version as chart_version,
+  hr.name as release_name,
+  hr.status as release_status,
+  hr.version as deployment_version,
+  hr.first_deployed as deployed_at,
+  hr.config as deployment_config
+from
+  kubernetes.helm_chart as hc
+  left join kubernetes.helm_release as hr
+    on hc.name = hr.chart_name
+where
+  hr.status = 'deployed';
+```
+
 ### List all deprecated charts
 
 ```sql
