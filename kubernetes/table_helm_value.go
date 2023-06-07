@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"context"
 	"os"
+	"path"
 
 	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
@@ -52,7 +53,7 @@ func listHelmValues(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateD
 		}
 
 		for _, r := range defaultValues {
-			r.Path = chart.Path
+			r.Path = path.Join(chart.Path, "values.yaml")
 			allValues = append(allValues, r)
 		}
 	}
