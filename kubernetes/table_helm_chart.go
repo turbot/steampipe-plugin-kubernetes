@@ -15,7 +15,7 @@ import (
 func tableHelmChart(ctx context.Context) *plugin.Table {
 	return &plugin.Table{
 		Name:        "helm_chart",
-		Description: "Metadata for a Chart file",
+		Description: "Lists the configuration settings from the configured charts",
 		List: &plugin.ListConfig{
 			Hydrate: listHelmCharts,
 		},
@@ -50,14 +50,17 @@ type HelmChartInfo struct {
 //// LIST FUNCTION
 
 func listHelmCharts(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
+	// Get the list of unique helm charts from the charts provided in the config
 	charts, err := getUniqueHelmCharts(ctx, d)
 	if err != nil {
+		plugin.Logger(ctx).Error("listHelmCharts", "failed to list charts", err)
 		return nil, err
 	}
 
 	for _, chart := range charts {
 		d.StreamListItem(ctx, HelmChartInfo{*chart.Chart.Metadata, chart.Path})
 
+		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
 			return nil, nil
 		}

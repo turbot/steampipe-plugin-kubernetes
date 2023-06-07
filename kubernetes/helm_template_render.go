@@ -19,12 +19,10 @@ import (
 	"helm.sh/helm/v3/pkg/cli/values"
 	"helm.sh/helm/v3/pkg/getter"
 	"helm.sh/helm/v3/pkg/release"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/yaml"
 )
-
-type HelmTemplates struct {
-	Name string
-	Data string
-}
 
 var (
 	settings = cli.New()
@@ -43,6 +41,8 @@ func newClient() *action.Install {
 	return client
 }
 
+// Utils functions from template render
+
 type HelmRenderedTemplate struct {
 	Data      string
 	Chart     *chart.Chart
@@ -50,7 +50,7 @@ type HelmRenderedTemplate struct {
 	ConfigKey string
 }
 
-// Get the rendered templates.
+// getHelmRenderedTemplates returns the resulting manifest after rendering all the templates defined in the configured charts
 func getHelmRenderedTemplates(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) ([]HelmRenderedTemplate, error) {
 	helmRenderedTemplates, err := getHelmRenderedTemplatesCached(ctx, d, nil)
 	if err != nil {
@@ -123,8 +123,144 @@ func getHelmRenderedTemplatesUncached(ctx context.Context, d *plugin.QueryData, 
 	return renderedTemplates, nil
 }
 
-func runInstall(args []string, client *action.Install,
-	valueOpts *values.Options) (*release.Release, []string, error) {
+// Utils functions from formatting the rendered template contents
+
+// Get the parsed contents of the given files.
+func getRenderedHelmTemplateContent(ctx context.Context, d *plugin.QueryData) ([]parsedContent, error) {
+	conn, err := renderedHelmTemplateContentCached(ctx, d, nil)
+	if err != nil {
+		return nil, err
+	}
+	return conn.([]parsedContent), nil
+}
+
+// Cached form of the parsed file content.
+var renderedHelmTemplateContentCached = plugin.HydrateFunc(renderedHelmTemplateContentUncached).Memoize()
+
+// renderedHelmTemplateContentUncached is the actual implementation of getRenderedHelmTemplateContent, which should
+// be run only once per connection. Do not call this directly, use
+// getRenderedHelmTemplateContent instead.
+func renderedHelmTemplateContentUncached(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (any, error) {
+	// Read the config
+	renderedTemplates, err := getHelmRenderedTemplates(ctx, d, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var parsedContents []parsedContent
+	for _, t := range renderedTemplates {
+		for _, resource := range strings.Split(t.Data, "---") {
+			// Skip empty documents, `Decode` will fail on them
+			// Also, increment the pos to include the separator position (e.g. ---)
+			if len(resource) == 0 {
+				continue
+			}
+
+			// Skip if no kind defined
+			if !(strings.Contains(resource, "kind:") || strings.Contains(resource, "\"kind\":")) {
+				continue
+			}
+
+			obj := &unstructured.Unstructured{}
+			err = yaml.Unmarshal([]byte(resource), obj)
+			if err != nil {
+				plugin.Logger(ctx).Error("renderedHelmTemplateContentUncached", "unmarshal_error", err)
+				return nil, err
+			}
+
+			obj.SetAPIVersion(obj.GetAPIVersion())
+			obj.SetKind(obj.GetKind())
+			gvk := obj.GetObjectKind().GroupVersionKind()
+			obj.SetGroupVersionKind(schema.GroupVersionKind{
+				Group:   gvk.Group,
+				Version: gvk.Version,
+				Kind:    gvk.Kind,
+			})
+
+			// Convert the content to concrete type based on the resource kind
+			targetObj, err := convertUnstructuredDataToType(obj)
+			if err != nil {
+				plugin.Logger(ctx).Error("RenderedHelmTemplateContentUncached", "failed to convert content into a concrete type", err, "path", t.Path)
+				return nil, err
+			}
+
+			parsedContents = append(parsedContents, parsedContent{
+				Data:       targetObj,
+				Kind:       obj.GetKind(),
+				Path:       t.Path,
+				SourceType: fmt.Sprintf("helm_rendered:%s", t.ConfigKey),
+			})
+		}
+	}
+
+	// // Check for the start of the document
+	// pos := 0
+	// for _, resource := range strings.Split(string(content), "---") {
+	// 	// Skip empty documents, `Decode` will fail on them
+	// 	// Also, increment the pos to include the separator position (e.g. ---)
+	// 	if len(resource) == 0 {
+	// 		pos++
+	// 		continue
+	// 	}
+
+	// 	// Calculate the length of the YAML resource block
+	// 	blockLength := strings.Split(strings.ReplaceAll(resource, " ", ""), "\n")
+
+	// 	// Remove the extra lines added during the split operation based on the separator
+	// 	blockLength = blockLength[:len(blockLength)-1]
+	// 	if blockLength[0] == "" {
+	// 		blockLength = blockLength[1:]
+	// 	}
+
+	// 	// skip if no kind defined
+	// 	if !strings.Contains(resource, "kind:") {
+	// 		pos = pos + len(blockLength) + 1
+	// 		continue
+	// 	}
+
+	// 	obj := &unstructured.Unstructured{}
+	// 	err = yaml.Unmarshal([]byte(resource), obj)
+	// 	if err != nil {
+	// 		plugin.Logger(ctx).Error("parsedHelmChartContentUncached", "failed to unmarshal the content", err, "path", path)
+	// 		return nil, err
+	// 	}
+
+	// 	obj.SetAPIVersion(obj.GetAPIVersion())
+	// 	obj.SetKind(obj.GetKind())
+	// 	gvk := obj.GetObjectKind().GroupVersionKind()
+	// 	obj.SetGroupVersionKind(schema.GroupVersionKind{
+	// 		Group:   gvk.Group,
+	// 		Version: gvk.Version,
+	// 		Kind:    gvk.Kind,
+	// 	})
+
+	// 	// Convert the content to concrete type based on the resource kind
+	// 	targetObj, err := convertUnstructuredDataToType(obj)
+	// 	if err != nil {
+	// 		plugin.Logger(ctx).Error("parsedHelmChartContentUncached", "failed to convert content into a concrete type", err, "path", path)
+	// 		return nil, err
+	// 	}
+
+	// 	parsedContents = append(parsedContents, parsedContent{
+	// 		Data:      targetObj,
+	// 		Kind:      obj.GetKind(),
+	// 		Path:      path,
+	// 		StartLine: pos + 1, // Since starts from 0
+	// 		EndLine:   pos + len(blockLength),
+	// 	})
+
+	// 	// Increment the position by the length of the block
+	// 	// the value is added with 1 to include the separator
+	// 	pos = pos + len(blockLength) + 1
+	// }
+
+	return parsedContents, nil
+}
+
+// Utils functions
+
+// runInstall renders the templates and returns the resulting manifest after communicating with the k8s cluster without actually creating any resources on the cluster
+func runInstall(args []string, client *action.Install, valueOpts *values.Options) (*release.Release, []string, error) {
 	defer log.SetOutput(os.Stderr)
 	if client.Version == "" && client.Devel {
 		client.Version = ">0.0.0-0"
@@ -165,6 +301,9 @@ func runInstall(args []string, client *action.Install,
 	return helmRelease, excluded, nil
 }
 
+// checkIfInstallable validates if a chart can be installed
+//
+// Application chart type is only installable
 func checkIfInstallable(ch *chart.Chart) error {
 	switch ch.Metadata.Type {
 	case "", "application":
@@ -183,6 +322,7 @@ func getExcluded(charterino *chart.Chart, chartpath string) []string {
 	return excluded
 }
 
+// extractTemplatePathFromContent extracts the path of the template source file from the rendered template content
 func extractTemplatePathFromContent(content string) string {
 	splitContent := strings.Split(content, "\n")
 	sourceInfoFromManifest := splitContent[1]

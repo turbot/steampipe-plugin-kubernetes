@@ -4,7 +4,7 @@ A template is a file that defines a Kubernetes manifest in a way that is generic
 
 During the installation process, Helm takes the template files in the chart and renders them using the values provided by the user or the defaults defined in the chart's values.yaml file.
 
-The table `helm_template_rendered` reads the templates defined in the chart, the value files provided in the config, renders the templates and shows all the resource configurations in a table format. Using this table, you can query all the resource configurations before deploying the chart in the production.
+The table `helm_template_rendered` reads the templates defined in the chart, the value files provided in the config, renders the templates and returns the resulting manifest after communicating with the kubernetes cluster without actually creating any resources on the cluster.
 
 ## Examples
 

@@ -13,7 +13,7 @@ import (
 func tableHelmTemplateRendered(ctx context.Context) *plugin.Table {
 	return &plugin.Table{
 		Name:        "helm_template_rendered",
-		Description: "Templates defines in a specific chart directory",
+		Description: "Lists the fully rendered templates using the values provided in the config",
 		List: &plugin.ListConfig{
 			Hydrate: listHelmRenderedTemplates,
 		},
@@ -27,7 +27,6 @@ func tableHelmTemplateRendered(ctx context.Context) *plugin.Table {
 }
 
 type helmTemplate struct {
-	// Path string
 	ChartName  string
 	Path       string
 	Rendered   string
@@ -37,22 +36,6 @@ type helmTemplate struct {
 //// LIST FUNCTION
 
 func listHelmRenderedTemplates(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
-	// renderedTemplates, err := getHelmRenderedTemplates(ctx, d, nil)
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	// for _, template := range renderedTemplates {
-	// 	for k, v := range template.Data {
-	// 		d.StreamListItem(ctx, helmTemplate{
-	// 			ChartName:  template.Chart.Metadata.Name,
-	// 			Name:       k,
-	// 			Rendered:   v,
-	// 			SourceType: fmt.Sprintf("helm_rendered:%s", template.Name),
-	// 		})
-	// 	}
-	// }
-
 	renderedTemplates, err := getHelmRenderedTemplates(ctx, d, nil)
 	if err != nil {
 		return nil, err
@@ -65,6 +48,11 @@ func listHelmRenderedTemplates(ctx context.Context, d *plugin.QueryData, _ *plug
 			Rendered:   template.Data,
 			SourceType: fmt.Sprintf("helm_rendered:%s", template.ConfigKey),
 		})
+
+		// Context can be cancelled due to manual cancellation or the limit has been hit
+		if d.RowsRemaining(ctx) == 0 {
+			return nil, nil
+		}
 	}
 
 	return nil, nil

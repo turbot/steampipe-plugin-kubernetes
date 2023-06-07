@@ -140,14 +140,14 @@ connection "kubernetes" {
 - `config_context` - (Optional) The kubeconfig context to use. If not set, the current context will be used.
 - `config_path` - (Optional) The kubeconfig file path. If not set, the plugin will check `~/.kube/config`. Can also be set with the `KUBE_CONFIG_PATHS` or `KUBERNETES_MASTER` environment variables.
 - `custom_resource_tables` - (Optional) The custom resources to create as dynamic tables. If set to empty or not set, the plugin will not create any dynamic tables.
-- `manifest_file_paths` - (Optional) A list of locations to search for Kubernetes manifest files. If set, the plugin will read the resource configurations from the configured paths and list the resources in the respective tables.
+- `manifest_file_paths` - (Optional) A list of locations to search for Kubernetes manifest files. If set, the plugin will read the resource configurations from the configured paths and list the resources in the respective tables. See [Supported Manifest File Path Formats](#supported-manifest-file-path-formats) for more details.
 - `source_type` - (Optional) Specify the source of the resource. Default set to `all`. The possible values are: `deployed`, `helm`, `manifest`, and `all`.
 
   - If the value is set to `deployed`, tables will show all the deployed resources.
   - If set to `helm`, tables will only show resources from the configured helm charts.
   - If set to `manifest`, tables will show all the resources from the kubernetes manifest. Make sure that the `manifest_file_paths` arg is set.
 
-- `helm_rendered_charts` - (optional) A map of Helm charts along with the path to the chart directory and the paths of the value override files (if any). If set, the plugin can list the charts, the templates defined for the charts, and the list of released versions of charts.
+- `helm_rendered_charts` - (optional) A map of Helm charts along with the path to the chart directory and the paths of the value override files (if any). If set, the plugin can list the charts, the templates defined for the charts, and the list of released versions of charts. See [Helm Configuration](#helm-configuration) from more details.
 
 ## Configuring Kubernetes Credentials
 

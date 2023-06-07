@@ -13,7 +13,7 @@ import (
 func tableHelmTemplateRaw(ctx context.Context) *plugin.Table {
 	return &plugin.Table{
 		Name:        "helm_template_raw",
-		Description: "Templates defines in a specific chart directory",
+		Description: "Lists the raw templates defined in the configured charts",
 		List: &plugin.ListConfig{
 			Hydrate: listHelmRawTemplates,
 		},
@@ -26,10 +26,9 @@ func tableHelmTemplateRaw(ctx context.Context) *plugin.Table {
 }
 
 type helmTemplateRaw struct {
-	ChartName  string
-	Path       string
-	SourceType string
-	Raw        string
+	ChartName string
+	Path      string
+	Raw       string
 }
 
 //// LIST FUNCTION
@@ -43,11 +42,15 @@ func listHelmRawTemplates(ctx context.Context, d *plugin.QueryData, _ *plugin.Hy
 	for _, chart := range charts {
 		for _, template := range chart.Chart.Templates {
 			d.StreamListItem(ctx, helmTemplateRaw{
-				ChartName:  chart.Chart.Metadata.Name,
-				SourceType: "helm",
-				Raw:        string(template.Data),
-				Path:       path.Join(chart.Path, template.Name),
+				ChartName: chart.Chart.Metadata.Name,
+				Raw:       string(template.Data),
+				Path:      path.Join(chart.Path, template.Name),
 			})
+
+			// Context can be cancelled due to manual cancellation or the limit has been hit
+			if d.RowsRemaining(ctx) == 0 {
+				return nil, nil
+			}
 		}
 	}
 

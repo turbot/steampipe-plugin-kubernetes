@@ -18,7 +18,7 @@ import (
 func tableHelmRelease(ctx context.Context) *plugin.Table {
 	return &plugin.Table{
 		Name:        "helm_release",
-		Description: "List of Helm releases for a specified namespace",
+		Description: "List all of the releases of chart in a Kubernetes cluster",
 		List: &plugin.ListConfig{
 			Hydrate:       listHelmReleases,
 			ParentHydrate: listK8sNamespaces,
@@ -65,12 +65,18 @@ func listHelmReleases(ctx context.Context, d *plugin.QueryData, h *plugin.Hydrat
 	// So, use the namespace list as parent and get the releases from each of the namespaces available in the current cluster context.
 	namespace := namespaceInfo.Name
 	if d.EqualsQualString("namespace") != "" {
-		namespace = d.EqualsQualString("namespace")
+		namespaceQual := d.EqualsQualString("namespace")
+
+		// Return nil, if the namespace is not same with the desired namespaced provided using quals
+		if namespaceQual != namespace {
+			return nil, nil
+		}
 	}
 
 	// Create client
 	client, err := getHelmClient(ctx, namespace)
 	if err != nil {
+		plugin.Logger(ctx).Error("listHelmReleases", "client_error", err)
 		return nil, err
 	}
 
@@ -82,6 +88,7 @@ func listHelmReleases(ctx context.Context, d *plugin.QueryData, h *plugin.Hydrat
 	// List all the helm charts configured in the config
 	chart, err := getUniqueHelmCharts(ctx, d)
 	if err != nil {
+		plugin.Logger(ctx).Error("listHelmReleases", "failed to list charts", err)
 		return nil, err
 	}
 
@@ -104,11 +111,13 @@ func listHelmReleases(ctx context.Context, d *plugin.QueryData, h *plugin.Hydrat
 		}
 
 		for _, release := range releases {
+			// Ignore, if the release is not for the desired chart
 			if release.Chart.Metadata.Name != c.Chart.Metadata.Name {
 				continue
 			}
 			d.StreamListItem(ctx, release)
 
+			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
 				return nil, nil
 			}

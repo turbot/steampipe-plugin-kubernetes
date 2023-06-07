@@ -15,7 +15,7 @@ import (
 func tableHelmValue(ctx context.Context) *plugin.Table {
 	return &plugin.Table{
 		Name:        "helm_value",
-		Description: "Values passed into the chart",
+		Description: "Lists the values from chart's values.yaml file as well as the values listed in the configured values override files",
 		List: &plugin.ListConfig{
 			Hydrate: listHelmValues,
 		},
@@ -43,6 +43,7 @@ func listHelmValues(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateD
 		return nil, err
 	}
 
+	var allValues Rows
 	for _, chart := range charts {
 		defaultValues, err := getRows(ctx, chart.Chart.Values)
 		if err != nil {
@@ -51,9 +52,8 @@ func listHelmValues(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateD
 		}
 
 		for _, r := range defaultValues {
-
 			r.Path = chart.Path
-			d.StreamListItem(ctx, r)
+			allValues = append(allValues, r)
 		}
 	}
 
@@ -78,7 +78,17 @@ func listHelmValues(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateD
 
 		for _, r := range overrideValues {
 			r.Path = path
-			d.StreamListItem(ctx, r)
+			allValues = append(allValues, r)
+		}
+	}
+
+	// Stream all the values from chart's default values.yaml as well as the value override files configured in the config
+	for _, v := range allValues {
+		d.StreamListItem(ctx, v)
+
+		// Context can be cancelled due to manual cancellation or the limit has been hit
+		if d.RowsRemaining(ctx) == 0 {
+			return nil, nil
 		}
 	}
 
