@@ -20,7 +20,7 @@ og_image: "/images/plugins/turbot/kubernetes-social-graphic.png"
 
 The Kubernetes plugin make it simpler to query the variety of Kubernetes resources deployed in a Kubernetes cluster using [Steampipe](https://steampipe.io).
 
-Apart from querying the deployed resources, the plugin also supports scanning the [Kubernetes manifest files](#supported-manifest-file-path-formats) from different sources, parsing the configured [Helm charts](#helm-configuration) and scanning all the templates to get the list of Kubernetes resources.
+Apart from querying the deployed resources, the plugin also supports scanning of [Kubernetes manifest files](#supported-manifest-file-path-formats) from different sources, parsing the configured [Helm charts](#helm-configuration) and scanning all the templates to get the list of Kubernetes resources.
 
 For example:
 
