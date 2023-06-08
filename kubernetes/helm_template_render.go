@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
 
 	"helm.sh/helm/v3/pkg/action"
@@ -72,7 +73,7 @@ var getHelmRenderedTemplatesCached = plugin.HydrateFunc(getHelmRenderedTemplates
 // be run only once per connection. Do not call this directly, use
 // getHelmRenderedTemplates instead.
 func getHelmRenderedTemplatesUncached(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (any, error) {
-	charts, err := getParsedHelmChart(ctx, d)
+	charts, err := getUniqueHelmCharts(ctx, d)
 	if err != nil {
 		return nil, err
 	}
@@ -87,8 +88,12 @@ func getHelmRenderedTemplatesUncached(ctx context.Context, d *plugin.QueryData, 
 			return nil, nil
 		}
 
+		var processedHelmConfigs []string
 		for name, c := range helmConfig.HelmRenderedCharts {
-			if c.ChartPath == chart.Path {
+			if c.ChartPath == chart.Path && !helpers.StringSliceContains(processedHelmConfigs, name) {
+
+				// Add the processed Helm render configs into processedHelmConfigs to avoid duplicate entries
+				processedHelmConfigs = append(processedHelmConfigs, name)
 
 				client := newClient()
 				client.ReleaseName = name
@@ -141,9 +146,16 @@ var renderedHelmTemplateContentCached = plugin.HydrateFunc(renderedHelmTemplateC
 // be run only once per connection. Do not call this directly, use
 // getRenderedHelmTemplateContent instead.
 func renderedHelmTemplateContentUncached(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (any, error) {
-	// Read the config
+	// List the fully rendered templates
 	renderedTemplates, err := getHelmRenderedTemplates(ctx, d, nil)
 	if err != nil {
+		return nil, err
+	}
+
+	// Get the start and end line information for the templates
+	templateWithLineInfo, err := getRawTemplateLineInfo(ctx, d)
+	if err != nil {
+		plugin.Logger(ctx).Error("renderedHelmTemplateContentUncached", "failed to get line information from raw template", err)
 		return nil, err
 	}
 
@@ -184,75 +196,26 @@ func renderedHelmTemplateContentUncached(ctx context.Context, d *plugin.QueryDat
 				return nil, err
 			}
 
+			lineInfo := templateWithLineInfo[t.Path]
+			if len(lineInfo) == 0 {
+				plugin.Logger(ctx).Debug("getRawTemplateLineInfo", "<<<<<<TEMPLATE_PATH>>>>>>", t.Path)
+				continue
+			}
 			parsedContents = append(parsedContents, parsedContent{
 				Data:       targetObj,
 				Kind:       obj.GetKind(),
 				Path:       t.Path,
 				SourceType: fmt.Sprintf("helm_rendered:%s", t.ConfigKey),
+				StartLine:  lineInfo[0].StartLine,
+				EndLine:    lineInfo[0].EndLine,
 			})
+
+			// Remove the first element since it is already used
+			if len(lineInfo) > 1 {
+				templateWithLineInfo[t.Path] = lineInfo[1:]
+			}
 		}
 	}
-
-	// // Check for the start of the document
-	// pos := 0
-	// for _, resource := range strings.Split(string(content), "---") {
-	// 	// Skip empty documents, `Decode` will fail on them
-	// 	// Also, increment the pos to include the separator position (e.g. ---)
-	// 	if len(resource) == 0 {
-	// 		pos++
-	// 		continue
-	// 	}
-
-	// 	// Calculate the length of the YAML resource block
-	// 	blockLength := strings.Split(strings.ReplaceAll(resource, " ", ""), "\n")
-
-	// 	// Remove the extra lines added during the split operation based on the separator
-	// 	blockLength = blockLength[:len(blockLength)-1]
-	// 	if blockLength[0] == "" {
-	// 		blockLength = blockLength[1:]
-	// 	}
-
-	// 	// skip if no kind defined
-	// 	if !strings.Contains(resource, "kind:") {
-	// 		pos = pos + len(blockLength) + 1
-	// 		continue
-	// 	}
-
-	// 	obj := &unstructured.Unstructured{}
-	// 	err = yaml.Unmarshal([]byte(resource), obj)
-	// 	if err != nil {
-	// 		plugin.Logger(ctx).Error("parsedHelmChartContentUncached", "failed to unmarshal the content", err, "path", path)
-	// 		return nil, err
-	// 	}
-
-	// 	obj.SetAPIVersion(obj.GetAPIVersion())
-	// 	obj.SetKind(obj.GetKind())
-	// 	gvk := obj.GetObjectKind().GroupVersionKind()
-	// 	obj.SetGroupVersionKind(schema.GroupVersionKind{
-	// 		Group:   gvk.Group,
-	// 		Version: gvk.Version,
-	// 		Kind:    gvk.Kind,
-	// 	})
-
-	// 	// Convert the content to concrete type based on the resource kind
-	// 	targetObj, err := convertUnstructuredDataToType(obj)
-	// 	if err != nil {
-	// 		plugin.Logger(ctx).Error("parsedHelmChartContentUncached", "failed to convert content into a concrete type", err, "path", path)
-	// 		return nil, err
-	// 	}
-
-	// 	parsedContents = append(parsedContents, parsedContent{
-	// 		Data:      targetObj,
-	// 		Kind:      obj.GetKind(),
-	// 		Path:      path,
-	// 		StartLine: pos + 1, // Since starts from 0
-	// 		EndLine:   pos + len(blockLength),
-	// 	})
-
-	// 	// Increment the position by the length of the block
-	// 	// the value is added with 1 to include the separator
-	// 	pos = pos + len(blockLength) + 1
-	// }
 
 	return parsedContents, nil
 }
@@ -333,4 +296,73 @@ func extractTemplatePathFromContent(content string) string {
 		return strings.Join(source[1:], "/")
 	}
 	return ""
+}
+
+type LineInfo struct {
+	StartLine int
+	EndLine   int
+}
+
+// getRawTemplateLineInfo returns a map containing the line numbers for each resource configuration block defined in a template file
+func getRawTemplateLineInfo(ctx context.Context, d *plugin.QueryData) (map[string][]LineInfo, error) {
+
+	templateMetadata := map[string][]LineInfo{}
+	charts, err := getUniqueHelmCharts(ctx, d)
+	if err != nil {
+		plugin.Logger(ctx).Debug("getChartTemplatesInfo", "failed to list helm charts", err)
+		return nil, err
+	}
+
+	// A template file can have more than 1 configuration defined in it separated by `---` separator.
+	// This function will read all the raw templates, and will calculate the start and end line of a resource configuration block.
+	// If the file has more than 1 configurations defined, the function will return a map containing the template file path, along with an array of map containing the start and end line information. For example:
+	// map["/path/to/the/template1":[{StartLine: ..., EndLine: ...}, {...}], "/path/to/the/template2":[{StartLine: ..., EndLine: ...}, {...}], ...]
+	for _, chart := range charts {
+		templates := chart.Chart.Templates
+
+		for _, template := range templates {
+			templateContent := string(template.Data)
+
+			var lineInfo []LineInfo
+			startLine := 0
+			count := 0
+
+			for _, content := range strings.Split(templateContent, "---") {
+				// Skip empty documents, `Decode` will fail on them
+				// Also, increment the pos to include the separator position (e.g. ---)
+				if len(content) == 0 {
+					startLine++
+					continue
+				}
+				count++
+
+				// Calculate the length of the YAML resource block
+				blockLength := strings.Split(strings.ReplaceAll(content, " ", ""), "\n")
+
+				// Remove the extra lines added during the split operation based on the separator
+				blockLength = blockLength[:len(blockLength)-1]
+				if blockLength[0] == "" {
+					blockLength = blockLength[1:]
+				}
+
+				// Calculate the end line number
+				endLine := startLine + len(blockLength)
+				if count > 1 {
+					endLine++
+				}
+
+				lineInfo = append(lineInfo, LineInfo{
+					StartLine: startLine + 1, // Since starts from 0
+					EndLine:   endLine,
+				})
+
+				// Increment the startLine by the length of the block
+				// the value is added with 1 to include the separator
+				startLine = startLine + len(blockLength) + 1
+			}
+			templateMetadata[path.Join(chart.Path, template.Name)] = lineInfo
+		}
+	}
+
+	return templateMetadata, nil
 }
