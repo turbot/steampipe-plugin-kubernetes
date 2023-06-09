@@ -32,11 +32,11 @@ connection "kubernetes" {
   helm_rendered_charts = {
     "my-app-dev" = {
       chart_path        = "~/charts/my-app"
-      values_file_paths = "~/value/file/for/dev.yaml"
+      values_file_paths = ["~/value/file/for/dev.yaml"]
     }
     "my-app-prod" = {
       chart_path        = "~/charts/my-app"
-      values_file_paths = "~/value/file/for/prod.yaml"
+      values_file_paths = ["~/value/file/for/prod.yaml"]
     }
   }
 }
