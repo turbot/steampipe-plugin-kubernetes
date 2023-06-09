@@ -46,7 +46,7 @@ func pluginTableDefinitions(ctx context.Context, d *plugin.TableMapData) (map[st
 	tables := map[string]*plugin.Table{
 		"helm_chart":                            tableHelmChart(ctx),
 		"helm_release":                          tableHelmRelease(ctx),
-		"helm_template_raw":                     tableHelmTemplateRaw(ctx),
+		"helm_template":                         tableHelmTemplates(ctx),
 		"helm_template_rendered":                tableHelmTemplateRendered(ctx),
 		"helm_value":                            tableHelmValue(ctx),
 		"kubernetes_cluster_role":               tableKubernetesClusterRole(ctx),

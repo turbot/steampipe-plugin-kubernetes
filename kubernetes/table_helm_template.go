@@ -10,12 +10,12 @@ import (
 
 //// TABLE DEFINITION
 
-func tableHelmTemplateRaw(ctx context.Context) *plugin.Table {
+func tableHelmTemplates(ctx context.Context) *plugin.Table {
 	return &plugin.Table{
-		Name:        "helm_template_raw",
+		Name:        "helm_template",
 		Description: "Lists the raw templates defined in the configured charts",
 		List: &plugin.ListConfig{
-			Hydrate: listHelmRawTemplates,
+			Hydrate: listHelmTemplates,
 		},
 		Columns: []*plugin.Column{
 			{Name: "chart_name", Type: proto.ColumnType_STRING, Description: "The name of the chart."},
@@ -33,7 +33,7 @@ type helmTemplateRaw struct {
 
 //// LIST FUNCTION
 
-func listHelmRawTemplates(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
+func listHelmTemplates(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
 	charts, err := getUniqueHelmCharts(ctx, d)
 	if err != nil {
 		return nil, err
