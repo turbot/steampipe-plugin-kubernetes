@@ -99,14 +99,16 @@ func getHelmRenderedTemplatesUncached(ctx context.Context, d *plugin.QueryData, 
 				client.ReleaseName = name
 				client.Namespace = "default" // TODO: Update this to use namespace defined in the current context
 
-				vals := &values.Options{
-					ValueFiles: c.ValuesFilePaths,
+				vals := &values.Options{}
+				if len(c.ValuesFilePaths) > 0 {
+					vals.ValueFiles = c.ValuesFilePaths
 				}
 
 				manifest, _, err := runInstall([]string{c.ChartPath}, client, vals)
 				if err != nil {
 					plugin.Logger(ctx).Debug("getHelmRenderedTemplatesUncached", "run_install_error", err, "connection", d.Connection.Name)
-					return nil, err
+					// return nil, err
+					continue
 				}
 
 				splitManifest := strings.Split(manifest.Manifest, "---")
@@ -158,9 +160,31 @@ func renderedHelmTemplateContentUncached(ctx context.Context, d *plugin.QueryDat
 		plugin.Logger(ctx).Error("renderedHelmTemplateContentUncached", "failed to get line information from raw template", err)
 		return nil, err
 	}
+	temp := map[string][]LineInfo{}
 
+	var processedConfigs []string
 	var parsedContents []parsedContent
 	for _, t := range renderedTemplates {
+		// Get the line numbers of each configuration block for the current template
+		if len(templateWithLineInfo[t.Path]) == 0 {
+			continue
+		}
+
+		// If the same chart is configured more than once, use the key used to identify the chart config in the config file
+		// to avoid the conflicts when calculating the line numbers.
+		// If the current config is not yet processed
+		test := fmt.Sprintf("%s:%s", t.Path, t.ConfigKey)
+		if !helpers.StringSliceContains(processedConfigs, test) {
+			// Set the config as processed
+			processedConfigs = append(processedConfigs, test)
+
+			// Reinitialize the temp with the actual templateWithLineInfo data
+			for k, v := range templateWithLineInfo {
+				temp[k] = v
+			}
+		}
+		lineInfo := temp[t.Path]
+
 		for _, resource := range strings.Split(t.Data, "---") {
 			// Skip empty documents, `Decode` will fail on them
 			// Also, increment the pos to include the separator position (e.g. ---)
@@ -196,11 +220,6 @@ func renderedHelmTemplateContentUncached(ctx context.Context, d *plugin.QueryDat
 				return nil, err
 			}
 
-			lineInfo := templateWithLineInfo[t.Path]
-			if len(lineInfo) == 0 {
-				plugin.Logger(ctx).Debug("getRawTemplateLineInfo", "<<<<<<TEMPLATE_PATH>>>>>>", t.Path)
-				continue
-			}
 			parsedContents = append(parsedContents, parsedContent{
 				Data:       targetObj,
 				Kind:       obj.GetKind(),
@@ -210,9 +229,10 @@ func renderedHelmTemplateContentUncached(ctx context.Context, d *plugin.QueryDat
 				EndLine:    lineInfo[0].EndLine,
 			})
 
-			// Remove the first element since it is already used
+			// Remove the line information for the processed block
 			if len(lineInfo) > 1 {
-				templateWithLineInfo[t.Path] = lineInfo[1:]
+				lineInfo = lineInfo[1:]
+				temp[t.Path] = lineInfo
 			}
 		}
 	}
