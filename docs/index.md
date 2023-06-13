@@ -16,13 +16,47 @@ og_image: "/images/plugins/turbot/kubernetes-social-graphic.png"
 
 [Kubernetes](https://kubernetes.io) is an open-source system for automating deployment, scaling, and management of containerized applications.
 
-## Overview
-
 The Kubernetes plugin make it simpler to query the variety of Kubernetes resources deployed in a Kubernetes cluster using [Steampipe](https://steampipe.io).
 
 Apart from querying the deployed resources, the plugin also supports scanning of [Kubernetes manifest files](#manifest-files) from different sources, parsing the configured [Helm charts](#helm-charts) and scanning all the templates to get the list of Kubernetes resources.
 
-For example:
+## Documentation
+
+- **[Table definitions & examples →](/plugins/turbot/kubernetes/tables)**
+
+## Get Started
+
+### Install
+
+Download and install the latest Kubernetes plugin:
+
+```bash
+steampipe plugin install kubernetes
+```
+
+### Configuration
+
+Installing the latest Kubernetes plugin will create a config file (`~/.steampipe/config/kubernetes.spc`) with a single connection named `kubernetes`:
+
+```hcl
+connection "kubernetes" {
+  plugin         = "kubernetes"
+  config_path    = "~/.kube/config"
+  config_context = "myCluster"
+}
+```
+
+For a full list of configuration arguments, please see the [default configuration file](https://github.com/turbot/steampipe-plugin-kubernetes/blob/main/config/kubernetes.spc).
+
+### Run a Query
+
+Run steampipe:
+
+```shell
+steampipe query
+```
+
+List all pods:
 
 ```sql
 select
@@ -44,20 +78,6 @@ from
 | helm-install-traefik-crd-hb87d          | kube-system | Succeeded | 2021-06-11 14:21:48 | 10.42.0.3 |
 | local-path-provisioner-5ff76fc89d-c9hnm | kube-system | Running   | 2021-06-11 14:21:48 | 10.42.0.2 |
 +-----------------------------------------+-------------+-----------+---------------------+-----------+
-```
-
-## Documentation
-
-- **[Table definitions & examples →](/plugins/turbot/kubernetes/tables)**
-
-## Get started
-
-### Install
-
-Download and install the latest Kubernetes plugin:
-
-```bash
-steampipe plugin install kubernetes
 ```
 
 ## Configuring Kubernetes Cluster Credentials
@@ -90,14 +110,14 @@ You may create multiple Kubernetes connections. Example of creating multiple con
 
 ```hcl
 connection "kubernetes_cluster_aks" {
-  plugin          = "kubernetes"
-  config_path = "~/.kube/config"
+  plugin         = "kubernetes"
+  config_path    = "~/.kube/config"
   config_context = "myAKSCluster"
 }
 
 connection "kubernetes_cluster_eks" {
-  plugin = "kubernetes"
-  config_path = "~/.kube/config"
+  plugin         = "kubernetes"
+  config_path    = "~/.kube/config"
   config_context = "arn:aws:eks:us-east-1:123456789012:cluster/myEKSCluster"
 }
 ```
@@ -323,7 +343,7 @@ connection "kubernetes" {
 - Every map should have a `chart_path` indicates the directory where the chart is located.
 - The map can have an optional `values_file_paths` indicates the override value files for rendering the templates. The `values_file_paths` can have more than 1 override value file reference. The plugin reads values from all of those files, and use the resultant values to render the templates. By default, the plugin uses the default `values.yaml` if no additional value files are passed.
 
-## Get involved
+## Get Involved
 
 - Open source: https://github.com/turbot/steampipe-plugin-kubernetes
 - Community: [Slack Channel](https://steampipe.io/community/join)
