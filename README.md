@@ -30,7 +30,7 @@ connection "kubernetes" {
   # The kubeconfig path and context can also be specified with the following config arguments:
 
   # Specify the file path to the kubeconfig.
-  # Can also be set with the "KUBE_CONFIG_PATHS" or "KUBERNETES_MASTER" environment variables.
+  # Can also be set with the "KUBECONFIG" or "KUBE_CONFIG_PATHS" or "KUBERNETES_MASTER" environment variables.
   # config_path = "~/.kube/config"
 
   # Specify a context other than the current one.
