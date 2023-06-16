@@ -4,12 +4,12 @@ import (
 	"context"
 	"strings"
 
-	"k8s.io/api/discovery/v1beta1"
+	v1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/turbot/steampipe-plugin-sdk/v4/grpc/proto"
-	"github.com/turbot/steampipe-plugin-sdk/v4/plugin"
-	"github.com/turbot/steampipe-plugin-sdk/v4/plugin/transform"
+	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
+	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
+	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
 )
 
 func tableKubernetesEndpointSlice(ctx context.Context) *plugin.Table {
@@ -40,6 +40,18 @@ func tableKubernetesEndpointSlice(ctx context.Context) *plugin.Table {
 				Type:        proto.ColumnType_JSON,
 				Description: "List of network ports exposed by each endpoint in this slice. Each port must have a unique name. When ports is empty, it indicates that there are no defined ports.",
 			},
+			{
+				Name:        "context_name",
+				Type:        proto.ColumnType_STRING,
+				Description: "Kubectl config context name.",
+				Hydrate:     getEndpointSliceResourceAdditionalData,
+			},
+			{
+				Name:        "source_type",
+				Type:        proto.ColumnType_STRING,
+				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
+				Hydrate:     getEndpointSliceResourceAdditionalData,
+			},
 
 			//// Steampipe Standard Columns
 			{
@@ -58,15 +70,46 @@ func tableKubernetesEndpointSlice(ctx context.Context) *plugin.Table {
 	}
 }
 
+type EndpointSlice struct {
+	v1.EndpointSlice
+	Path      string
+	StartLine int
+	EndLine   int
+}
+
 //// HYDRATE FUNCTIONS
 
 func listK8sEnpointSlices(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
 	logger := plugin.Logger(ctx)
 	logger.Trace("listK8sEnpointSlices")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
+	}
+
+	// Check for manifest files
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "EndpointSlice")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		endpointSlice := content.Data.(*v1.EndpointSlice)
+
+		d.StreamListItem(ctx, EndpointSlice{*endpointSlice, content.Path, content.StartLine, content.EndLine})
+
+		// Context can be cancelled due to manual cancellation or the limit has been hit
+		if d.RowsRemaining(ctx) == 0 {
+			return nil, nil
+		}
+	}
+
+	// Check for deployed resources
+	if clientset == nil {
+		return nil, nil
 	}
 
 	input := metav1.ListOptions{
@@ -91,11 +134,11 @@ func listK8sEnpointSlices(ctx context.Context, d *plugin.QueryData, _ *plugin.Hy
 		input.FieldSelector = strings.Join(commonFieldSelectorValue, ",")
 	}
 
-	var response *v1beta1.EndpointSliceList
+	var response *v1.EndpointSliceList
 	pageLeft := true
 
 	for pageLeft {
-		response, err = clientset.DiscoveryV1beta1().EndpointSlices("").List(ctx, input)
+		response, err = clientset.DiscoveryV1().EndpointSlices("").List(ctx, input)
 		if err != nil {
 			return nil, err
 		}
@@ -107,10 +150,10 @@ func listK8sEnpointSlices(ctx context.Context, d *plugin.QueryData, _ *plugin.Hy
 		}
 
 		for _, endpointSlice := range response.Items {
-			d.StreamListItem(ctx, endpointSlice)
+			d.StreamListItem(ctx, EndpointSlice{endpointSlice, "", 0, 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
-			if d.QueryStatus.RowsRemaining(ctx) == 0 {
+			if d.RowsRemaining(ctx) == 0 {
 				return nil, nil
 			}
 		}
@@ -123,30 +166,75 @@ func getK8sEnpointSlice(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 	logger := plugin.Logger(ctx)
 	logger.Trace("getK8sEnpointSlice")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
 	}
 
-	name := d.KeyColumnQuals["name"].GetStringValue()
-	namespace := d.KeyColumnQuals["namespace"].GetStringValue()
+	name := d.EqualsQuals["name"].GetStringValue()
+	namespace := d.EqualsQuals["namespace"].GetStringValue()
 
 	// return if namespace or name is empty
 	if namespace == "" || name == "" {
 		return nil, nil
 	}
 
-	endpointSlice, err := clientset.DiscoveryV1beta1().EndpointSlices(namespace).Get(ctx, name, metav1.GetOptions{})
+	// Get the manifest resource
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "EndpointSlice")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		endpointSlice := content.Data.(*v1.EndpointSlice)
+
+		if endpointSlice.Name == name && endpointSlice.Namespace == namespace {
+			return EndpointSlice{*endpointSlice, content.Path, content.StartLine, content.EndLine}, nil
+		}
+	}
+
+	// Get the deployed resource
+	if clientset == nil {
+		return nil, nil
+	}
+
+	endpointSlice, err := clientset.DiscoveryV1().EndpointSlices(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
 		return nil, err
 	}
 
-	return *endpointSlice, nil
+	return EndpointSlice{*endpointSlice, "", 0, 0}, nil
+}
+
+func getEndpointSliceResourceAdditionalData(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+	obj := h.Item.(EndpointSlice)
+
+	data := map[string]interface{}{
+		"SourceType": "deployed",
+	}
+
+	// Set the source_type as manifest, if path is not empty
+	// also, set the context_name as nil
+	if obj.Path != "" {
+		data["SourceType"] = "manifest"
+		return data, nil
+	}
+
+	// Else, set the current context as context_name
+	currentContext, err := getKubectlContext(ctx, d, nil)
+	if err != nil {
+		return data, nil
+	}
+	data["ContextName"] = currentContext.(string)
+
+	return data, nil
 }
 
 //// TRANSFORM FUNCTIONS
 
 func transformEndpointSliceTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	obj := d.HydrateItem.(v1beta1.EndpointSlice)
+	obj := d.HydrateItem.(EndpointSlice)
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }

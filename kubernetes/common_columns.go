@@ -1,9 +1,9 @@
 package kubernetes
 
 import (
-	"github.com/turbot/steampipe-plugin-sdk/v4/grpc/proto"
-	"github.com/turbot/steampipe-plugin-sdk/v4/plugin"
-	"github.com/turbot/steampipe-plugin-sdk/v4/plugin/transform"
+	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
+	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
+	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
 )
 
 const (
@@ -12,12 +12,20 @@ const (
 	ColumnDescriptionTags  = "A map of tags for the resource. This includes both labels and annotations."
 )
 
+func manifestResourceColumns() []*plugin.Column {
+	return []*plugin.Column{
+		{Name: "path", Type: proto.ColumnType_STRING, Description: "The path to the manifest file.", Transform: transform.FromField("Path").Transform(transform.NullIfZeroValue)},
+		{Name: "start_line", Type: proto.ColumnType_INT, Description: "The path to the manifest file.", Transform: transform.FromField("StartLine").NullIfZero()},
+		{Name: "end_line", Type: proto.ColumnType_INT, Description: "The path to the manifest file.", Transform: transform.FromField("EndLine").NullIfZero()},
+	}
+}
+
 func objectMetadataPrimaryColumnsWithoutNamespace() []*plugin.Column {
 	return []*plugin.Column{
 		//{Name: "raw", Type: proto.ColumnType_JSON, Transform: transform.FromValue()},
 		{Name: "name", Type: proto.ColumnType_STRING, Description: "Name of the object.  Name must be unique within a namespace."},
 		// {Name: "namespace", Type: proto.ColumnType_STRING, Description: "Namespace defines the space within which each name must be unique."},
-		{Name: "uid", Type: proto.ColumnType_STRING, Description: "UID is the unique in time and space value for this object."},
+		{Name: "uid", Type: proto.ColumnType_STRING, Description: "UID is the unique in time and space value for this object.", Transform: transform.FromField("UID").Transform(transform.NullIfZeroValue)},
 	}
 }
 
@@ -26,7 +34,7 @@ func objectMetadataPrimaryColumns() []*plugin.Column {
 		//{Name: "raw", Type: proto.ColumnType_JSON, Transform: transform.FromValue()},
 		{Name: "name", Type: proto.ColumnType_STRING, Description: "Name of the object.  Name must be unique within a namespace."},
 		{Name: "namespace", Type: proto.ColumnType_STRING, Description: "Namespace defines the space within which each name must be unique."},
-		{Name: "uid", Type: proto.ColumnType_STRING, Description: "UID is the unique in time and space value for this object."},
+		{Name: "uid", Type: proto.ColumnType_STRING, Description: "UID is the unique in time and space value for this object.", Transform: transform.FromField("UID").Transform(transform.NullIfZeroValue)},
 	}
 }
 
@@ -56,26 +64,33 @@ func objectMetadataSecondaryColumns() []*plugin.Column {
 	}
 }
 
-func kubectlConfigColumns() []*plugin.Column {
-	return []*plugin.Column{
-		{
-			Name:        "context_name",
-			Type:        proto.ColumnType_STRING,
-			Description: "Kubectl config context name.",
-			Hydrate:     getKubectlContext,
-			Transform:   transform.FromValue(),
-		},
-	}
-}
-
-// append the common aws columns for REGIONAL resources onto the column list
+// append the common kubernetes columns for REGIONAL resources onto the column list
 func k8sCommonColumns(columns []*plugin.Column) []*plugin.Column {
 	allColumns := objectMetadataPrimaryColumns()
 	allColumns = append(allColumns, columns...)
 	//allColumns = append(allColumns, typeMetaColumns...)
 	//allColumns = append(allColumns, specStatusColumns...)
 	allColumns = append(allColumns, objectMetadataSecondaryColumns()...)
-	allColumns = append(allColumns, kubectlConfigColumns()...)
+	allColumns = append(allColumns, manifestResourceColumns()...)
+
+	return allColumns
+}
+
+// append the common kubernetes columns for CRD resources
+func k8sCRDResourceCommonColumns(columns []*plugin.Column) []*plugin.Column {
+	allColumns := []*plugin.Column{
+		{Name: "name", Type: proto.ColumnType_STRING, Description: "Name of resource."},
+		{Name: "uid", Type: proto.ColumnType_STRING, Description: "UID is the unique in time and space value for this object.", Transform: transform.FromField("UID")},
+		{Name: "kind", Type: proto.ColumnType_STRING, Description: "Type of resource."},
+		{Name: "api_version", Type: proto.ColumnType_STRING, Description: "The API version of the resource.", Transform: transform.FromField("APIVersion")},
+		{Name: "namespace", Type: proto.ColumnType_STRING, Description: "Namespace defines the space within which each name must be unique."},
+		{Name: "creation_timestamp", Type: proto.ColumnType_TIMESTAMP, Transform: transform.FromGo().Transform(v1TimeToRFC3339), Description: "CreationTimestamp is a timestamp representing the server time when this object was created."},
+		{Name: "labels", Type: proto.ColumnType_JSON, Description: "Map of string keys and values that can be used to organize and categorize (scope and select) objects. May match selectors of replication controllers and services."},
+		{Name: "context_name", Type: proto.ColumnType_STRING, Description: "Kubectl config context name.", Transform: transform.FromField("ContextName").Transform(transform.NullIfZeroValue)},
+		{Name: "source_type", Type: proto.ColumnType_STRING, Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest."},
+	}
+	allColumns = append(allColumns, columns...)
+	allColumns = append(allColumns, manifestResourceColumns()...)
 
 	return allColumns
 }
@@ -87,7 +102,7 @@ func k8sCommonGlobalColumns(columns []*plugin.Column) []*plugin.Column {
 	//allColumns = append(allColumns, typeMetaColumns...)
 	//allColumns = append(allColumns, specStatusColumns...)
 	allColumns = append(allColumns, objectMetadataSecondaryColumns()...)
-	allColumns = append(allColumns, kubectlConfigColumns()...)
+	allColumns = append(allColumns, manifestResourceColumns()...)
 
 	return allColumns
 }

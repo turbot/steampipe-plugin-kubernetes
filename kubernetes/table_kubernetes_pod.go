@@ -7,9 +7,9 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/turbot/steampipe-plugin-sdk/v4/grpc/proto"
-	"github.com/turbot/steampipe-plugin-sdk/v4/plugin"
-	"github.com/turbot/steampipe-plugin-sdk/v4/plugin/transform"
+	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
+	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
+	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
 )
 
 func tableKubernetesPod(ctx context.Context) *plugin.Table {
@@ -400,6 +400,19 @@ func tableKubernetesPod(ctx context.Context) *plugin.Table {
 					"This field is alpha-level and is only populated by servers that enable the EphemeralContainers feature.",
 				Transform: transform.FromField("Status.EphemeralContainerStatuses"),
 			},
+			{
+				Name:        "context_name",
+				Type:        proto.ColumnType_STRING,
+				Description: "Kubectl config context name.",
+				Hydrate:     getPodResourceAdditionalData,
+			},
+
+			{
+				Name:        "source_type",
+				Type:        proto.ColumnType_STRING,
+				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
+				Hydrate:     getPodResourceAdditionalData,
+			},
 
 			//// Steampipe Standard Columns
 			{
@@ -418,23 +431,54 @@ func tableKubernetesPod(ctx context.Context) *plugin.Table {
 	}
 }
 
+type Pod struct {
+	v1.Pod
+	Path      string
+	StartLine int
+	EndLine   int
+}
+
 //// HYDRATE FUNCTIONS
 
 func listK8sPods(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
 	logger := plugin.Logger(ctx)
 	logger.Trace("listK8sPods")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
+	}
+
+	// Check for manifest files
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "Pod")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		pod := content.Data.(*v1.Pod)
+
+		d.StreamListItem(ctx, Pod{*pod, content.Path, content.StartLine, content.EndLine})
+
+		// Context can be cancelled due to manual cancellation or the limit has been hit
+		if d.RowsRemaining(ctx) == 0 {
+			return nil, nil
+		}
+	}
+
+	// Check for deployed resources
+	if clientset == nil {
+		return nil, nil
 	}
 
 	input := metav1.ListOptions{
 		Limit: 500,
 	}
 
-	if d.KeyColumnQuals["selector_search"] != nil {
-		input.LabelSelector = d.KeyColumnQuals["selector_search"].GetStringValue()
+	if d.EqualsQuals["selector_search"] != nil {
+		input.LabelSelector = d.EqualsQuals["selector_search"].GetStringValue()
 	}
 
 	// Limiting the results
@@ -473,10 +517,10 @@ func listK8sPods(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 		}
 
 		for _, pod := range response.Items {
-			d.StreamListItem(ctx, pod)
+			d.StreamListItem(ctx, Pod{pod, "", 0, 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
-			if d.QueryStatus.RowsRemaining(ctx) == 0 {
+			if d.RowsRemaining(ctx) == 0 {
 				return nil, nil
 			}
 		}
@@ -489,16 +533,37 @@ func getK8sPod(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) 
 	logger := plugin.Logger(ctx)
 	logger.Trace("getK8sPod")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
 	}
 
-	name := d.KeyColumnQuals["name"].GetStringValue()
-	namespace := d.KeyColumnQuals["namespace"].GetStringValue()
+	name := d.EqualsQuals["name"].GetStringValue()
+	namespace := d.EqualsQuals["namespace"].GetStringValue()
 
 	// return if namespace or name is empty
 	if namespace == "" || name == "" {
+		return nil, nil
+	}
+
+	// Get the manifest resource
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "Pod")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		pod := content.Data.(*v1.Pod)
+
+		if pod.Name == name && pod.Namespace == namespace {
+			return Pod{*pod, content.Path, content.StartLine, content.EndLine}, nil
+		}
+	}
+
+	// Get the deployed resource
+	if clientset == nil {
 		return nil, nil
 	}
 
@@ -507,17 +572,41 @@ func getK8sPod(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) 
 		return nil, err
 	}
 
-	return *pod, nil
+	return Pod{*pod, "", 0, 0}, nil
+}
+
+func getPodResourceAdditionalData(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+	obj := h.Item.(Pod)
+
+	data := map[string]interface{}{
+		"SourceType": "deployed",
+	}
+
+	// Set the source_type as manifest, if path is not empty
+	// also, set the context_name as nil
+	if obj.Path != "" {
+		data["SourceType"] = "manifest"
+		return data, nil
+	}
+
+	// Else, set the current context as context_name
+	currentContext, err := getKubectlContext(ctx, d, nil)
+	if err != nil {
+		return data, nil
+	}
+	data["ContextName"] = currentContext.(string)
+
+	return data, nil
 }
 
 //// TRANSFORM FUNCTIONS
 
 func transformPodTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	obj := d.HydrateItem.(v1.Pod)
+	obj := d.HydrateItem.(Pod)
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }
 
-//// UTILITY FUNCTION
+// // UTILITY FUNCTION
 // Build kubernetes pod list call input field selector filter
 func buildKubernetsPodFieldSelectorFilter(ctx context.Context, d *plugin.QueryData) []string {
 
@@ -534,14 +623,14 @@ func buildKubernetsPodFieldSelectorFilter(ctx context.Context, d *plugin.QueryDa
 
 	for columnName, filterName := range filterQuals {
 		if columnName == "pod_ip" {
-			if d.KeyColumnQuals["pod_ip"] != nil {
-				value := d.KeyColumnQuals["pod_ip"].GetInetValue().GetAddr()
+			if d.EqualsQuals["pod_ip"] != nil {
+				value := d.EqualsQuals["pod_ip"].GetInetValue().GetAddr()
 				commonFieldSelectorValue = append(commonFieldSelectorValue, filterName+"="+value)
 			}
 			continue
 		}
-		if d.KeyColumnQualString(columnName) != "" {
-			commonFieldSelectorValue = append(commonFieldSelectorValue, filterName+"="+d.KeyColumnQualString(columnName))
+		if d.EqualsQualString(columnName) != "" {
+			commonFieldSelectorValue = append(commonFieldSelectorValue, filterName+"="+d.EqualsQualString(columnName))
 		}
 	}
 

@@ -35,3 +35,19 @@ order by
   role_name,
   api_groups;
 ```
+
+### List manifest resources
+
+```sql
+select
+  name,
+  namespace,
+  rules,
+  path
+from
+  kubernetes_role
+where
+  path is not null
+order by
+  name;
+```

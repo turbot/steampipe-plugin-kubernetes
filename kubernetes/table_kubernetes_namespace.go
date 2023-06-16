@@ -7,9 +7,9 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/turbot/steampipe-plugin-sdk/v4/grpc/proto"
-	"github.com/turbot/steampipe-plugin-sdk/v4/plugin"
-	"github.com/turbot/steampipe-plugin-sdk/v4/plugin/transform"
+	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
+	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
+	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
 )
 
 func tableKubernetesNamespace(ctx context.Context) *plugin.Table {
@@ -49,6 +49,18 @@ func tableKubernetesNamespace(ctx context.Context) *plugin.Table {
 				Description: "The latest available observations of namespace's current state.",
 				Transform:   transform.FromField("Status.NamespaceCondition"),
 			},
+			{
+				Name:        "context_name",
+				Type:        proto.ColumnType_STRING,
+				Description: "Kubectl config context name.",
+				Hydrate:     getNamespaceResourceAdditionalData,
+			},
+			{
+				Name:        "source_type",
+				Type:        proto.ColumnType_STRING,
+				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
+				Hydrate:     getNamespaceResourceAdditionalData,
+			},
 
 			//// Steampipe Standard Columns
 			{
@@ -67,15 +79,46 @@ func tableKubernetesNamespace(ctx context.Context) *plugin.Table {
 	}
 }
 
+type Namespace struct {
+	v1.Namespace
+	Path      string
+	StartLine int
+	EndLine   int
+}
+
 //// HYDRATE FUNCTIONS
 
 func listK8sNamespaces(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
 	logger := plugin.Logger(ctx)
 	logger.Trace("listK8sNamespaces")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
+	}
+
+	// Check for manifest files
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "Namespace")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		namespace := content.Data.(*v1.Namespace)
+
+		d.StreamListItem(ctx, Namespace{*namespace, content.Path, content.StartLine, content.EndLine})
+
+		// Context can be cancelled due to manual cancellation or the limit has been hit
+		if d.RowsRemaining(ctx) == 0 {
+			return nil, nil
+		}
+	}
+
+	// Check for deployed resources
+	if clientset == nil {
+		return nil, nil
 	}
 
 	input := metav1.ListOptions{
@@ -94,8 +137,8 @@ func listK8sNamespaces(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 		}
 	}
 
-	if d.KeyColumnQualString("phase") != "" {
-		input.FieldSelector = fmt.Sprintf("status.phase=%v", d.KeyColumnQualString("phase"))
+	if d.EqualsQualString("phase") != "" {
+		input.FieldSelector = fmt.Sprintf("status.phase=%v", d.EqualsQualString("phase"))
 	}
 
 	var response *v1.NamespaceList
@@ -113,11 +156,11 @@ func listK8sNamespaces(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 			pageLeft = false
 		}
 
-		for _, pod := range response.Items {
-			d.StreamListItem(ctx, pod)
+		for _, namespace := range response.Items {
+			d.StreamListItem(ctx, Namespace{namespace, "", 0, 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
-			if d.QueryStatus.RowsRemaining(ctx) == 0 {
+			if d.RowsRemaining(ctx) == 0 {
 				return nil, nil
 			}
 		}
@@ -130,15 +173,36 @@ func getK8sNamespace(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 	logger := plugin.Logger(ctx)
 	logger.Trace("getK8sNamespace")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
 	}
 
-	name := d.KeyColumnQuals["name"].GetStringValue()
+	name := d.EqualsQuals["name"].GetStringValue()
 
 	// return if name is empty
 	if name == "" {
+		return nil, nil
+	}
+
+	// Get the manifest resource
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "Namespace")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		namespace := content.Data.(*v1.Namespace)
+
+		if namespace.Name == name {
+			return Namespace{*namespace, content.Path, content.StartLine, content.EndLine}, nil
+		}
+	}
+
+	// Get the deployed resource
+	if clientset == nil {
 		return nil, nil
 	}
 
@@ -147,12 +211,36 @@ func getK8sNamespace(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 		return nil, err
 	}
 
-	return *namespace, nil
+	return Namespace{*namespace, "", 0, 0}, nil
+}
+
+func getNamespaceResourceAdditionalData(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+	obj := h.Item.(Namespace)
+
+	data := map[string]interface{}{
+		"SourceType": "deployed",
+	}
+
+	// Set the source_type as manifest, if path is not empty
+	// also, set the context_name as nil
+	if obj.Path != "" {
+		data["SourceType"] = "manifest"
+		return data, nil
+	}
+
+	// Else, set the current context as context_name
+	currentContext, err := getKubectlContext(ctx, d, nil)
+	if err != nil {
+		return data, nil
+	}
+	data["ContextName"] = currentContext.(string)
+
+	return data, nil
 }
 
 //// TRANSFORM FUNCTIONS
 
 func transformNamespaceTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	obj := d.HydrateItem.(v1.Namespace)
+	obj := d.HydrateItem.(Namespace)
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }

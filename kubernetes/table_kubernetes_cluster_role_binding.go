@@ -6,9 +6,9 @@ import (
 	v1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/turbot/steampipe-plugin-sdk/v4/grpc/proto"
-	"github.com/turbot/steampipe-plugin-sdk/v4/plugin"
-	"github.com/turbot/steampipe-plugin-sdk/v4/plugin/transform"
+	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
+	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
+	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
 )
 
 func tableKubernetesClusterRoleBinding(ctx context.Context) *plugin.Table {
@@ -48,6 +48,18 @@ func tableKubernetesClusterRoleBinding(ctx context.Context) *plugin.Table {
 				Description: "Type of the role refrenced must be one of ClusterRole or Role.",
 				Transform:   transform.FromField("RoleRef.Kind"),
 			},
+			{
+				Name:        "context_name",
+				Type:        proto.ColumnType_STRING,
+				Description: "Kubectl config context name.",
+				Hydrate:     getClusterRoleBindingResourceAdditionalData,
+			},
+			{
+				Name:        "source_type",
+				Type:        proto.ColumnType_STRING,
+				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
+				Hydrate:     getClusterRoleBindingResourceAdditionalData,
+			},
 
 			//// Steampipe Standard Columns
 			{
@@ -66,15 +78,46 @@ func tableKubernetesClusterRoleBinding(ctx context.Context) *plugin.Table {
 	}
 }
 
+type ClusterRoleBinding struct {
+	v1.ClusterRoleBinding
+	Path      string
+	StartLine int
+	EndLine   int
+}
+
 //// HYDRATE FUNCTIONS
 
 func listK8sClusterRoleBindings(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
 	logger := plugin.Logger(ctx)
 	logger.Trace("listK8sClusterRoleBindings")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
+	}
+
+	// Check for manifest files
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "ClusterRoleBinding")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		clusterRoleBinding := content.Data.(*v1.ClusterRoleBinding)
+
+		d.StreamListItem(ctx, ClusterRoleBinding{*clusterRoleBinding, content.Path, content.StartLine, content.EndLine})
+
+		// Context can be cancelled due to manual cancellation or the limit has been hit
+		if d.RowsRemaining(ctx) == 0 {
+			return nil, nil
+		}
+	}
+
+	// Check for deployed resources
+	if clientset == nil {
+		return nil, nil
 	}
 
 	input := metav1.ListOptions{
@@ -109,10 +152,10 @@ func listK8sClusterRoleBindings(ctx context.Context, d *plugin.QueryData, _ *plu
 		}
 
 		for _, clusterRoleBinding := range response.Items {
-			d.StreamListItem(ctx, clusterRoleBinding)
+			d.StreamListItem(ctx, ClusterRoleBinding{clusterRoleBinding, "", 0, 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
-			if d.QueryStatus.RowsRemaining(ctx) == 0 {
+			if d.RowsRemaining(ctx) == 0 {
 				return nil, nil
 			}
 		}
@@ -125,15 +168,36 @@ func getK8sClusterRoleBinding(ctx context.Context, d *plugin.QueryData, _ *plugi
 	logger := plugin.Logger(ctx)
 	logger.Trace("getK8sClusterRoleBinding")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
 	}
 
-	name := d.KeyColumnQuals["name"].GetStringValue()
+	name := d.EqualsQuals["name"].GetStringValue()
 
 	// return if name is empty
 	if name == "" {
+		return nil, nil
+	}
+
+	// Get the manifest resource
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "ClusterRoleBinding")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		clusterRoleBinding := content.Data.(*v1.ClusterRoleBinding)
+
+		if clusterRoleBinding.Name == name {
+			return ClusterRoleBinding{*clusterRoleBinding, content.Path, content.StartLine, content.EndLine}, nil
+		}
+	}
+
+	// Get the deployed resource
+	if clientset == nil {
 		return nil, nil
 	}
 
@@ -142,12 +206,36 @@ func getK8sClusterRoleBinding(ctx context.Context, d *plugin.QueryData, _ *plugi
 		return nil, err
 	}
 
-	return *clusterRoleBinding, nil
+	return ClusterRoleBinding{*clusterRoleBinding, "", 0, 0}, nil
+}
+
+func getClusterRoleBindingResourceAdditionalData(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+	obj := h.Item.(ClusterRoleBinding)
+
+	data := map[string]interface{}{
+		"SourceType": "deployed",
+	}
+
+	// Set the source_type as manifest, if path is not empty
+	// also, set the context_name as nil
+	if obj.Path != "" {
+		data["SourceType"] = "manifest"
+		return data, nil
+	}
+
+	// Else, set the current context as context_name
+	currentContext, err := getKubectlContext(ctx, d, nil)
+	if err != nil {
+		return data, nil
+	}
+	data["ContextName"] = currentContext.(string)
+
+	return data, nil
 }
 
 //// TRANSFORM FUNCTIONS
 
 func transformClusterRoleBindingTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	obj := d.HydrateItem.(v1.ClusterRoleBinding)
+	obj := d.HydrateItem.(ClusterRoleBinding)
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }

@@ -57,8 +57,7 @@ from
   kubernetes_node;
 ```
 
-
-### Node IP info 
+### Node IP info
 
 ```sql
 select
@@ -81,4 +80,21 @@ select
   ) as hostnames
 from
   kubernetes_node;
+```
+
+### List manifest resources
+
+```sql
+select
+  name,
+  pod_cidr,
+  pod_cidrs,
+  provider_id,
+  addresses,
+  capacity,
+  path
+from
+  kubernetes_node
+where
+  path is not null;
 ```

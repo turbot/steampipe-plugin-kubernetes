@@ -51,3 +51,19 @@ from
 group by
   aggregation_rule;
 ```
+
+### List manifest resources
+
+```sql
+select
+  name,
+  rules,
+  aggregation_rule,
+  path
+from
+  kubernetes_cluster_role
+where
+  path is not null
+order by
+  name;
+```

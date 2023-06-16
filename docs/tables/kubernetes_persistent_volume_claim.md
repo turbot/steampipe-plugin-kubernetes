@@ -23,3 +23,24 @@ select
 from
   kubernetes_persistent_volume_claim;
 ```
+
+### List manifest resources
+
+```sql
+select
+  name,
+  namespace,
+  volume_name as volume,
+  volume_mode,
+  access_modes,
+  phase as status,
+  capacity ->> 'storage' as capacity,
+  data_source,
+  selector,
+  resources,
+  path
+from
+  kubernetes_persistent_volume_claim
+where
+  path is not null;
+```

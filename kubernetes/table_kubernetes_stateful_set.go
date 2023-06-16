@@ -7,9 +7,9 @@ import (
 	v1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/turbot/steampipe-plugin-sdk/v4/grpc/proto"
-	"github.com/turbot/steampipe-plugin-sdk/v4/plugin"
-	"github.com/turbot/steampipe-plugin-sdk/v4/plugin/transform"
+	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
+	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
+	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
 )
 
 func tableKubernetesStatefulSet(ctx context.Context) *plugin.Table {
@@ -29,7 +29,7 @@ func tableKubernetesStatefulSet(ctx context.Context) *plugin.Table {
 			{
 				Name:        "service_name",
 				Type:        proto.ColumnType_STRING,
-				Description: "The ame of the service that governs this StatefulSet.",
+				Description: "The name of the service that governs this StatefulSet.",
 				Transform:   transform.FromField("Spec.ServiceName"),
 			},
 			{
@@ -116,6 +116,18 @@ func tableKubernetesStatefulSet(ctx context.Context) *plugin.Table {
 				Description: "Indicates the StatefulSetUpdateStrategy that will be employed to update Pods in the StatefulSet when a revision is made to Template.",
 				Transform:   transform.FromField("Spec.UpdateStrategy"),
 			},
+			{
+				Name:        "context_name",
+				Type:        proto.ColumnType_STRING,
+				Description: "Kubectl config context name.",
+				Hydrate:     getStatefulSetResourceAdditionalData,
+			},
+			{
+				Name:        "source_type",
+				Type:        proto.ColumnType_STRING,
+				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
+				Hydrate:     getStatefulSetResourceAdditionalData,
+			},
 
 			// Steampipe Standard Columns
 			{
@@ -134,15 +146,46 @@ func tableKubernetesStatefulSet(ctx context.Context) *plugin.Table {
 	}
 }
 
+type StatefulSet struct {
+	v1.StatefulSet
+	Path      string
+	StartLine int
+	EndLine   int
+}
+
 //// HYDRATE FUNCTIONS
 
 func listK8sStatefulSets(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
 	logger := plugin.Logger(ctx)
 	logger.Trace("listK8sStatefulSets")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
+	}
+
+	// Check for manifest files
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "StatefulSet")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		statefulSet := content.Data.(*v1.StatefulSet)
+
+		d.StreamListItem(ctx, StatefulSet{*statefulSet, content.Path, content.StartLine, content.EndLine})
+
+		// Context can be cancelled due to manual cancellation or the limit has been hit
+		if d.RowsRemaining(ctx) == 0 {
+			return nil, nil
+		}
+	}
+
+	// Check for deployed resources
+	if clientset == nil {
+		return nil, nil
 	}
 
 	input := metav1.ListOptions{
@@ -183,10 +226,10 @@ func listK8sStatefulSets(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 		}
 
 		for _, statefulSet := range response.Items {
-			d.StreamListItem(ctx, statefulSet)
+			d.StreamListItem(ctx, StatefulSet{statefulSet, "", 0, 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
-			if d.QueryStatus.RowsRemaining(ctx) == 0 {
+			if d.RowsRemaining(ctx) == 0 {
 				return nil, nil
 			}
 		}
@@ -199,16 +242,37 @@ func getK8sStatefulSet(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 	logger := plugin.Logger(ctx)
 	logger.Trace("getK8sStatefulSet")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
 	}
 
-	name := d.KeyColumnQuals["name"].GetStringValue()
-	namespace := d.KeyColumnQuals["namespace"].GetStringValue()
+	name := d.EqualsQuals["name"].GetStringValue()
+	namespace := d.EqualsQuals["namespace"].GetStringValue()
 
 	// handle empty name and namespace value
 	if name == "" || namespace == "" {
+		return nil, nil
+	}
+
+	// Get the manifest resource
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "StatefulSet")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		statefulSet := content.Data.(*v1.StatefulSet)
+
+		if statefulSet.Name == name && statefulSet.Namespace == namespace {
+			return StatefulSet{*statefulSet, content.Path, content.StartLine, content.EndLine}, nil
+		}
+	}
+
+	// Get the deployed resource
+	if clientset == nil {
 		return nil, nil
 	}
 
@@ -218,12 +282,36 @@ func getK8sStatefulSet(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 		return nil, err
 	}
 
-	return *statefulSet, nil
+	return StatefulSet{*statefulSet, "", 0, 0}, nil
+}
+
+func getStatefulSetResourceAdditionalData(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+	obj := h.Item.(StatefulSet)
+
+	data := map[string]interface{}{
+		"SourceType": "deployed",
+	}
+
+	// Set the source_type as manifest, if path is not empty
+	// also, set the context_name as nil
+	if obj.Path != "" {
+		data["SourceType"] = "manifest"
+		return data, nil
+	}
+
+	// Else, set the current context as context_name
+	currentContext, err := getKubectlContext(ctx, d, nil)
+	if err != nil {
+		return data, nil
+	}
+	data["ContextName"] = currentContext.(string)
+
+	return data, nil
 }
 
 //// TRANSFORM FUNCTIONS
 
 func transformStatefulSetTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	obj := d.HydrateItem.(v1.StatefulSet)
+	obj := d.HydrateItem.(StatefulSet)
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }

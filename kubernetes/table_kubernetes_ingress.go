@@ -4,12 +4,12 @@ import (
 	"context"
 	"strings"
 
-	"k8s.io/api/extensions/v1beta1"
+	v1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/turbot/steampipe-plugin-sdk/v4/grpc/proto"
-	"github.com/turbot/steampipe-plugin-sdk/v4/plugin"
-	"github.com/turbot/steampipe-plugin-sdk/v4/plugin/transform"
+	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
+	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
+	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
 )
 
 func tableKubernetesIngress(ctx context.Context) *plugin.Table {
@@ -33,10 +33,10 @@ func tableKubernetesIngress(ctx context.Context) *plugin.Table {
 				Transform:   transform.FromField("Spec.IngressClassName"),
 			},
 			{
-				Name:        "backend",
+				Name:        "default_backend",
 				Type:        proto.ColumnType_JSON,
 				Description: "A default backend capable of servicing requests that don't match any rule. At least one of 'backend' or 'rules' must be specified.",
-				Transform:   transform.FromField("Spec.Backend"),
+				Transform:   transform.FromField("Spec.DefaultBackend"),
 			},
 			{
 				Name:        "tls",
@@ -49,6 +49,18 @@ func tableKubernetesIngress(ctx context.Context) *plugin.Table {
 				Type:        proto.ColumnType_JSON,
 				Description: "A list of host rules used to configure the Ingress.",
 				Transform:   transform.FromField("Spec.Rules"),
+			},
+			{
+				Name:        "context_name",
+				Type:        proto.ColumnType_STRING,
+				Description: "Kubectl config context name.",
+				Hydrate:     getIngressResourceAdditionalData,
+			},
+			{
+				Name:        "source_type",
+				Type:        proto.ColumnType_STRING,
+				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
+				Hydrate:     getIngressResourceAdditionalData,
 			},
 
 			//// IngressStatus columns
@@ -76,15 +88,46 @@ func tableKubernetesIngress(ctx context.Context) *plugin.Table {
 	}
 }
 
+type Ingress struct {
+	v1.Ingress
+	Path      string
+	StartLine int
+	EndLine   int
+}
+
 //// HYDRATE FUNCTIONS
 
 func listK8sIngresses(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
 	logger := plugin.Logger(ctx)
 	logger.Trace("listK8sIngresses")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
+	}
+
+	// Check for manifest files
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "Ingress")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		ingress := content.Data.(*v1.Ingress)
+
+		d.StreamListItem(ctx, Ingress{*ingress, content.Path, content.StartLine, content.EndLine})
+
+		// Context can be cancelled due to manual cancellation or the limit has been hit
+		if d.RowsRemaining(ctx) == 0 {
+			return nil, nil
+		}
+	}
+
+	// Check for deployed resources
+	if clientset == nil {
+		return nil, nil
 	}
 
 	input := metav1.ListOptions{
@@ -109,11 +152,11 @@ func listK8sIngresses(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 		}
 	}
 
-	var response *v1beta1.IngressList
+	var response *v1.IngressList
 	pageLeft := true
 
 	for pageLeft {
-		response, err = clientset.ExtensionsV1beta1().Ingresses("").List(ctx, input)
+		response, err = clientset.NetworkingV1().Ingresses("").List(ctx, input)
 		if err != nil {
 			return nil, err
 		}
@@ -125,10 +168,10 @@ func listK8sIngresses(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 		}
 
 		for _, ingress := range response.Items {
-			d.StreamListItem(ctx, ingress)
+			d.StreamListItem(ctx, Ingress{ingress, "", 0, 0})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
-			if d.QueryStatus.RowsRemaining(ctx) == 0 {
+			if d.RowsRemaining(ctx) == 0 {
 				return nil, nil
 			}
 		}
@@ -141,30 +184,75 @@ func getK8sIngress(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDa
 	logger := plugin.Logger(ctx)
 	logger.Trace("getK8sIngress")
 
+	// Get the client for querying the K8s APIs for the provided context.
+	// If the connection is configured for the manifest files, the client will return nil.
 	clientset, err := GetNewClientset(ctx, d)
 	if err != nil {
 		return nil, err
 	}
 
-	name := d.KeyColumnQuals["name"].GetStringValue()
-	namespace := d.KeyColumnQuals["namespace"].GetStringValue()
+	name := d.EqualsQuals["name"].GetStringValue()
+	namespace := d.EqualsQuals["namespace"].GetStringValue()
 
 	// return if namespace or name is empty
 	if namespace == "" || name == "" {
 		return nil, nil
 	}
 
-	ingress, err := clientset.ExtensionsV1beta1().Ingresses(namespace).Get(ctx, name, metav1.GetOptions{})
+	// Get the manifest resource
+	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "Ingress")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, content := range parsedContents {
+		ingress := content.Data.(*v1.Ingress)
+
+		if ingress.Name == name && ingress.Namespace == namespace {
+			return Ingress{*ingress, content.Path, content.StartLine, content.EndLine}, nil
+		}
+	}
+
+	// Get the deployed resource
+	if clientset == nil {
+		return nil, nil
+	}
+
+	ingress, err := clientset.NetworkingV1().Ingresses(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil && !isNotFoundError(err) {
 		return nil, err
 	}
 
-	return *ingress, nil
+	return Ingress{*ingress, "", 0, 0}, nil
+}
+
+func getIngressResourceAdditionalData(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+	obj := h.Item.(Ingress)
+
+	data := map[string]interface{}{
+		"SourceType": "deployed",
+	}
+
+	// Set the source_type as manifest, if path is not empty
+	// also, set the context_name as nil
+	if obj.Path != "" {
+		data["SourceType"] = "manifest"
+		return data, nil
+	}
+
+	// Else, set the current context as context_name
+	currentContext, err := getKubectlContext(ctx, d, nil)
+	if err != nil {
+		return data, nil
+	}
+	data["ContextName"] = currentContext.(string)
+
+	return data, nil
 }
 
 //// TRANSFORM FUNCTIONS
 
 func transformIngressTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	obj := d.HydrateItem.(v1beta1.Ingress)
+	obj := d.HydrateItem.(Ingress)
 	return mergeTags(obj.Labels, obj.Annotations), nil
 }

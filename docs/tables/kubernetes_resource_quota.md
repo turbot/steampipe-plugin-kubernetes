@@ -30,3 +30,20 @@ select
 from
   kubernetes_resource_quota;
 ```
+
+### List manifest resources
+
+```sql
+select
+  name,
+  namespace,
+  resource_version,
+  jsonb_pretty(spec_hard) as spec_hard,
+  path
+from
+  kubernetes_resource_quota
+where
+  path is not null
+order by
+  name;
+```
