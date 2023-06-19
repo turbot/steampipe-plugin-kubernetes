@@ -29,7 +29,7 @@ func tableKubernetesStatefulSet(ctx context.Context) *plugin.Table {
 			{
 				Name:        "service_name",
 				Type:        proto.ColumnType_STRING,
-				Description: "The ame of the service that governs this StatefulSet.",
+				Description: "The name of the service that governs this StatefulSet.",
 				Transform:   transform.FromField("Spec.ServiceName"),
 			},
 			{
