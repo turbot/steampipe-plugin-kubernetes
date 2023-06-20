@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -391,6 +392,35 @@ func getK8Config(ctx context.Context, d *plugin.QueryData) (clientcmd.ClientConf
 		}
 	}
 
+	// Overriding with static configuration
+	if kubernetesConfig.ClusterCACertificate != nil {
+		overrides.ClusterInfo.CertificateAuthorityData = bytes.NewBufferString(*kubernetesConfig.ClusterCACertificate).Bytes()
+	}
+	if kubernetesConfig.ClientCertificate != nil {
+		overrides.AuthInfo.ClientCertificateData = bytes.NewBufferString(*kubernetesConfig.ClientCertificate).Bytes()
+	}
+	if kubernetesConfig.Host != nil {
+		// Server has to be the complete address of the kubernetes cluster (scheme://hostname:port), not just the hostname,
+		// because `overrides` are processed too late to be taken into account by `defaultServerUrlFor()`.
+		// This basically replicates what defaultServerUrlFor() does with config but for overrides,
+		// see https://github.com/kubernetes/client-go/blob/v12.0.0/rest/url_utils.go#L85-L87
+		hasCA := len(overrides.ClusterInfo.CertificateAuthorityData) != 0
+		hasCert := len(overrides.AuthInfo.ClientCertificateData) != 0
+		defaultTLS := hasCA || hasCert || overrides.ClusterInfo.InsecureSkipTLSVerify
+		host, _, err := rest.DefaultServerURL(*kubernetesConfig.Host, "", schema.GroupVersion{}, defaultTLS)
+		if err != nil {
+			return nil, err
+		}
+
+		overrides.ClusterInfo.Server = host.String()
+	}
+	if kubernetesConfig.ClientKey != nil {
+		overrides.AuthInfo.ClientKeyData = bytes.NewBufferString(*kubernetesConfig.ClientKey).Bytes()
+	}
+	if kubernetesConfig.Token != nil {
+		overrides.AuthInfo.Token = *kubernetesConfig.ClientKey
+	}
+
 	kubeconfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loader, overrides)
 
 	// save the config in cache
@@ -471,6 +501,35 @@ func getK8ConfigRaw(ctx context.Context, cc *connection.ConnectionCache, c *plug
 			overrides.CurrentContext = *kubernetesConfig.ConfigContext
 			overrides.Context = clientcmdapi.Context{}
 		}
+	}
+
+	// Overriding with static configuration
+	if kubernetesConfig.ClusterCACertificate != nil {
+		overrides.ClusterInfo.CertificateAuthorityData = bytes.NewBufferString(*kubernetesConfig.ClusterCACertificate).Bytes()
+	}
+	if kubernetesConfig.ClientCertificate != nil {
+		overrides.AuthInfo.ClientCertificateData = bytes.NewBufferString(*kubernetesConfig.ClientCertificate).Bytes()
+	}
+	if kubernetesConfig.Host != nil {
+		// Server has to be the complete address of the kubernetes cluster (scheme://hostname:port), not just the hostname,
+		// because `overrides` are processed too late to be taken into account by `defaultServerUrlFor()`.
+		// This basically replicates what defaultServerUrlFor() does with config but for overrides,
+		// see https://github.com/kubernetes/client-go/blob/v12.0.0/rest/url_utils.go#L85-L87
+		hasCA := len(overrides.ClusterInfo.CertificateAuthorityData) != 0
+		hasCert := len(overrides.AuthInfo.ClientCertificateData) != 0
+		defaultTLS := hasCA || hasCert || overrides.ClusterInfo.InsecureSkipTLSVerify
+		host, _, err := rest.DefaultServerURL(*kubernetesConfig.Host, "", schema.GroupVersion{}, defaultTLS)
+		if err != nil {
+			return nil, err
+		}
+
+		overrides.ClusterInfo.Server = host.String()
+	}
+	if kubernetesConfig.ClientKey != nil {
+		overrides.AuthInfo.ClientKeyData = bytes.NewBufferString(*kubernetesConfig.ClientKey).Bytes()
+	}
+	if kubernetesConfig.Token != nil {
+		overrides.AuthInfo.Token = *kubernetesConfig.ClientKey
 	}
 
 	kubeconfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loader, overrides)

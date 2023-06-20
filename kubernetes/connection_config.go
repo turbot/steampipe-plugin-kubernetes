@@ -12,6 +12,11 @@ type kubernetesConfig struct {
 	CustomResourceTables []string `cty:"custom_resource_tables"`
 	ManifestFilePaths    []string `cty:"manifest_file_paths" steampipe:"watch"`
 	SourceType           *string  `cty:"source_type"`
+	ClusterCACertificate *string  `cty:"cluster_ca_certificate"`
+	ClientCertificate    *string  `cty:"client_certificate"`
+	Host                 *string  `cty:"host"`
+	ClientKey            *string  `cty:"client_key"`
+	Token                *string  `cty:"token"`
 }
 
 var ConfigSchema = map[string]*schema.Attribute{
@@ -34,6 +39,21 @@ var ConfigSchema = map[string]*schema.Attribute{
 		Elem: &schema.Attribute{Type: schema.TypeString},
 	},
 	"source_type": {
+		Type: schema.TypeString,
+	},
+	"cluster_ca_certificate": {
+		Type: schema.TypeString,
+	},
+	"client_certificate": {
+		Type: schema.TypeString,
+	},
+	"host": {
+		Type: schema.TypeString,
+	},
+	"client_key": {
+		Type: schema.TypeString,
+	},
+	"token": {
 		Type: schema.TypeString,
 	},
 }
