@@ -432,12 +432,11 @@ func getK8ConfigRaw(ctx context.Context, cc *connection.ConnectionCache, c *plug
 	}
 
 	// Set default loader and overriding rules
-	loader := &clientcmd.ClientConfigLoadingRules{}
+	loader := clientcmd.NewDefaultClientConfigLoadingRules()
 	overrides := &clientcmd.ConfigOverrides{}
 
 	// variable to store paths for kubernetes config
-	// default kube config path
-	var configPaths = []string{"~/.kube/config"}
+	var configPaths []string
 
 	if kubernetesConfig.ConfigPath != nil {
 		configPaths = []string{*kubernetesConfig.ConfigPath}
