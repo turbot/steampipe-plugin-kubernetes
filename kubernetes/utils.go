@@ -358,19 +358,27 @@ func getK8Config(ctx context.Context, d *plugin.QueryData) (clientcmd.ClientConf
 	}
 
 	// Set default loader and overriding rules
-	loader := clientcmd.NewDefaultClientConfigLoadingRules()
+	loader := &clientcmd.ClientConfigLoadingRules{}
 	overrides := &clientcmd.ConfigOverrides{}
 
 	// variable to store paths for kubernetes config
-	var configPaths []string
+	// default kube config path
+	var configPaths = []string{"~/.kube/config"}
 
 	if kubernetesConfig.ConfigPath != nil {
 		configPaths = []string{*kubernetesConfig.ConfigPath}
 	} else if kubernetesConfig.ConfigPaths != nil && len(kubernetesConfig.ConfigPaths) > 0 {
+		plugin.Logger(ctx).Warn("config_paths parameter is deprecated and will be removed after 31st July 2023, please use config_path instead.")
 		configPaths = kubernetesConfig.ConfigPaths
+	} else if v := os.Getenv("KUBECONFIG"); v != "" {
+		configPaths = []string{v}
+	} else if v := os.Getenv("KUBE_CONFIG_PATH"); v != "" {
+		configPaths = []string{v}
 	} else if v := os.Getenv("KUBE_CONFIG_PATHS"); v != "" {
+		plugin.Logger(ctx).Warn("KUBE_CONFIG_PATHS parameter is deprecated and will be removed after 31st July 2023, please use KUBECONFIG or KUBE_CONFIG_PATH instead.")
 		configPaths = filepath.SplitList(v)
 	} else if v := os.Getenv("KUBERNETES_MASTER"); v != "" {
+		plugin.Logger(ctx).Warn("KUBERNETES_MASTER parameter is deprecated and will be removed after 31st July 2023, please use KUBECONFIG or KUBE_CONFIG_PATH instead.")
 		configPaths = []string{v}
 	}
 
@@ -441,19 +449,27 @@ func getK8ConfigRaw(ctx context.Context, cc *connection.ConnectionCache, c *plug
 	}
 
 	// Set default loader and overriding rules
-	loader := clientcmd.NewDefaultClientConfigLoadingRules()
+	loader := &clientcmd.ClientConfigLoadingRules{}
 	overrides := &clientcmd.ConfigOverrides{}
 
 	// variable to store paths for kubernetes config
-	var configPaths []string
+	// default kube config path
+	var configPaths = []string{"~/.kube/config"}
 
 	if kubernetesConfig.ConfigPath != nil {
 		configPaths = []string{*kubernetesConfig.ConfigPath}
 	} else if kubernetesConfig.ConfigPaths != nil && len(kubernetesConfig.ConfigPaths) > 0 {
+		plugin.Logger(ctx).Warn("config_paths parameter is deprecated and will be removed after 31st July 2023, please use config_path instead.")
 		configPaths = kubernetesConfig.ConfigPaths
+	} else if v := os.Getenv("KUBECONFIG"); v != "" {
+		configPaths = []string{v}
+	} else if v := os.Getenv("KUBE_CONFIG_PATH"); v != "" {
+		configPaths = []string{v}
 	} else if v := os.Getenv("KUBE_CONFIG_PATHS"); v != "" {
+		plugin.Logger(ctx).Warn("KUBE_CONFIG_PATHS parameter is deprecated and will be removed after 31st July 2023, please use KUBECONFIG or KUBE_CONFIG_PATH instead.")
 		configPaths = filepath.SplitList(v)
 	} else if v := os.Getenv("KUBERNETES_MASTER"); v != "" {
+		plugin.Logger(ctx).Warn("KUBERNETES_MASTER parameter is deprecated and will be removed after 31st July 2023, please use KUBECONFIG or KUBE_CONFIG_PATH instead.")
 		configPaths = []string{v}
 	}
 

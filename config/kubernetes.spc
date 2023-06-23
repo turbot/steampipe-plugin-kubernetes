@@ -6,7 +6,7 @@ connection "kubernetes" {
   # The kubeconfig path and context can also be specified with the following config arguments:
 
   # Specify the file path to the kubeconfig.
-  # Can also be set with the "KUBECONFIG" or "KUBE_CONFIG_PATHS" or "KUBERNETES_MASTER" environment variables.
+  # Can also be set with the "KUBECONFIG" or "KUBE_CONFIG_PATH" environment variables. Plugin will prioritize KUBECONFIG if both are available.
   # config_path = "~/.kube/config"
 
   # Specify a context other than the current one.
@@ -37,7 +37,7 @@ connection "kubernetes" {
   # source_type = "all"
 
   # Manifest File Configuration
-  
+
   # Manifest file paths is a list of locations to search for Kubernetes manifest files
   # Manifest file paths can be configured with a local directory, a remote Git repository URL, or an S3 bucket URL
   # Refer https://hub.steampipe.io/plugins/turbot/kubernetes#supported-path-formats for more information
@@ -59,7 +59,7 @@ connection "kubernetes" {
   # manifest_file_paths = [ "*.yml", "*.yaml", "*.json" ]
 
   # Helm configuration
-  
+
   # A map for Helm charts along with the path to the chart directory and the paths of the value override files (if any).
   # Every map should have chart_path defined, and the values_file_paths is optional.
   # You can define multiple charts in the config.
