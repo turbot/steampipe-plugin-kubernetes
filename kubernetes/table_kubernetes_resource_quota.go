@@ -63,13 +63,12 @@ func tableKubernetesResourceQuota(ctx context.Context) *plugin.Table {
 				Name:        "context_name",
 				Type:        proto.ColumnType_STRING,
 				Description: "Kubectl config context name.",
-				Hydrate:     getResourceQuotaResourceAdditionalData,
+				Hydrate:     getResourceQuotaResourceContext,
 			},
 			{
 				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Hydrate:     getResourceQuotaResourceAdditionalData,
 			},
 
 			//// Steampipe Standard Columns
@@ -91,9 +90,7 @@ func tableKubernetesResourceQuota(ctx context.Context) *plugin.Table {
 
 type ResourceQuota struct {
 	v1.ResourceQuota
-	Path      string
-	StartLine int
-	EndLine   int
+	parsedContent
 }
 
 //// HYDRATE FUNCTIONS
@@ -117,7 +114,7 @@ func listK8sResourceQuotas(ctx context.Context, d *plugin.QueryData, h *plugin.H
 	for _, content := range parsedContents {
 		resourceQuota := content.Data.(*v1.ResourceQuota)
 
-		d.StreamListItem(ctx, ResourceQuota{*resourceQuota, content.Path, content.StartLine, content.EndLine})
+		d.StreamListItem(ctx, ResourceQuota{*resourceQuota, content})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -168,7 +165,7 @@ func listK8sResourceQuotas(ctx context.Context, d *plugin.QueryData, h *plugin.H
 		}
 
 		for _, resourceQuota := range response.Items {
-			d.StreamListItem(ctx, ResourceQuota{resourceQuota, "", 0, 0})
+			d.StreamListItem(ctx, ResourceQuota{resourceQuota, parsedContent{SourceType: "deployed"}})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -208,7 +205,7 @@ func getK8sResourceQuota(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 		resourceQuota := content.Data.(*v1.ResourceQuota)
 
 		if resourceQuota.Name == name && resourceQuota.Namespace == namespace {
-			return ResourceQuota{*resourceQuota, content.Path, content.StartLine, content.EndLine}, nil
+			return ResourceQuota{*resourceQuota, content}, nil
 		}
 	}
 
@@ -222,20 +219,15 @@ func getK8sResourceQuota(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 		return nil, err
 	}
 
-	return ResourceQuota{*resourceQuota, "", 0, 0}, nil
+	return ResourceQuota{*resourceQuota, parsedContent{SourceType: "deployed"}}, nil
 }
 
-func getResourceQuotaResourceAdditionalData(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+func getResourceQuotaResourceContext(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 	obj := h.Item.(ResourceQuota)
 
-	data := map[string]interface{}{
-		"SourceType": "deployed",
-	}
-
-	// Set the source_type as manifest, if path is not empty
-	// also, set the context_name as nil
+	// Set the context_name as nil
+	data := map[string]interface{}{}
 	if obj.Path != "" {
-		data["SourceType"] = "manifest"
 		return data, nil
 	}
 

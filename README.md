@@ -4,6 +4,8 @@
 
 Use SQL to query Kubernetes components.
 
+Apart from querying the deployed resources, the plugin also supports scanning the [Kubernetes manifest files](https://hub.steampipe.io/plugins/turbot/kubernetes#supported-manifest-file-path-formats) from different sources, parsing the configured [Helm charts](https://hub.steampipe.io/plugins/turbot/kubernetes#helm-configuration) and scanning all the templates to get the list of Kubernetes resources.
+
 - **[Get started →](https://hub.steampipe.io/plugins/turbot/kubernetes)**
 - Documentation: [Table definitions & examples](https://hub.steampipe.io/plugins/turbot/kubernetes/tables)
 - Community: [Slack Channel](https://steampipe.io/community/join)
@@ -19,7 +21,7 @@ Download and install the latest Kubernetes plugin:
 steampipe plugin install kubernetes
 ```
 
-Configure your [config file](https://hub.steampipe.io/plugins/turbot/kubernetes#configuration).
+Installing the latest Kubernetes plugin will create a config file (`~/.steampipe/config/kubernetes.spc`) with a single connection named `kubernetes`:
 
 ```hcl
 connection "kubernetes" {
@@ -52,6 +54,16 @@ connection "kubernetes" {
   # If no kubeconfig file can be found, the plugin will attempt to use the service account Kubernetes gives to pods.
   # This authentication method is intended for clients that expect to be running inside a pod running on Kubernetes.
 
+  # Specify the source of the resource. Possible values: `deployed`, `helm`, `manifest`, and `all`.
+  # Default set to `all`. Set the argument to override the default value.
+  # If the value is set to `deployed`, tables will show all the deployed resources.
+  # If set to `helm`, tables will only show resources from the configured helm charts.
+  # If set to `manifest`, tables will show all the resources from the kubernetes manifest. Make sure that the `manifest_file_paths` arg is set.
+  # If `all`, tables will show all the deployed and manifest resources.
+  # source_type = "all"
+
+  # Manifest File Configuration
+  
   # Manifest file paths is a list of locations to search for Kubernetes manifest files
   # Manifest file paths can be configured with a local directory, a remote Git repository URL, or an S3 bucket URL
   # Refer https://hub.steampipe.io/plugins/turbot/kubernetes#supported-path-formats for more information
@@ -72,12 +84,17 @@ connection "kubernetes" {
   # Defaults to CWD
   # manifest_file_paths = [ "*.yml", "*.yaml", "*.json" ]
 
-  # Specify the source of the resource. Possible values: `deployed`, `manifest`, and `all`.
-  # Default set to `all`. Set the argument to override the default value.
-  # If the value is set to `deployed`, tables will show all the deployed resources.
-  # If set to `manifest`, tables will show all the resources from the kubernetes manifest. Make sure that the `manifest_file_paths` arg is set.
-  # If `all`, tables will show all the deployed and manifest resources.
-  # source_type = "all"
+  # Helm configuration
+  
+  # A map for Helm charts along with the path to the chart directory and the paths of the value override files (if any).
+  # Every map should have chart_path defined, and the values_file_paths is optional.
+  # You can define multiple charts in the config.
+  # helm_rendered_charts = {
+  #   "chart_name" = {
+  #     chart_path        = "/path/to/chart/dir"
+  #     values_file_paths = ["/path/to/value/override/files.yaml"]
+  #   }
+  # }
 }
 ```
 

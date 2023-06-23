@@ -54,13 +54,12 @@ func tableKubernetesRoleBinding(ctx context.Context) *plugin.Table {
 				Name:        "context_name",
 				Type:        proto.ColumnType_STRING,
 				Description: "Kubectl config context name.",
-				Hydrate:     getRoleBindingResourceAdditionalData,
+				Hydrate:     getRoleBindingResourceContext,
 			},
 			{
 				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Hydrate:     getRoleBindingResourceAdditionalData,
 			},
 
 			//// Steampipe Standard Columns
@@ -82,9 +81,7 @@ func tableKubernetesRoleBinding(ctx context.Context) *plugin.Table {
 
 type RoleBinding struct {
 	v1.RoleBinding
-	Path      string
-	StartLine int
-	EndLine   int
+	parsedContent
 }
 
 //// HYDRATE FUNCTIONS
@@ -109,7 +106,7 @@ func listK8sRoleBindings(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 	for _, content := range parsedContents {
 		roleBinding := content.Data.(*v1.RoleBinding)
 
-		d.StreamListItem(ctx, RoleBinding{*roleBinding, content.Path, content.StartLine, content.EndLine})
+		d.StreamListItem(ctx, RoleBinding{*roleBinding, content})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -160,7 +157,7 @@ func listK8sRoleBindings(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 		}
 
 		for _, roleBinding := range response.Items {
-			d.StreamListItem(ctx, RoleBinding{roleBinding, "", 0, 0})
+			d.StreamListItem(ctx, RoleBinding{roleBinding, parsedContent{SourceType: "deployed"}})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -201,7 +198,7 @@ func getK8sRoleBinding(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 		roleBinding := content.Data.(*v1.RoleBinding)
 
 		if roleBinding.Name == name && roleBinding.Namespace == namespace {
-			return RoleBinding{*roleBinding, content.Path, content.StartLine, content.EndLine}, nil
+			return RoleBinding{*roleBinding, content}, nil
 		}
 	}
 
@@ -215,20 +212,15 @@ func getK8sRoleBinding(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 		return nil, err
 	}
 
-	return RoleBinding{*roleBinding, "", 0, 0}, nil
+	return RoleBinding{*roleBinding, parsedContent{SourceType: "deployed"}}, nil
 }
 
-func getRoleBindingResourceAdditionalData(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+func getRoleBindingResourceContext(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 	obj := h.Item.(RoleBinding)
 
-	data := map[string]interface{}{
-		"SourceType": "deployed",
-	}
-
-	// Set the source_type as manifest, if path is not empty
-	// also, set the context_name as nil
+	// Set the context_name as nil
+	data := map[string]interface{}{}
 	if obj.Path != "" {
-		data["SourceType"] = "manifest"
 		return data, nil
 	}
 

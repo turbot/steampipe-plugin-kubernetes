@@ -135,13 +135,12 @@ func tableKubernetesDeployment(ctx context.Context) *plugin.Table {
 				Name:        "context_name",
 				Type:        proto.ColumnType_STRING,
 				Description: "Kubectl config context name.",
-				Hydrate:     getDeploymentResourceAdditionalData,
+				Hydrate:     getDeploymentResourceContext,
 			},
 			{
 				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Hydrate:     getDeploymentResourceAdditionalData,
 			},
 
 			//// Steampipe Standard Columns
@@ -163,9 +162,7 @@ func tableKubernetesDeployment(ctx context.Context) *plugin.Table {
 
 type Deployment struct {
 	v1.Deployment
-	Path      string
-	StartLine int
-	EndLine   int
+	parsedContent
 }
 
 //// HYDRATE FUNCTIONS
@@ -190,7 +187,7 @@ func listK8sDeployments(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 	for _, content := range parsedContents {
 		deployment := content.Data.(*v1.Deployment)
 
-		d.StreamListItem(ctx, Deployment{*deployment, content.Path, content.StartLine, content.EndLine})
+		d.StreamListItem(ctx, Deployment{*deployment, content})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -242,7 +239,7 @@ func listK8sDeployments(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 		}
 
 		for _, item := range response.Items {
-			d.StreamListItem(ctx, Deployment{item, "", 0, 0})
+			d.StreamListItem(ctx, Deployment{item, parsedContent{SourceType: "deployed"}})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -283,7 +280,7 @@ func getK8sDeployment(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 		deployment := content.Data.(*v1.Deployment)
 
 		if deployment.Name == name && deployment.Namespace == namespace {
-			return Deployment{*deployment, content.Path, content.StartLine, content.EndLine}, nil
+			return Deployment{*deployment, content}, nil
 		}
 	}
 
@@ -297,20 +294,15 @@ func getK8sDeployment(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 		return nil, err
 	}
 
-	return Deployment{*deployment, "", 0, 0}, nil
+	return Deployment{*deployment, parsedContent{SourceType: "deployed"}}, nil
 }
 
-func getDeploymentResourceAdditionalData(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+func getDeploymentResourceContext(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 	obj := h.Item.(Deployment)
 
-	data := map[string]interface{}{
-		"SourceType": "deployed",
-	}
-
-	// Set the source_type as manifest, if path is not empty
-	// also, set the context_name as nil
+	// Set the context_name as nil
+	data := map[string]interface{}{}
 	if obj.Path != "" {
-		data["SourceType"] = "manifest"
 		return data, nil
 	}
 

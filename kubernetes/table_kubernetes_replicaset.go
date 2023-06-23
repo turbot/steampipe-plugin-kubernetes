@@ -99,13 +99,12 @@ func tableKubernetesReplicaSet(ctx context.Context) *plugin.Table {
 				Name:        "context_name",
 				Type:        proto.ColumnType_STRING,
 				Description: "Kubectl config context name.",
-				Hydrate:     getReplicaSetResourceAdditionalData,
+				Hydrate:     getReplicaSetResourceContext,
 			},
 			{
 				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Hydrate:     getReplicaSetResourceAdditionalData,
 			},
 
 			//// Steampipe Standard Columns
@@ -127,9 +126,7 @@ func tableKubernetesReplicaSet(ctx context.Context) *plugin.Table {
 
 type ReplicaSet struct {
 	v1.ReplicaSet
-	Path      string
-	StartLine int
-	EndLine   int
+	parsedContent
 }
 
 //// HYDRATE FUNCTIONS
@@ -154,7 +151,7 @@ func listK8sReplicaSets(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 	for _, content := range parsedContents {
 		replicaSet := content.Data.(*v1.ReplicaSet)
 
-		d.StreamListItem(ctx, ReplicaSet{*replicaSet, content.Path, content.StartLine, content.EndLine})
+		d.StreamListItem(ctx, ReplicaSet{*replicaSet, content})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -205,7 +202,7 @@ func listK8sReplicaSets(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 		}
 
 		for _, item := range response.Items {
-			d.StreamListItem(ctx, ReplicaSet{item, "", 0, 0})
+			d.StreamListItem(ctx, ReplicaSet{item, parsedContent{SourceType: "deployed"}})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -246,7 +243,7 @@ func getK8sReplicaSet(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 		replicaSet := content.Data.(*v1.ReplicaSet)
 
 		if replicaSet.Name == name && replicaSet.Namespace == namespace {
-			return ReplicaSet{*replicaSet, content.Path, content.StartLine, content.EndLine}, nil
+			return ReplicaSet{*replicaSet, content}, nil
 		}
 	}
 
@@ -260,20 +257,15 @@ func getK8sReplicaSet(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 		return nil, err
 	}
 
-	return ReplicaSet{*rs, "", 0, 0}, nil
+	return ReplicaSet{*rs, parsedContent{SourceType: "deployed"}}, nil
 }
 
-func getReplicaSetResourceAdditionalData(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+func getReplicaSetResourceContext(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 	obj := h.Item.(ReplicaSet)
 
-	data := map[string]interface{}{
-		"SourceType": "deployed",
-	}
-
-	// Set the source_type as manifest, if path is not empty
-	// also, set the context_name as nil
+	// Set the context_name as nil
+	data := map[string]interface{}{}
 	if obj.Path != "" {
-		data["SourceType"] = "manifest"
 		return data, nil
 	}
 

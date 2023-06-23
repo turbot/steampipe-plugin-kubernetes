@@ -1,8 +1,22 @@
+## v0.21.0 [2023-06-23]
+
+_What's new?_
+
+- Added support to query Kubernetes Helm charts. This can be set using the `helm_rendered_charts` config argument in the `kubernetes.spc` file. Please check the [Helm Charts](https://hub.steampipe.io/plugins/turbot/kubernetes#helm-charts) section for more information. ([#139](https://github.com/turbot/steampipe-plugin-kubernetes/pull/139))
+
+_Bug fixes_
+
+- Fixed typo in the description of `service_name` column of `kubernetes_stateful_set` table. ([#141](https://github.com/turbot/steampipe-plugin-kubernetes/pull/141)) (Thanks [@jacksgt](https://github.com/jacksgt) for the contribution!!)
+
+_Dependencies_
+
+- Recompiled plugin with [steampipe-plugin-sdk v5.5.0](https://github.com/turbot/steampipe-plugin-sdk/blob/v5.5.0/CHANGELOG.md#v550-2023-06-16) which significantly reduces API calls and boosts query performance, resulting in faster data retrieval. ([#139](https://github.com/turbot/steampipe-plugin-kubernetes/pull/139))
+
 ## v0.20.0 [2023-05-24]
 
 _What's new?_
 
-- Added support to query Kubernetes manifest files. This can be set using the `manifest_file_paths` config argument in the `kubernetes.spc` file. Please check the [Supported Manifest File Path Formats](https://hub.steampipe.io/plugins/turbot/kubernetes#supported-manifest-file-path-formats) section for more information. ([#129](https://github.com/turbot/steampipe-plugin-kubernetes/pull/129))
+- Added support to query Kubernetes manifest files. This can be set using the `manifest_file_paths` config argument in the `kubernetes.spc` file. Please check the [Supported Manifest File Path Formats](https://hub.steampipe.io/plugins/turbot/kubernetes#manifest-files) section for more information. ([#129](https://github.com/turbot/steampipe-plugin-kubernetes/pull/129))
 
 ## v0.19.0 [2023-05-11]
 

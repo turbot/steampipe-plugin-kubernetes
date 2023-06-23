@@ -168,7 +168,7 @@ func listK8sCustomResources(ctx context.Context, crdName string, resourceName st
 				StartLine:         content.StartLine,
 				EndLine:           content.EndLine,
 				Path:              content.Path,
-				SourceType:        "manifest",
+				SourceType:        content.SourceType,
 			})
 		}
 
