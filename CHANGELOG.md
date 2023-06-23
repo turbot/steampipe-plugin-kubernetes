@@ -8,6 +8,10 @@ _Bug fixes_
 
 - Fixed typo in the description of `service_name` column of `kubernetes_stateful_set` table. ([#141](https://github.com/turbot/steampipe-plugin-kubernetes/pull/141)) (Thanks [@jacksgt](https://github.com/jacksgt) for the contribution!!)
 
+_Dependencies_
+
+- Recompiled plugin with [steampipe-plugin-sdk v5.5.0](https://github.com/turbot/steampipe-plugin-sdk/blob/v5.5.0/CHANGELOG.md#v550-2023-06-16) which significantly reduces API calls and boosts query performance, resulting in faster data retrieval. ([#139](https://github.com/turbot/steampipe-plugin-kubernetes/pull/139))
+
 ## v0.20.0 [2023-05-24]
 
 _What's new?_
