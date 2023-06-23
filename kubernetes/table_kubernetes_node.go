@@ -132,13 +132,12 @@ func tableKubernetesNode(ctx context.Context) *plugin.Table {
 				Name:        "context_name",
 				Type:        proto.ColumnType_STRING,
 				Description: "Kubectl config context name.",
-				Hydrate:     getNodeResourceAdditionalData,
+				Hydrate:     getNodeResourceContext,
 			},
 			{
 				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Hydrate:     getNodeResourceAdditionalData,
 			},
 			// To do - add Status Columns...
 
@@ -161,9 +160,7 @@ func tableKubernetesNode(ctx context.Context) *plugin.Table {
 
 type Node struct {
 	v1.Node
-	Path      string
-	StartLine int
-	EndLine   int
+	parsedContent
 }
 
 //// HYDRATE FUNCTIONS
@@ -188,7 +185,7 @@ func listK8sNodes(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 	for _, content := range parsedContents {
 		node := content.Data.(*v1.Node)
 
-		d.StreamListItem(ctx, Node{*node, content.Path, content.StartLine, content.EndLine})
+		d.StreamListItem(ctx, Node{*node, content})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -233,7 +230,7 @@ func listK8sNodes(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 		}
 
 		for _, node := range response.Items {
-			d.StreamListItem(ctx, Node{node, "", 0, 0})
+			d.StreamListItem(ctx, Node{node, parsedContent{SourceType: "deployed"}})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -273,7 +270,7 @@ func getK8sNode(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData)
 		node := content.Data.(*v1.Node)
 
 		if node.Name == name {
-			return Node{*node, content.Path, content.StartLine, content.EndLine}, nil
+			return Node{*node, content}, nil
 		}
 	}
 
@@ -287,20 +284,15 @@ func getK8sNode(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData)
 		return nil, err
 	}
 
-	return Node{*node, "", 0, 0}, nil
+	return Node{*node, parsedContent{SourceType: "deployed"}}, nil
 }
 
-func getNodeResourceAdditionalData(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+func getNodeResourceContext(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 	obj := h.Item.(Node)
 
-	data := map[string]interface{}{
-		"SourceType": "deployed",
-	}
-
-	// Set the source_type as manifest, if path is not empty
-	// also, set the context_name as nil
+	// Set the context_name as nil
+	data := map[string]interface{}{}
 	if obj.Path != "" {
-		data["SourceType"] = "manifest"
 		return data, nil
 	}
 

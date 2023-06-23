@@ -54,13 +54,12 @@ func tableKubernetesNetworkPolicy(ctx context.Context) *plugin.Table {
 				Name:        "context_name",
 				Type:        proto.ColumnType_STRING,
 				Description: "Kubectl config context name.",
-				Hydrate:     getNetworkPolicyResourceAdditionalData,
+				Hydrate:     getNetworkPolicyResourceContext,
 			},
 			{
 				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Hydrate:     getNetworkPolicyResourceAdditionalData,
 			},
 
 			//// Steampipe Standard Columns
@@ -82,9 +81,7 @@ func tableKubernetesNetworkPolicy(ctx context.Context) *plugin.Table {
 
 type NetworkPolicy struct {
 	v1.NetworkPolicy
-	Path      string
-	StartLine int
-	EndLine   int
+	parsedContent
 }
 
 //// HYDRATE FUNCTIONS
@@ -109,7 +106,7 @@ func listK8sNetworkPolicies(ctx context.Context, d *plugin.QueryData, _ *plugin.
 	for _, content := range parsedContents {
 		networkPolicy := content.Data.(*v1.NetworkPolicy)
 
-		d.StreamListItem(ctx, NetworkPolicy{*networkPolicy, content.Path, content.StartLine, content.EndLine})
+		d.StreamListItem(ctx, NetworkPolicy{*networkPolicy, content})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -160,7 +157,7 @@ func listK8sNetworkPolicies(ctx context.Context, d *plugin.QueryData, _ *plugin.
 		}
 
 		for _, networkPolicy := range response.Items {
-			d.StreamListItem(ctx, NetworkPolicy{networkPolicy, "", 0, 0})
+			d.StreamListItem(ctx, NetworkPolicy{networkPolicy, parsedContent{SourceType: "deployed"}})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -201,7 +198,7 @@ func getK8sNetworkPolicy(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 		networkPolicy := content.Data.(*v1.NetworkPolicy)
 
 		if networkPolicy.Name == name && networkPolicy.Namespace == namespace {
-			return NetworkPolicy{*networkPolicy, content.Path, content.StartLine, content.EndLine}, nil
+			return NetworkPolicy{*networkPolicy, content}, nil
 		}
 	}
 
@@ -215,20 +212,15 @@ func getK8sNetworkPolicy(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 		return nil, err
 	}
 
-	return NetworkPolicy{*networkPolicy, "", 0, 0}, nil
+	return NetworkPolicy{*networkPolicy, parsedContent{SourceType: "deployed"}}, nil
 }
 
-func getNetworkPolicyResourceAdditionalData(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+func getNetworkPolicyResourceContext(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 	obj := h.Item.(NetworkPolicy)
 
-	data := map[string]interface{}{
-		"SourceType": "deployed",
-	}
-
-	// Set the source_type as manifest, if path is not empty
-	// also, set the context_name as nil
+	// Set the context_name as nil
+	data := map[string]interface{}{}
 	if obj.Path != "" {
-		data["SourceType"] = "manifest"
 		return data, nil
 	}
 

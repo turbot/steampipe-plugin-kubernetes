@@ -16,7 +16,47 @@ og_image: "/images/plugins/turbot/kubernetes-social-graphic.png"
 
 [Kubernetes](https://kubernetes.io) is an open-source system for automating deployment, scaling, and management of containerized applications.
 
-For example:
+The Kubernetes plugin makes it simpler to query the variety of Kubernetes resources deployed in a Kubernetes cluster using [Steampipe](https://steampipe.io).
+
+Apart from querying the deployed resources, the plugin also supports scanning [Kubernetes manifest files](#manifest-files) from different sources, parsing the configured [Helm charts](#helm-charts) and scanning all the templates to get the list of Kubernetes resources.
+
+## Documentation
+
+- **[Table definitions & examples →](/plugins/turbot/kubernetes/tables)**
+
+## Get Started
+
+### Install
+
+Download and install the latest Kubernetes plugin:
+
+```bash
+steampipe plugin install kubernetes
+```
+
+### Configuration
+
+Installing the latest Kubernetes plugin will create a config file (`~/.steampipe/config/kubernetes.spc`) with a single connection named `kubernetes`:
+
+```hcl
+connection "kubernetes" {
+  plugin         = "kubernetes"
+  config_path    = "~/.kube/config"
+  config_context = "myCluster"
+}
+```
+
+For a full list of configuration arguments, please see the [default configuration file](https://github.com/turbot/steampipe-plugin-kubernetes/blob/main/config/kubernetes.spc).
+
+### Run a Query
+
+Run steampipe:
+
+```shell
+steampipe query
+```
+
+List all pods:
 
 ```sql
 select
@@ -40,94 +80,7 @@ from
 +-----------------------------------------+-------------+-----------+---------------------+-----------+
 ```
 
-## Documentation
-
-- **[Table definitions & examples →](/plugins/turbot/kubernetes/tables)**
-
-## Get started
-
-### Install
-
-Download and install the latest Kubernetes plugin:
-
-```bash
-steampipe plugin install kubernetes
-```
-
-### Configuration
-
-Installing the latest kubernetes plugin will create a config file (`~/.steampipe/config/kubernetes.spc`) with a single connection named `kubernetes`:
-
-```hcl
-connection "kubernetes" {
-  plugin = "kubernetes"
-
-  # By default, the plugin will use credentials in "~/.kube/config" with the current context.
-  # OpenID Connect (OIDC) authentication is supported without any extra configuration.
-  # The kubeconfig path and context can also be specified with the following config arguments:
-
-  # Specify the file path to the kubeconfig.
-  # Can also be set with the "KUBECONFIG" or "KUBE_CONFIG_PATHS" or "KUBERNETES_MASTER" environment variables.
-  # config_path = "~/.kube/config"
-
-  # Specify a context other than the current one.
-  # config_context = "minikube"
-
-  # List of custom resources that will be created as dynamic tables.
-  # No dynamic tables will be created if this arg is empty or not set.
-  # Wildcard based searches are supported.
-
-  # For example:
-  #  - "*" matches all custom resources available
-  #  - "*.storage.k8s.io" matches all custom resources in the storage.k8s.io group
-  #  - "certificates.cert-manager.io" matches a specific custom resource "certificates.cert-manager.io"
-  #  - "backendconfig" matches the singular name "backendconfig" in any group
-
-  # Defaults to all custom resources
-  custom_resource_tables = ["*"]
-
-  # If no kubeconfig file can be found, the plugin will attempt to use the service account Kubernetes gives to pods.
-  # This authentication method is intended for clients that expect to be running inside a pod running on Kubernetes.
-
-  # Manifest file paths is a list of locations to search for Kubernetes manifest files
-  # Manifest file paths can be configured with a local directory, a remote Git repository URL, or an S3 bucket URL
-  # Refer https://hub.steampipe.io/plugins/turbot/kubernetes#supported-path-formats for more information
-  # Wildcard based searches are supported, including recursive searches
-  # Local paths are resolved relative to the current working directory (CWD)
-
-  # For example:
-  #  - "*.yml" or "*.yaml" or "*.json" matches all Kubernetes manifest files in the CWD
-  #  - "**/*.yml" or "**/*.yaml" or "**/*.json" matches all Kubernetes manifest files in the CWD and all sub-directories
-  #  - "../*.yml" or "../*.yaml" or "../*.json" matches all Kubernetes manifest files in the CWD's parent directory
-  #  - "steampipe*.yml" or "steampipe*.yaml" or "steampipe*.json" matches all Kubernetes manifest files starting with "steampipe" in the CWD
-  #  - "/path/to/dir/*.yml" or "/path/to/dir/*.yaml" or "/path/to/dir/*.json" matches all Kubernetes manifest files in a specific directory
-  #  - "/path/to/dir/main.yml" or "/path/to/dir/main.yaml" or "/path/to/dir/main.json" matches a specific file
-
-  # If the given paths includes "*", all files (including non-kubernetes manifest files) in
-  # the CWD will be matched, which may cause errors if incompatible file types exist
-
-  # Defaults to CWD
-  # manifest_file_paths = [ "*.yml", "*.yaml", "*.json" ]
-
-  # Specify the source of the resource. Possible values: `deployed`, `manifest`, and `all`.
-  # Default set to `all`. Set the argument to override the default value.
-  # If the value is set to `deployed`, tables will show all the deployed resources.
-  # If set to `manifest`, tables will show all the resources from the kubernetes manifest. Make sure that the `manifest_file_paths` arg is set.
-  # If `all`, tables will show all the deployed and manifest resources.
-  # source_type = "all"
-}
-```
-
-- `config_context` - (Optional) The kubeconfig context to use. If not set, the current context will be used.
-- `config_path` - (Optional) The kubeconfig file path. If not set, the plugin will check `~/.kube/config`. Can also be set with the `KUBE_CONFIG_PATHS` or `KUBERNETES_MASTER` environment variables.
-- `custom_resource_tables` - (Optional) The custom resources to create as dynamic tables. If set to empty or not set, the plugin will not create any dynamic tables.
-- `manifest_file_paths` - (Optional) A list of locations to search for Kubernetes manifest files. If set, the plugin will read the resource configurations from the configured paths and list the resources in the respective tables.
-- `source_type` - (Optional) Specify the source of the resource. Default set to `all`. The possible values are: `deployed`, `manifest`, and `all`.
-
-  - If the value is set to `deployed`, tables will show all the deployed resources.
-  - If set to `manifest`, tables will show all the resources from the kubernetes manifest. Make sure that the `manifest_file_paths` arg is set.
-
-## Configuring Kubernetes Credentials
+## Configuring Kubernetes Cluster Credentials
 
 By default, the plugin will use the kubeconfig in `~/.kube/config` with the current context. If using the default kubectl CLI configurations, the kubeconfig will be in this location and the Kubernetes plugin connections will work by default.
 
@@ -137,40 +90,36 @@ This plugin supports querying Kubernetes clusters using [OpenID Connect](https:/
 
 If no kubeconfig file is found, then the plugin will [attempt to access the API from within a pod](https://kubernetes.io/docs/tasks/run-application/access-api-from-pod/#accessing-the-api-from-within-a-pod) using the service account Kubernetes gives to pods.
 
-## Multiple Context Connections
-
-You may create multiple Kubernetes connections. Example of creating multiple connections per the same `kubeconfig` file and different contexts:
-
-```hcl
-connection "kubernetes_all" {
-  type        = "aggregator"
-  plugin      = "kubernetes"
-  connections = ["kubernetes_*"]
-}
-
-connection "kubernetes_cluster_aks" {
-  plugin          = "kubernetes"
-  config_path = "~/.kube/config"
-  config_context = "myAKSCluster"
-}
-
-connection "kubernetes_cluster_eks" {
-  plugin = "kubernetes"
-  config_path = "~/.kube/config"
-  config_context = "arn:aws:eks:us-east-1:123456789012:cluster/myEKSCluster"
-}
-```
+### Single Context Connection
 
 Each connection is implemented as a distinct [Postgres schema](https://www.postgresql.org/docs/current/ddl-schemas.html). As such, you can use qualified table names to query a specific connection:
 
 ```sql
-select * from kubernetes_cluster_aks.kubernetes_namespace
+select * from kubernetes_cluster_aks.kubernetes_namespace;
 ```
 
 Alternatively, you can use an unqualified name and it will be resolved according to the [Search Path](https://steampipe.io/docs/using-steampipe/managing-connections#setting-the-search-path):
 
 ```sql
-select * from kubernetes_namespace
+select * from kubernetes_namespace;
+```
+
+### Multiple Context Connections
+
+You may create multiple Kubernetes connections. Example of creating multiple connections per the same `kubeconfig` file and different contexts:
+
+```hcl
+connection "kubernetes_cluster_aks" {
+  plugin         = "kubernetes"
+  config_path    = "~/.kube/config"
+  config_context = "myAKSCluster"
+}
+
+connection "kubernetes_cluster_eks" {
+  plugin         = "kubernetes"
+  config_path    = "~/.kube/config"
+  config_context = "arn:aws:eks:us-east-1:123456789012:cluster/myEKSCluster"
+}
 ```
 
 You can create multi-subscription connections by using an [**aggregator** connection](https://steampipe.io/docs/using-steampipe/managing-connections#using-aggregators). Aggregators allow you to query data from multiple connections for a plugin as if they are a single connection:
@@ -186,10 +135,10 @@ connection "kubernetes_all" {
 Querying tables from this connection will return results from the `kubernetes_cluster_aks` and `kubernetes_cluster_eks` connections:
 
 ```sql
-select * from kubernetes_all.kubernetes_namespace
+select * from kubernetes_all.kubernetes_namespace;
 ```
 
-Steampipe supports the `*` wildcard in the connection names. For example, to aggregate all the Kubernetes plugin connections whose names begin with `kubernetes_`:
+Steampipe also supports the `*` wildcard in the connection names. For example, to aggregate all the Kubernetes plugin connections whose names begin with `kubernetes_`:
 
 ```hcl
 connection "kubernetes_all" {
@@ -199,21 +148,17 @@ connection "kubernetes_all" {
 }
 ```
 
-## Custom Resource Definitions
+### Custom Resource Definitions
 
 Kubernetes also supports creating [Custom Resource Definitions](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/#customresourcedefinitions) with a name and schema that you specify in the `custom_resource_tables` configuration argument which allows you to extend Kubernetes capabilities by adding any kind of API object useful for your application.
 
 Refer [Custom Resource](https://hub.steampipe.io/plugins/turbot/kubernetes/tables/kubernetes_%7Bcustom_resource_singular_name%7D#table-kubernetes_custom_resource_singular_name) table to get more information about how the plugin handles CRD and custom resources.
 
-## Supported Manifest File Path Formats
+## Manifest Files
 
-The `manifest_file_paths` config argument is flexible and can search for Kubernetes manifest files from several different sources, e.g., local directory paths, Git, S3.
+It is not necessary to always have a Kubernetes cluster online. The plugin also supports reading the manifest files from various sources (e.g., [Local files](#configuring-local-file-paths), [Git](#configuring-remote-git-repository-urls), [S3](#configuring-s3-urls) etc.) and make it available to query the resources using the respective Kubernetes resource tables.
 
-The following sources are supported:
-
-- [Local files](#configuring-local-file-paths)
-- [Remote Git repositories](#configuring-remote-git-repository-urls)
-- [S3](#configuring-s3-urls)
+To query resources from the manifest files, set the `manifest_file_paths` argument to point the sources where the manifest files are located.
 
 Manifest file paths may [include wildcards](https://pkg.go.dev/path/filepath#Match) and support `**` for recursive matching. For example:
 
@@ -233,6 +178,18 @@ connection "kubernetes" {
 ```
 
 **Note**: If any path matches on `*` without `.yml` or `.yaml` or `.json`, all files (including non-Kubernetes manifest files) in the directory will be matched, which may cause errors if incompatible file types exist.
+
+By default the plugin always lists the resources deployed in the current Kubernetes cluster context. If you want to restrict this behavior to read resource configurations from the configured manifest files only, add the `source_type` argument to the config and set the value to `manifest`. For example:
+
+```hcl
+connection "kubernetes" {
+  plugin = "kubernetes"
+
+  manifest_file_paths = [ ... ]
+
+  source_type = "manifest"
+}
+```
 
 ### Configuring Local File Paths
 
@@ -345,7 +302,46 @@ connection "kubernetes" {
 }
 ```
 
-## Get involved
+## Helm Charts
+
+The plugin also supports configuring Helm charts and allows the users to query the metadata, templates, and deployed versions of the configured charts using Steampipe. It also renders the templates and returns the resulting manifest after communicating with the kubernetes cluster without actually creating any resources on the cluster.
+
+The plugin supports the following `helm_*` tables to query Helm configurations:
+
+- [helm_chart](https://hub.steampipe.io/plugins/turbot/kubernetes/tables/helm_chart)
+- [helm_release](https://hub.steampipe.io/plugins/turbot/kubernetes/tables/helm_release)
+- [helm_template](https://hub.steampipe.io/plugins/turbot/kubernetes/tables/helm_template)
+- [helm_template_rendered](https://hub.steampipe.io/plugins/turbot/kubernetes/tables/helm_template_rendered)
+- [helm_value](https://hub.steampipe.io/plugins/turbot/kubernetes/tables/helm_value)
+
+The plugin can also parse the configured Helm charts, render all its templates to Kubernetes manifests, and allow you to query the resource configurations (i.e. resources the chart will deploy when it is installed) using the respective `kubernetes_*` tables, which is particularly helpful while developing a new chart, making changes to the chart, debugging, and so on.
+
+For example:
+
+```hcl
+connection "kubernetes" {
+  plugin = "kubernetes"
+
+  helm_rendered_charts = {
+    "my-app-1" = {
+      chart_path        = "~/charts/my-app-1"
+      values_file_paths = ["~/value/file/for/my-app-1.yaml"]
+    }
+    "my-app-2" = {
+      chart_path        = "~/charts/my-app-2"
+      values_file_paths = [] # works with values from chart's default values.yaml file
+    }
+  }
+}
+```
+
+`helm_rendered_charts` takes a map of chart configurations. It can have more than 1 chart based on the requirement:
+
+- The above configuration has 2 charts: `my-app-1` and `my-app-2`. The name `my-app-1` and `my-app-2` are considered as release names.
+- Every map should have a `chart_path` indicating the directory where the chart is located.
+- The map can have an optional `values_file_paths` argument that overrides value files for rendering the templates. The `values_file_paths` can have more than 1 override value file reference. The plugin reads values from all of those files, and uses the resultant value to render the templates. By default, the plugin uses `values.yaml` if no additional value files are passed.
+
+## Get Involved
 
 - Open source: https://github.com/turbot/steampipe-plugin-kubernetes
 - Community: [Slack Channel](https://steampipe.io/community/join)

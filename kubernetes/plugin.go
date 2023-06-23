@@ -32,8 +32,7 @@ func Plugin(ctx context.Context) *plugin.Plugin {
 		Name:             pluginName,
 		DefaultTransform: transform.FromGo(),
 		ConnectionConfigSchema: &plugin.ConnectionConfigSchema{
-			NewInstance: ConfigInstance,
-			Schema:      ConfigSchema,
+			NewInstance: func() interface{} { return &kubernetesConfig{} },
 		},
 		SchemaMode:   plugin.SchemaModeDynamic,
 		TableMapFunc: pluginTableDefinitions,
@@ -45,6 +44,11 @@ func Plugin(ctx context.Context) *plugin.Plugin {
 func pluginTableDefinitions(ctx context.Context, d *plugin.TableMapData) (map[string]*plugin.Table, error) {
 	// Initialize tables
 	tables := map[string]*plugin.Table{
+		"helm_chart":                            tableHelmChart(ctx),
+		"helm_release":                          tableHelmRelease(ctx),
+		"helm_template":                         tableHelmTemplates(ctx),
+		"helm_template_rendered":                tableHelmTemplateRendered(ctx),
+		"helm_value":                            tableHelmValue(ctx),
 		"kubernetes_cluster_role":               tableKubernetesClusterRole(ctx),
 		"kubernetes_cluster_role_binding":       tableKubernetesClusterRoleBinding(ctx),
 		"kubernetes_config_map":                 tableKubernetesConfigMap(ctx),

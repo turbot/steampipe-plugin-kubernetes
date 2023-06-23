@@ -37,13 +37,12 @@ func tableKubernetesLimitRange(ctx context.Context) *plugin.Table {
 				Name:        "context_name",
 				Type:        proto.ColumnType_STRING,
 				Description: "Kubectl config context name.",
-				Hydrate:     getLimitRangeResourceAdditionalData,
+				Hydrate:     getLimitRangeResourceContext,
 			},
 			{
 				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Hydrate:     getLimitRangeResourceAdditionalData,
 			},
 
 			//// Steampipe Standard Columns
@@ -65,9 +64,7 @@ func tableKubernetesLimitRange(ctx context.Context) *plugin.Table {
 
 type LimitRange struct {
 	v1.LimitRange
-	Path      string
-	StartLine int
-	EndLine   int
+	parsedContent
 }
 
 //// HYDRATE FUNCTIONS
@@ -91,7 +88,7 @@ func listK8sLimitRanges(ctx context.Context, d *plugin.QueryData, h *plugin.Hydr
 	for _, content := range parsedContents {
 		limitRange := content.Data.(*v1.LimitRange)
 
-		d.StreamListItem(ctx, LimitRange{*limitRange, content.Path, content.StartLine, content.EndLine})
+		d.StreamListItem(ctx, LimitRange{*limitRange, content})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -142,7 +139,7 @@ func listK8sLimitRanges(ctx context.Context, d *plugin.QueryData, h *plugin.Hydr
 		}
 
 		for _, limitRange := range response.Items {
-			d.StreamListItem(ctx, LimitRange{limitRange, "", 0, 0})
+			d.StreamListItem(ctx, LimitRange{limitRange, parsedContent{SourceType: "deployed"}})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -182,7 +179,7 @@ func getK8sLimitRange(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 		limitRange := content.Data.(*v1.LimitRange)
 
 		if limitRange.Name == name && limitRange.Namespace == namespace {
-			return LimitRange{*limitRange, content.Path, content.StartLine, content.EndLine}, nil
+			return LimitRange{*limitRange, content}, nil
 		}
 	}
 
@@ -196,20 +193,15 @@ func getK8sLimitRange(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 		return nil, err
 	}
 
-	return LimitRange{*limitRange, "", 0, 0}, nil
+	return LimitRange{*limitRange, parsedContent{SourceType: "deployed"}}, nil
 }
 
-func getLimitRangeResourceAdditionalData(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+func getLimitRangeResourceContext(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 	obj := h.Item.(LimitRange)
 
-	data := map[string]interface{}{
-		"SourceType": "deployed",
-	}
-
-	// Set the source_type as manifest, if path is not empty
-	// also, set the context_name as nil
+	// Set the context_name as nil
+	data := map[string]interface{}{}
 	if obj.Path != "" {
-		data["SourceType"] = "manifest"
 		return data, nil
 	}
 

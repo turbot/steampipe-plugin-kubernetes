@@ -53,13 +53,12 @@ func tableKubernetesNamespace(ctx context.Context) *plugin.Table {
 				Name:        "context_name",
 				Type:        proto.ColumnType_STRING,
 				Description: "Kubectl config context name.",
-				Hydrate:     getNamespaceResourceAdditionalData,
+				Hydrate:     getNamespaceResourceContext,
 			},
 			{
 				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Hydrate:     getNamespaceResourceAdditionalData,
 			},
 
 			//// Steampipe Standard Columns
@@ -81,9 +80,7 @@ func tableKubernetesNamespace(ctx context.Context) *plugin.Table {
 
 type Namespace struct {
 	v1.Namespace
-	Path      string
-	StartLine int
-	EndLine   int
+	parsedContent
 }
 
 //// HYDRATE FUNCTIONS
@@ -108,7 +105,7 @@ func listK8sNamespaces(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 	for _, content := range parsedContents {
 		namespace := content.Data.(*v1.Namespace)
 
-		d.StreamListItem(ctx, Namespace{*namespace, content.Path, content.StartLine, content.EndLine})
+		d.StreamListItem(ctx, Namespace{*namespace, content})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -157,7 +154,7 @@ func listK8sNamespaces(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 		}
 
 		for _, namespace := range response.Items {
-			d.StreamListItem(ctx, Namespace{namespace, "", 0, 0})
+			d.StreamListItem(ctx, Namespace{namespace, parsedContent{SourceType: "deployed"}})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -197,7 +194,7 @@ func getK8sNamespace(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 		namespace := content.Data.(*v1.Namespace)
 
 		if namespace.Name == name {
-			return Namespace{*namespace, content.Path, content.StartLine, content.EndLine}, nil
+			return Namespace{*namespace, content}, nil
 		}
 	}
 
@@ -211,20 +208,15 @@ func getK8sNamespace(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 		return nil, err
 	}
 
-	return Namespace{*namespace, "", 0, 0}, nil
+	return Namespace{*namespace, parsedContent{SourceType: "deployed"}}, nil
 }
 
-func getNamespaceResourceAdditionalData(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+func getNamespaceResourceContext(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 	obj := h.Item.(Namespace)
 
-	data := map[string]interface{}{
-		"SourceType": "deployed",
-	}
-
-	// Set the source_type as manifest, if path is not empty
-	// also, set the context_name as nil
+	// Set the context_name as nil
+	data := map[string]interface{}{}
 	if obj.Path != "" {
-		data["SourceType"] = "manifest"
 		return data, nil
 	}
 

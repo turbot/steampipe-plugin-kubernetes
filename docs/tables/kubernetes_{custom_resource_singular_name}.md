@@ -166,6 +166,34 @@ Steampipe will automatically create the `kubernetes_certificate` table, which ca
 +------------------------------------+--------------------------------------+-------------+--------------------+-----------+
 ```
 
+Similarly, the plugin also allows reading the CRDs and custom resource configurations from the manifest files:
+
+- If the paths for both CRD and custom resource manifests are configured in the config, the plugin will create table using that manifest, which can be queried like other tables. For example:
+
+```hcl
+connection "kubernetes" {
+  plugin = "kubernetes"
+  
+  custom_resource_tables = ["*"]
+
+  # both CRD and custom resource configurations are from manifests
+  manifest_file_paths = ["/path/to/certManager.yaml", "/path/to/spCloudCertificate.yaml"]
+}
+```
+
+- If the CRD is already deployed to the current cluster context, the plugin can read the CRD configuration from there, and will create the table using that configuration. In that case the plugin will only read the resource configuration from the manifest. For example:
+
+```hcl
+connection "kubernetes" {
+  plugin = "kubernetes"
+  
+  custom_resource_tables = ["*"]
+
+  # CRD is already deployed, and the resource configuration will be taken from manifest
+  manifest_file_paths = ["/path/to/spCloudCertificate.yaml"]
+}
+```
+
 ## Examples
 
 ### List all certificates
