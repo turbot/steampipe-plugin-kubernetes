@@ -16,9 +16,9 @@ og_image: "/images/plugins/turbot/kubernetes-social-graphic.png"
 
 [Kubernetes](https://kubernetes.io) is an open-source system for automating deployment, scaling, and management of containerized applications.
 
-The Kubernetes plugin make it simpler to query the variety of Kubernetes resources deployed in a Kubernetes cluster using [Steampipe](https://steampipe.io).
+The Kubernetes plugin makes it simpler to query the variety of Kubernetes resources deployed in a Kubernetes cluster using [Steampipe](https://steampipe.io).
 
-Apart from querying the deployed resources, the plugin also supports scanning of [Kubernetes manifest files](#manifest-files) from different sources, parsing the configured [Helm charts](#helm-charts) and scanning all the templates to get the list of Kubernetes resources.
+Apart from querying the deployed resources, the plugin also supports scanning [Kubernetes manifest files](#manifest-files) from different sources, parsing the configured [Helm charts](#helm-charts) and scanning all the templates to get the list of Kubernetes resources.
 
 ## Documentation
 
@@ -304,9 +304,9 @@ connection "kubernetes" {
 
 ## Helm Charts
 
-The plugin also supports configuring Helm charts and allows the users to query the metadata, templates, and deployed versions of the configured charts using Steampipe. It also does rendering the templates and returns the resulting manifest after communicating with the kubernetes cluster without actually creating any resources on the cluster.
+The plugin also supports configuring Helm charts and allows the users to query the metadata, templates, and deployed versions of the configured charts using Steampipe. It also renders the templates and returns the resulting manifest after communicating with the kubernetes cluster without actually creating any resources on the cluster.
 
-The plugin has the below `helm_*` tables that tells about the configured charts. For example:
+The plugin supports the following `helm_*` tables to query Helm configurations:
 
 - [helm_chart](https://hub.steampipe.io/plugins/turbot/kubernetes/tables/helm_chart)
 - [helm_release](https://hub.steampipe.io/plugins/turbot/kubernetes/tables/helm_release)
@@ -314,9 +314,7 @@ The plugin has the below `helm_*` tables that tells about the configured charts.
 - [helm_template_rendered](https://hub.steampipe.io/plugins/turbot/kubernetes/tables/helm_template_rendered)
 - [helm_value](https://hub.steampipe.io/plugins/turbot/kubernetes/tables/helm_value)
 
-The plugin is not just limited in the above tables, it also allows the user to query the resource configurations (i.e. resources the chart will deploy when it is installed) using the respective `kubernetes_*` tables, which make it easy to query especially when you are developing a new chart, making changes to the chart, debugging, and so on.
-
-The plugin can also parse the configured Helm charts, as well as it can render all its templates to Kubernetes manifest and shows it in table format and make it easy to query especially when you are developing a new chart, making changes to the chart, debugging, and so on.
+The plugin can also parse the configured Helm charts, render all its templates to Kubernetes manifests, and allow you to query the resource configurations (i.e. resources the chart will deploy when it is installed) using the respective `kubernetes_*` tables, which is particularly helpful while developing a new chart, making changes to the chart, debugging, and so on.
 
 For example:
 
@@ -337,11 +335,11 @@ connection "kubernetes" {
 }
 ```
 
-`helm_rendered_charts` takes a map of chart configurations. It can have more than 1 chart based on the requirements:
+`helm_rendered_charts` takes a map of chart configurations. It can have more than 1 chart based on the requirement:
 
-- The above configuration has 2 charts configured: `my-app-1` and `my-app-2`. The name `my-app-1` and `my-app-2` are considered as release name.
-- Every map should have a `chart_path` indicates the directory where the chart is located.
-- The map can have an optional `values_file_paths` indicates the override value files for rendering the templates. The `values_file_paths` can have more than 1 override value file reference. The plugin reads values from all of those files, and use the resultant values to render the templates. By default, the plugin uses the default `values.yaml` if no additional value files are passed.
+- The above configuration has 2 charts: `my-app-1` and `my-app-2`. The name `my-app-1` and `my-app-2` are considered as release names.
+- Every map should have a `chart_path` indicating the directory where the chart is located.
+- The map can have an optional `values_file_paths` argument that overrides value files for rendering the templates. The `values_file_paths` can have more than 1 override value file reference. The plugin reads values from all of those files, and uses the resultant value to render the templates. By default, the plugin uses `values.yaml` if no additional value files are passed.
 
 ## Get Involved
 
