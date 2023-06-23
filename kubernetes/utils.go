@@ -6,9 +6,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 
-	filehelpers "github.com/turbot/go-kit/files"
+	goYaml "gopkg.in/yaml.v3"
+
 	apiextension "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -25,6 +28,8 @@ import (
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
 	"github.com/mitchellh/go-homedir"
+	filehelpers "github.com/turbot/go-kit/files"
+	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/steampipe-plugin-sdk/v5/connection"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
@@ -34,6 +39,7 @@ type SourceType string
 
 const (
 	Deployed SourceType = "deployed"
+	Helm     SourceType = "helm"
 	Manifest SourceType = "manifest"
 	All      SourceType = "all"
 )
@@ -41,7 +47,7 @@ const (
 // Validate the source type.
 func (sourceType SourceType) IsValid() error {
 	switch sourceType {
-	case Deployed, Manifest, All:
+	case Deployed, Helm, Manifest, All:
 		return nil
 	}
 	return fmt.Errorf("invalid source type: %s", sourceType)
@@ -297,7 +303,6 @@ func GetNewClientDynamic(ctx context.Context, d *plugin.QueryData) (dynamic.Inte
 	d.ConnectionManager.Cache.Set(serviceCacheKey, clientset)
 
 	return clientset, err
-
 }
 
 func inClusterConfigCRDDynamic(ctx context.Context) (dynamic.Interface, error) {
@@ -342,11 +347,13 @@ func getK8Config(ctx context.Context, d *plugin.QueryData) (clientcmd.ClientConf
 		}
 	}
 
-	// By default source type is set to "all", which indicates querying the table will return both deployed and manifest resources.
-	// If the source type is explicitly set to "manifest", the table will only return the manifest resources.
+	// By default source type is set to "all", which indicates querying the table will return both deployed, helm and manifest resources.
+	// If the source type is explicitly set, other plugin will list resources based on that. For example:
+	// If set to "manifest", the table will only return the manifest resources.
+	// If set to "helm", the table will return the resources after rendering the templates defined in the configured chart.
 	// Similarly, setting the value as "deployed" will return all the deployed resources.
-	if source.String() == "manifest" {
-		plugin.Logger(ctx).Debug("getK8Config", "The source_type set to 'manifest'. Returning nil for API server client.", "connection", d.Connection.Name)
+	if source.String() == "manifest" || source.String() == "helm" {
+		plugin.Logger(ctx).Debug("getK8Config", "Returning nil for API server client.", "Source type", source.String(), "connection", d.Connection.Name)
 		return nil, nil
 	}
 
@@ -424,11 +431,13 @@ func getK8ConfigRaw(ctx context.Context, cc *connection.ConnectionCache, c *plug
 		}
 	}
 
-	// By default source type is set to "all", which indicates querying the table will return both deployed and manifest resources.
-	// If the source type is explicitly set to "manifest", the table will only return the manifest resources.
+	// By default source type is set to "all", which indicates querying the table will return all the deployed, helm and manifest resources.
+	// If the source type is explicitly set, other plugin will list resources based on that. For example:
+	// If set to "manifest", the table will only return the manifest resources.
+	// If set to "helm", the table will return the resources after rendering the templates defined in the configured chart.
 	// Similarly, setting the value as "deployed" will return all the deployed resources.
-	if source.String() == "manifest" {
-		plugin.Logger(ctx).Debug("getK8ConfigRaw", "The source_type set to 'manifest'. Returning nil for API server client.", "connection", c.Name)
+	if source.String() == "manifest" || source.String() == "helm" {
+		plugin.Logger(ctx).Debug("getK8ConfigRaw", "Returning nil for API server client.", "Source type", source.String(), "connection", c.Name)
 		return nil, nil
 	}
 
@@ -630,18 +639,36 @@ func mergeTags(labels map[string]string, annotations map[string]string) map[stri
 
 //// Utility functions for manifest files
 
+type parsedContent struct {
+	Data       any
+	Kind       string
+	Path       string
+	SourceType string
+	StartLine  int
+	EndLine    int
+}
+
+// Returns the manifest file content based on the kind provided
 func fetchResourceFromManifestFileByKind(ctx context.Context, d *plugin.QueryData, kind string) ([]parsedContent, error) {
 
 	if kind == "" {
 		return nil, fmt.Errorf("missing required property: kind")
 	}
-
 	var data []parsedContent
+
+	// Get parsed content from manifest files
 	parsedContents, err := getParsedManifestFileContent(ctx, d)
 	if err != nil {
 		return nil, err
 	}
 
+	// Get parsed content from rendered Helm templates
+	renderedTemplateContents, err := getRenderedHelmTemplateContent(ctx, d)
+	if err != nil {
+		return nil, err
+	}
+
+	parsedContents = append(parsedContents, renderedTemplateContents...)
 	for _, content := range parsedContents {
 		if content.Kind == kind {
 			data = append(data, content)
@@ -649,14 +676,6 @@ func fetchResourceFromManifestFileByKind(ctx context.Context, d *plugin.QueryDat
 	}
 
 	return data, nil
-}
-
-type parsedContent struct {
-	Data      any
-	Kind      string
-	Path      string
-	StartLine int
-	EndLine   int
 }
 
 // Get the parsed contents of the given files.
@@ -675,7 +694,7 @@ var parsedManifestFileContentCached = plugin.HydrateFunc(parsedManifestFileConte
 // be run only once per connection. Do not call this directly, use
 // getParsedManifestFileContent instead.
 func parsedManifestFileContentUncached(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (any, error) {
-	plugin.Logger(ctx).Debug("parsedManifestFileContentUncached", "Parsing file content...", "connection", d.Connection.Name)
+	plugin.Logger(ctx).Debug("parsedManifestFileContentUncached", "Parsing file content", "connection", d.Connection.Name)
 
 	// Read the config
 	resolvedPaths, err := resolveManifestFilePaths(ctx, d)
@@ -741,11 +760,12 @@ func parsedManifestFileContentUncached(ctx context.Context, d *plugin.QueryData,
 			}
 
 			parsedContents = append(parsedContents, parsedContent{
-				Data:      targetObj,
-				Kind:      obj.GetKind(),
-				Path:      path,
-				StartLine: pos + 1, // Since starts from 0
-				EndLine:   pos + len(blockLength),
+				Data:       targetObj,
+				Kind:       obj.GetKind(),
+				Path:       path,
+				SourceType: "manifest",
+				StartLine:  pos + 1, // Since starts from 0
+				EndLine:    pos + len(blockLength),
 			})
 
 			// Increment the position by the length of the block
@@ -757,13 +777,14 @@ func parsedManifestFileContentUncached(ctx context.Context, d *plugin.QueryData,
 	return parsedContents, nil
 }
 
+// Returns the list of file paths/glob patterns after resolving all the given manifest file paths.
 func resolveManifestFilePaths(ctx context.Context, d *plugin.QueryData) ([]string, error) {
 	// Read the config
 	k8sConfig := GetConfig(d.Connection)
 
-	// Return nil, if the source_type is set to "deployed"
+	// Return nil, if the source_type is set other than "manifest", or "all"
 	if k8sConfig.SourceType != nil &&
-		*k8sConfig.SourceType == "deployed" {
+		!helpers.StringSliceContains([]string{"all", "manifest"}, *k8sConfig.SourceType) {
 		return nil, nil
 	}
 
@@ -799,4 +820,158 @@ func resolveManifestFilePaths(ctx context.Context, d *plugin.QueryData) ([]strin
 	}
 
 	return resolvedPaths, nil
+}
+
+//// HELM values
+
+type Rows []Row
+type Row struct {
+	Path        string
+	Key         []string
+	Value       interface{}
+	Tag         *string
+	PreComments []string
+	HeadComment string
+	LineComment string
+	FootComment string
+	StartLine   int
+	StartColumn int
+}
+
+func treeToList(tree *goYaml.Node, prefix []string, rows *Rows, preComments []string, headComments []string, footComments []string) {
+	switch tree.Kind {
+	case goYaml.DocumentNode:
+		for i, v := range tree.Content {
+			localComments := []string{}
+			headComments = []string{}
+			footComments = []string{}
+			if i == 0 {
+				localComments = append(localComments, preComments...)
+				if tree.HeadComment != "" {
+					localComments = append(localComments, tree.HeadComment)
+					headComments = append(headComments, tree.HeadComment)
+				}
+				if tree.FootComment != "" {
+					footComments = append(footComments, tree.FootComment)
+				}
+				if tree.LineComment != "" {
+					localComments = append(localComments, tree.LineComment)
+				}
+			}
+			treeToList(v, prefix, rows, localComments, headComments, footComments)
+		}
+	case goYaml.SequenceNode:
+		if len(tree.Content) == 0 {
+			row := Row{
+				Key:         prefix,
+				Value:       []string{},
+				Tag:         &tree.Tag,
+				StartLine:   tree.Line,
+				StartColumn: tree.Column,
+				PreComments: preComments,
+				HeadComment: strings.Join(headComments, ","),
+				LineComment: tree.LineComment,
+				FootComment: strings.Join(footComments, ","),
+			}
+			*rows = append(*rows, row)
+		}
+
+		for i, v := range tree.Content {
+			localComments := []string{}
+			headComments = []string{}
+			footComments = []string{}
+			if i == 0 {
+				localComments = append(localComments, preComments...)
+				if tree.HeadComment != "" {
+					localComments = append(localComments, tree.HeadComment)
+					headComments = append(headComments, tree.HeadComment)
+				}
+				if tree.LineComment != "" {
+					localComments = append(localComments, tree.LineComment)
+				}
+			}
+			newKey := make([]string, len(prefix))
+			copy(newKey, prefix)
+			newKey = append(newKey, strconv.Itoa(i))
+			treeToList(v, newKey, rows, localComments, headComments, footComments)
+		}
+	case goYaml.MappingNode:
+		localComments := []string{}
+		headComments = []string{}
+		footComments = []string{}
+		localComments = append(localComments, preComments...)
+		if tree.HeadComment != "" {
+			localComments = append(localComments, tree.HeadComment)
+			headComments = append(headComments, tree.HeadComment)
+		}
+		if tree.FootComment != "" {
+			footComments = append(footComments, tree.FootComment)
+		}
+		if tree.LineComment != "" {
+			localComments = append(localComments, tree.LineComment)
+		}
+		if len(tree.Content) == 0 {
+			row := Row{
+				Key:         prefix,
+				Value:       map[string]interface{}{},
+				Tag:         &tree.Tag,
+				StartLine:   tree.Line,
+				StartColumn: tree.Column,
+				PreComments: preComments,
+				HeadComment: strings.Join(headComments, ","),
+				LineComment: tree.LineComment,
+				FootComment: strings.Join(footComments, ","),
+			}
+			*rows = append(*rows, row)
+		}
+		i := 0
+		for i < len(tree.Content)-1 {
+			key := tree.Content[i]
+			val := tree.Content[i+1]
+			i = i + 2
+			if key.HeadComment != "" {
+				localComments = append(localComments, key.HeadComment)
+				headComments = append(headComments, key.HeadComment)
+			}
+			if key.FootComment != "" {
+				footComments = append(footComments, key.FootComment)
+			}
+			if key.LineComment != "" {
+				localComments = append(localComments, key.LineComment)
+			}
+			newKey := make([]string, len(prefix))
+			copy(newKey, prefix)
+			newKey = append(newKey, key.Value)
+			treeToList(val, newKey, rows, localComments, headComments, footComments)
+			localComments = make([]string, 0)
+			headComments = make([]string, 0)
+			footComments = make([]string, 0)
+		}
+	case goYaml.ScalarNode:
+		row := Row{
+			Key:         prefix,
+			Value:       tree.Value,
+			Tag:         &tree.Tag,
+			StartLine:   tree.Line,
+			StartColumn: tree.Column,
+			PreComments: preComments,
+			HeadComment: strings.Join(headComments, ","),
+			LineComment: tree.LineComment,
+			FootComment: strings.Join(footComments, ","),
+		}
+		if tree.Tag == "!!null" {
+			row.Value = nil
+		}
+		*rows = append(*rows, row)
+	}
+}
+
+func keysToSnakeCase(_ context.Context, d *transform.TransformData) (interface{}, error) {
+	keys := d.Value.([]string)
+	snakes := []string{}
+	re := regexp.MustCompile(`[^A-Za-z0-9_]`)
+	for _, k := range keys {
+		snakes = append(snakes, re.ReplaceAllString(k, "_"))
+	}
+	return strings.Join(snakes, "."), nil
 }

@@ -45,13 +45,12 @@ func tableKubernetesServiceAccount(ctx context.Context) *plugin.Table {
 				Name:        "context_name",
 				Type:        proto.ColumnType_STRING,
 				Description: "Kubectl config context name.",
-				Hydrate:     getServiceAccountResourceAdditionalData,
+				Hydrate:     getServiceAccountResourceContext,
 			},
 			{
 				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Hydrate:     getServiceAccountResourceAdditionalData,
 			},
 
 			//// Steampipe Standard Columns
@@ -73,9 +72,7 @@ func tableKubernetesServiceAccount(ctx context.Context) *plugin.Table {
 
 type ServiceAccount struct {
 	v1.ServiceAccount
-	Path      string
-	StartLine int
-	EndLine   int
+	parsedContent
 }
 
 //// HYDRATE FUNCTIONS
@@ -100,7 +97,7 @@ func listK8sServiceAccounts(ctx context.Context, d *plugin.QueryData, _ *plugin.
 	for _, content := range parsedContents {
 		serviceAccount := content.Data.(*v1.ServiceAccount)
 
-		d.StreamListItem(ctx, ServiceAccount{*serviceAccount, content.Path, content.StartLine, content.EndLine})
+		d.StreamListItem(ctx, ServiceAccount{*serviceAccount, content})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -151,7 +148,7 @@ func listK8sServiceAccounts(ctx context.Context, d *plugin.QueryData, _ *plugin.
 		}
 
 		for _, serviceAccount := range response.Items {
-			d.StreamListItem(ctx, ServiceAccount{serviceAccount, "", 0, 0})
+			d.StreamListItem(ctx, ServiceAccount{serviceAccount, parsedContent{SourceType: "deployed"}})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -192,7 +189,7 @@ func getK8sServiceAccount(ctx context.Context, d *plugin.QueryData, _ *plugin.Hy
 		serviceAccount := content.Data.(*v1.ServiceAccount)
 
 		if serviceAccount.Name == name && serviceAccount.Namespace == namespace {
-			return ServiceAccount{*serviceAccount, content.Path, content.StartLine, content.EndLine}, nil
+			return ServiceAccount{*serviceAccount, content}, nil
 		}
 	}
 
@@ -207,20 +204,15 @@ func getK8sServiceAccount(ctx context.Context, d *plugin.QueryData, _ *plugin.Hy
 		return nil, err
 	}
 
-	return ServiceAccount{*serviceAccount, "", 0, 0}, nil
+	return ServiceAccount{*serviceAccount, parsedContent{SourceType: "deployed"}}, nil
 }
 
-func getServiceAccountResourceAdditionalData(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+func getServiceAccountResourceContext(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 	obj := h.Item.(ServiceAccount)
 
-	data := map[string]interface{}{
-		"SourceType": "deployed",
-	}
-
-	// Set the source_type as manifest, if path is not empty
-	// also, set the context_name as nil
+	// Set the context_name as nil
+	data := map[string]interface{}{}
 	if obj.Path != "" {
-		data["SourceType"] = "manifest"
 		return data, nil
 	}
 

@@ -50,13 +50,12 @@ func tableKubernetesPDB(ctx context.Context) *plugin.Table {
 				Name:        "context_name",
 				Type:        proto.ColumnType_STRING,
 				Description: "Kubectl config context name.",
-				Hydrate:     getPodDisruptionBudgetResourceAdditionalData,
+				Hydrate:     getPodDisruptionBudgetResourceContext,
 			},
 			{
 				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Hydrate:     getPodDisruptionBudgetResourceAdditionalData,
 			},
 
 			// Steampipe Standard Columns
@@ -78,9 +77,7 @@ func tableKubernetesPDB(ctx context.Context) *plugin.Table {
 
 type PodDisruptionBudget struct {
 	v1.PodDisruptionBudget
-	Path      string
-	StartLine int
-	EndLine   int
+	parsedContent
 }
 
 //// HYDRATE FUNCTIONS
@@ -105,7 +102,7 @@ func listPDBs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (
 	for _, content := range parsedContents {
 		pdb := content.Data.(*v1.PodDisruptionBudget)
 
-		d.StreamListItem(ctx, PodDisruptionBudget{*pdb, content.Path, content.StartLine, content.EndLine})
+		d.StreamListItem(ctx, PodDisruptionBudget{*pdb, content})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -156,7 +153,7 @@ func listPDBs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (
 		}
 
 		for _, item := range response.Items {
-			d.StreamListItem(ctx, PodDisruptionBudget{item, "", 0, 0})
+			d.StreamListItem(ctx, PodDisruptionBudget{item, parsedContent{SourceType: "deployed"}})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -197,7 +194,7 @@ func getPDB(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (in
 		pdb := content.Data.(*v1.PodDisruptionBudget)
 
 		if pdb.Name == name && pdb.Namespace == namespace {
-			return PodDisruptionBudget{*pdb, content.Path, content.StartLine, content.EndLine}, nil
+			return PodDisruptionBudget{*pdb, content}, nil
 		}
 	}
 
@@ -211,20 +208,15 @@ func getPDB(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (in
 		return nil, err
 	}
 
-	return PodDisruptionBudget{*pdb, "", 0, 0}, nil
+	return PodDisruptionBudget{*pdb, parsedContent{SourceType: "deployed"}}, nil
 }
 
-func getPodDisruptionBudgetResourceAdditionalData(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+func getPodDisruptionBudgetResourceContext(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 	obj := h.Item.(PodDisruptionBudget)
 
-	data := map[string]interface{}{
-		"SourceType": "deployed",
-	}
-
-	// Set the source_type as manifest, if path is not empty
-	// also, set the context_name as nil
+	// Set the context_name as nil
+	data := map[string]interface{}{}
 	if obj.Path != "" {
-		data["SourceType"] = "manifest"
 		return data, nil
 	}
 

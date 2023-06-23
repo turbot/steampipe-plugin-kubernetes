@@ -122,13 +122,12 @@ func tableKubernetesJob(ctx context.Context) *plugin.Table {
 				Name:        "context_name",
 				Type:        proto.ColumnType_STRING,
 				Description: "Kubectl config context name.",
-				Hydrate:     getJobResourceAdditionalData,
+				Hydrate:     getJobResourceContext,
 			},
 			{
 				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Hydrate:     getJobResourceAdditionalData,
 			},
 
 			//// Steampipe Standard Columns
@@ -150,9 +149,7 @@ func tableKubernetesJob(ctx context.Context) *plugin.Table {
 
 type Job struct {
 	v1.Job
-	Path      string
-	StartLine int
-	EndLine   int
+	parsedContent
 }
 
 //// HYDRATE FUNCTIONS
@@ -177,7 +174,7 @@ func listK8sJobs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 	for _, content := range parsedContents {
 		job := content.Data.(*v1.Job)
 
-		d.StreamListItem(ctx, Job{*job, content.Path, content.StartLine, content.EndLine})
+		d.StreamListItem(ctx, Job{*job, content})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -228,7 +225,7 @@ func listK8sJobs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 		}
 
 		for _, job := range response.Items {
-			d.StreamListItem(ctx, Job{job, "", 0, 0})
+			d.StreamListItem(ctx, Job{job, parsedContent{SourceType: "deployed"}})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -269,7 +266,7 @@ func getK8sJob(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) 
 		job := content.Data.(*v1.Job)
 
 		if job.Name == name && job.Namespace == namespace {
-			return Job{*job, content.Path, content.StartLine, content.EndLine}, nil
+			return Job{*job, content}, nil
 		}
 	}
 
@@ -283,20 +280,15 @@ func getK8sJob(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) 
 		return nil, err
 	}
 
-	return Job{*job, "", 0, 0}, nil
+	return Job{*job, parsedContent{SourceType: "deployed"}}, nil
 }
 
-func getJobResourceAdditionalData(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+func getJobResourceContext(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 	obj := h.Item.(Job)
 
-	data := map[string]interface{}{
-		"SourceType": "deployed",
-	}
-
-	// Set the source_type as manifest, if path is not empty
-	// also, set the context_name as nil
+	// Set the context_name as nil
+	data := map[string]interface{}{}
 	if obj.Path != "" {
-		data["SourceType"] = "manifest"
 		return data, nil
 	}
 

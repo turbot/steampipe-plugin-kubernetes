@@ -34,13 +34,12 @@ func tableKubernetesEndpoints(ctx context.Context) *plugin.Table {
 				Name:        "context_name",
 				Type:        proto.ColumnType_STRING,
 				Description: "Kubectl config context name.",
-				Hydrate:     endpointResourceAdditionalData,
+				Hydrate:     endpointResourceContext,
 			},
 			{
 				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Hydrate:     endpointResourceAdditionalData,
 			},
 
 			//// Steampipe Standard Columns
@@ -62,9 +61,7 @@ func tableKubernetesEndpoints(ctx context.Context) *plugin.Table {
 
 type Endpoints struct {
 	v1.Endpoints
-	Path      string
-	StartLine int
-	EndLine   int
+	parsedContent
 }
 
 //// HYDRATE FUNCTIONS
@@ -89,7 +86,7 @@ func listK8sEnpoints(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 	for _, content := range parsedContents {
 		endpoints := content.Data.(*v1.Endpoints)
 
-		d.StreamListItem(ctx, Endpoints{*endpoints, content.Path, content.StartLine, content.EndLine})
+		d.StreamListItem(ctx, Endpoints{*endpoints, content})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -140,7 +137,7 @@ func listK8sEnpoints(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 		}
 
 		for _, endpoint := range response.Items {
-			d.StreamListItem(ctx, Endpoints{endpoint, "", 0, 0})
+			d.StreamListItem(ctx, Endpoints{endpoint, parsedContent{SourceType: "deployed"}})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -181,7 +178,7 @@ func getK8sEndpoint(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateD
 		endpoints := content.Data.(*v1.Endpoints)
 
 		if endpoints.Name == name && endpoints.Namespace == namespace {
-			return Endpoints{*endpoints, content.Path, content.StartLine, content.EndLine}, nil
+			return Endpoints{*endpoints, content}, nil
 		}
 	}
 
@@ -195,20 +192,15 @@ func getK8sEndpoint(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateD
 		return nil, err
 	}
 
-	return Endpoints{*endpoint, "", 0, 0}, nil
+	return Endpoints{*endpoint, parsedContent{SourceType: "deployed"}}, nil
 }
 
-func endpointResourceAdditionalData(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+func endpointResourceContext(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 	obj := h.Item.(Endpoints)
 
-	data := map[string]interface{}{
-		"SourceType": "deployed",
-	}
-
-	// Set the source_type as manifest, if path is not empty
-	// also, set the context_name as nil
+	// Set the context_name as nil
+	data := map[string]interface{}{}
 	if obj.Path != "" {
-		data["SourceType"] = "manifest"
 		return data, nil
 	}
 

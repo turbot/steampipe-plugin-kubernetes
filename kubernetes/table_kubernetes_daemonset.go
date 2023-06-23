@@ -129,13 +129,12 @@ func tableKubernetesDaemonset(ctx context.Context) *plugin.Table {
 				Name:        "context_name",
 				Type:        proto.ColumnType_STRING,
 				Description: "Kubectl config context name.",
-				Hydrate:     getDaemonSetResourceAdditionalData,
+				Hydrate:     getDaemonSetResourceContext,
 			},
 			{
 				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Hydrate:     getDaemonSetResourceAdditionalData,
 			},
 
 			//// Steampipe Standard Columns
@@ -157,9 +156,7 @@ func tableKubernetesDaemonset(ctx context.Context) *plugin.Table {
 
 type DaemonSet struct {
 	v1.DaemonSet
-	Path      string
-	StartLine int
-	EndLine   int
+	parsedContent
 }
 
 //// HYDRATE FUNCTIONS
@@ -184,7 +181,7 @@ func listK8sDaemonSets(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 	for _, content := range parsedContents {
 		daemonSet := content.Data.(*v1.DaemonSet)
 
-		d.StreamListItem(ctx, DaemonSet{*daemonSet, content.Path, content.StartLine, content.EndLine})
+		d.StreamListItem(ctx, DaemonSet{*daemonSet, content})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -235,7 +232,7 @@ func listK8sDaemonSets(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 		}
 
 		for _, daemonSet := range response.Items {
-			d.StreamListItem(ctx, DaemonSet{daemonSet, "", 0, 0})
+			d.StreamListItem(ctx, DaemonSet{daemonSet, parsedContent{SourceType: "deployed"}})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -276,7 +273,7 @@ func getK8sDaemonSet(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 		daemonSet := content.Data.(*v1.DaemonSet)
 
 		if daemonSet.Name == name && daemonSet.Namespace == namespace {
-			return DaemonSet{*daemonSet, content.Path, content.StartLine, content.EndLine}, nil
+			return DaemonSet{*daemonSet, content}, nil
 		}
 	}
 
@@ -290,20 +287,15 @@ func getK8sDaemonSet(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 		return nil, err
 	}
 
-	return DaemonSet{*daemonSet, "", 0, 0}, nil
+	return DaemonSet{*daemonSet, parsedContent{SourceType: "deployed"}}, nil
 }
 
-func getDaemonSetResourceAdditionalData(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+func getDaemonSetResourceContext(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 	obj := h.Item.(DaemonSet)
 
-	data := map[string]interface{}{
-		"SourceType": "deployed",
-	}
-
-	// Set the source_type as manifest, if path is not empty
-	// also, set the context_name as nil
+	// Set the context_name as nil
+	data := map[string]interface{}{}
 	if obj.Path != "" {
-		data["SourceType"] = "manifest"
 		return data, nil
 	}
 

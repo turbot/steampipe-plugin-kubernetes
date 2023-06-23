@@ -102,13 +102,12 @@ func tableKubernetesPersistentVolume(ctx context.Context) *plugin.Table {
 				Name:        "context_name",
 				Type:        proto.ColumnType_STRING,
 				Description: "Kubectl config context name.",
-				Hydrate:     getPersistentVolumeResourceAdditionalData,
+				Hydrate:     getPersistentVolumeResourceContext,
 			},
 			{
 				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Hydrate:     getPersistentVolumeResourceAdditionalData,
 			},
 
 			//// Steampipe Standard Columns
@@ -130,9 +129,7 @@ func tableKubernetesPersistentVolume(ctx context.Context) *plugin.Table {
 
 type PersistentVolume struct {
 	v1.PersistentVolume
-	Path      string
-	StartLine int
-	EndLine   int
+	parsedContent
 }
 
 //// HYDRATE FUNCTIONS
@@ -157,7 +154,7 @@ func listK8sPVs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData)
 	for _, content := range parsedContents {
 		persistentVolume := content.Data.(*v1.PersistentVolume)
 
-		d.StreamListItem(ctx, PersistentVolume{*persistentVolume, content.Path, content.StartLine, content.EndLine})
+		d.StreamListItem(ctx, PersistentVolume{*persistentVolume, content})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -202,7 +199,7 @@ func listK8sPVs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData)
 		}
 
 		for _, persistentVolume := range response.Items {
-			d.StreamListItem(ctx, PersistentVolume{persistentVolume, "", 0, 0})
+			d.StreamListItem(ctx, PersistentVolume{persistentVolume, parsedContent{SourceType: "deployed"}})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -242,7 +239,7 @@ func getK8sPV(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (
 		persistentVolume := content.Data.(*v1.PersistentVolume)
 
 		if persistentVolume.Name == name {
-			return PersistentVolume{*persistentVolume, content.Path, content.StartLine, content.EndLine}, nil
+			return PersistentVolume{*persistentVolume, content}, nil
 		}
 	}
 
@@ -256,20 +253,15 @@ func getK8sPV(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (
 		return nil, err
 	}
 
-	return PersistentVolume{*persistentVolume, "", 0, 0}, nil
+	return PersistentVolume{*persistentVolume, parsedContent{SourceType: "deployed"}}, nil
 }
 
-func getPersistentVolumeResourceAdditionalData(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+func getPersistentVolumeResourceContext(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 	obj := h.Item.(PersistentVolume)
 
-	data := map[string]interface{}{
-		"SourceType": "deployed",
-	}
-
-	// Set the source_type as manifest, if path is not empty
-	// also, set the context_name as nil
+	// Set the context_name as nil
+	data := map[string]interface{}{}
 	if obj.Path != "" {
-		data["SourceType"] = "manifest"
 		return data, nil
 	}
 

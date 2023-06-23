@@ -104,13 +104,12 @@ func tableKubernetesHorizontalPodAutoscaler(ctx context.Context) *plugin.Table {
 				Name:        "context_name",
 				Type:        proto.ColumnType_STRING,
 				Description: "Kubectl config context name.",
-				Hydrate:     getHorizontalPodAutoscalarResourceAdditionalData,
+				Hydrate:     getHorizontalPodAutoscalarResourceContext,
 			},
 			{
 				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Hydrate:     getHorizontalPodAutoscalarResourceAdditionalData,
 			},
 
 			//// Steampipe Standard Columns
@@ -132,9 +131,7 @@ func tableKubernetesHorizontalPodAutoscaler(ctx context.Context) *plugin.Table {
 
 type HorizontalPodAutoscaler struct {
 	v1.HorizontalPodAutoscaler
-	Path      string
-	StartLine int
-	EndLine   int
+	parsedContent
 }
 
 //// HYDRATE FUNCTIONS
@@ -157,7 +154,7 @@ func listK8sHPAs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 	for _, content := range parsedContents {
 		hpa := content.Data.(*v1.HorizontalPodAutoscaler)
 
-		d.StreamListItem(ctx, HorizontalPodAutoscaler{*hpa, content.Path, content.StartLine, content.EndLine})
+		d.StreamListItem(ctx, HorizontalPodAutoscaler{*hpa, content})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -209,7 +206,7 @@ func listK8sHPAs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 		}
 
 		for _, hpa := range response.Items {
-			d.StreamListItem(ctx, HorizontalPodAutoscaler{hpa, "", 0, 0})
+			d.StreamListItem(ctx, HorizontalPodAutoscaler{hpa, parsedContent{SourceType: "deployed"}})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -248,7 +245,7 @@ func getK8sHPA(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) 
 		hpa := content.Data.(*v1.HorizontalPodAutoscaler)
 
 		if hpa.Name == name && hpa.Namespace == namespace {
-			return HorizontalPodAutoscaler{*hpa, content.Path, content.StartLine, content.EndLine}, nil
+			return HorizontalPodAutoscaler{*hpa, content}, nil
 		}
 	}
 
@@ -263,20 +260,15 @@ func getK8sHPA(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) 
 		return nil, err
 	}
 
-	return HorizontalPodAutoscaler{*hpa, "", 0, 0}, nil
+	return HorizontalPodAutoscaler{*hpa, parsedContent{SourceType: "deployed"}}, nil
 }
 
-func getHorizontalPodAutoscalarResourceAdditionalData(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+func getHorizontalPodAutoscalarResourceContext(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 	obj := h.Item.(HorizontalPodAutoscaler)
 
-	data := map[string]interface{}{
-		"SourceType": "deployed",
-	}
-
-	// Set the source_type as manifest, if path is not empty
-	// also, set the context_name as nil
+	// Set the context_name as nil
+	data := map[string]interface{}{}
 	if obj.Path != "" {
-		data["SourceType"] = "manifest"
 		return data, nil
 	}
 

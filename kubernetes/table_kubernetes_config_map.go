@@ -45,13 +45,12 @@ func tableKubernetesConfigMap(ctx context.Context) *plugin.Table {
 				Name:        "context_name",
 				Type:        proto.ColumnType_STRING,
 				Description: "Kubectl config context name.",
-				Hydrate:     getConfigMapResourceAdditionalData,
+				Hydrate:     getConfigMapResourceContext,
 			},
 			{
 				Name:        "source_type",
 				Type:        proto.ColumnType_STRING,
 				Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.",
-				Hydrate:     getConfigMapResourceAdditionalData,
 			},
 
 			//// Steampipe Standard Columns
@@ -73,9 +72,7 @@ func tableKubernetesConfigMap(ctx context.Context) *plugin.Table {
 
 type ConfigMap struct {
 	v1.ConfigMap
-	Path      string
-	StartLine int
-	EndLine   int
+	parsedContent
 }
 
 //// HYDRATE FUNCTIONS
@@ -100,7 +97,7 @@ func listK8sConfigMaps(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 	for _, content := range parsedContents {
 		configMap := content.Data.(*v1.ConfigMap)
 
-		d.StreamListItem(ctx, ConfigMap{*configMap, content.Path, content.StartLine, content.EndLine})
+		d.StreamListItem(ctx, ConfigMap{*configMap, content})
 
 		// Context can be cancelled due to manual cancellation or the limit has been hit
 		if d.RowsRemaining(ctx) == 0 {
@@ -151,7 +148,7 @@ func listK8sConfigMaps(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 		}
 
 		for _, configMap := range response.Items {
-			d.StreamListItem(ctx, ConfigMap{configMap, "", 0, 0})
+			d.StreamListItem(ctx, ConfigMap{configMap, parsedContent{SourceType: "deployed"}})
 
 			// Context can be cancelled due to manual cancellation or the limit has been hit
 			if d.RowsRemaining(ctx) == 0 {
@@ -192,7 +189,7 @@ func getK8sConfigMap(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 		configMap := content.Data.(*v1.ConfigMap)
 
 		if configMap.Name == name && configMap.Namespace == namespace {
-			return ConfigMap{*configMap, content.Path, content.StartLine, content.EndLine}, nil
+			return ConfigMap{*configMap, content}, nil
 		}
 	}
 
@@ -206,20 +203,15 @@ func getK8sConfigMap(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 		return nil, err
 	}
 
-	return ConfigMap{*configMap, "", 0, 0}, nil
+	return ConfigMap{*configMap, parsedContent{SourceType: "deployed"}}, nil
 }
 
-func getConfigMapResourceAdditionalData(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+func getConfigMapResourceContext(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 	obj := h.Item.(ConfigMap)
 
-	data := map[string]interface{}{
-		"SourceType": "deployed",
-	}
-
-	// Set the source_type as manifest, if path is not empty
-	// also, set the context_name as nil
+	// Set the context_name as nil
+	data := map[string]interface{}{}
 	if obj.Path != "" {
-		data["SourceType"] = "manifest"
 		return data, nil
 	}
 
