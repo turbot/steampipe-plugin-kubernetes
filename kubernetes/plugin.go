@@ -81,6 +81,7 @@ func pluginTableDefinitions(ctx context.Context, d *plugin.TableMapData) (map[st
 		"kubernetes_service_account":            tableKubernetesServiceAccount(ctx),
 		"kubernetes_stateful_set":               tableKubernetesStatefulSet(ctx),
 		"kubernetes_storage_class":              tableKubernetesStorageClass(ctx),
+		"kubernetes_version":                    tableKubernetesVersion(ctx),
 	}
 
 	// Fetch available CRDs
