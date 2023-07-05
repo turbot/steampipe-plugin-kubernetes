@@ -2,7 +2,7 @@
 
 _Enhancements_
 
-- The plugin has been enhanced to support updated environment variables. The usage of `KUBE_CONFIG_PATHS` and `KUBERNETES_MASTER` is now deprecated and will be removed. It is recommended to use `KUBECONFIG` or `KUBE_CONFIG_PATH` instead. Plugin will prioritize `KUBECONFIG` if any other environment variable is also available. ([#142](https://github.com/turbot/steampipe-plugin-kubernetes/pull/142)) (Thanks [@mrkwtz](https://github.com/mrkwtz) for the contribution!!)
+- The plugin has been updated to support the new environment variables `KUBECONFIG` and `KUBE_CONFIG_PATH`, replacing the previous variables `KUBE_CONFIG_PATHS` and `KUBERNETES_MASTER`. The usage of `KUBE_CONFIG_PATHS` and `KUBERNETES_MASTER` has been marked as deprecated and will be removed in a future release. To ensure seamless functionality, it is strongly recommended to update any existing scripts and workflows to utilize the new environment variables instead. ([#142](https://github.com/turbot/steampipe-plugin-kubernetes/pull/142)) (Thanks [@mrkwtz](https://github.com/mrkwtz) for the contribution!!)
 
 ## v0.21.0 [2023-06-23]
 
