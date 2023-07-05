@@ -1,3 +1,9 @@
+## v0.22.0 [2023-07-05]
+
+_Enhancements_
+
+- The plugin has been enhanced to support updated environment variables. The usage of `KUBE_CONFIG_PATHS` and `KUBERNETES_MASTER` is now deprecated and will be removed. It is recommended to use `KUBECONFIG` or `KUBE_CONFIG_PATH` instead. Plugin will prioritize `KUBECONFIG` if any other environment variable is also available. ([#142](https://github.com/turbot/steampipe-plugin-kubernetes/pull/142)) (Thanks [@mrkwtz](https://github.com/mrkwtz) for the contribution!!)
+
 ## v0.21.0 [2023-06-23]
 
 _What's new?_
