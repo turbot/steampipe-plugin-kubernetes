@@ -766,6 +766,45 @@ func parsedManifestFileContentUncached(ctx context.Context, d *plugin.QueryData,
 				Kind:    gvk.Kind,
 			})
 
+			// If the manifest has a list of resource configurations, for example:
+			// the output of the `kubectl get all` command in JSON/YAML format,
+			// extract the each item from the list and parse them.
+			if obj.GetKind() == "List" {
+				field, ok := obj.Object["items"]
+				if !ok {
+					return nil, errors.New("content is not a list")
+				}
+				items, ok := field.([]interface{})
+				if !ok {
+					return nil, fmt.Errorf("content is not a list: %T", field)
+				}
+
+				for _, item := range items {
+					child, ok := item.(map[string]interface{})
+					if !ok {
+						return nil, fmt.Errorf("items member is not an object: %T", child)
+					}
+
+					childObj := &unstructured.Unstructured{Object: child}
+
+					// Convert the content to concrete type based on the resource kind
+					targetObj, err := convertUnstructuredDataToType(childObj)
+					if err != nil {
+						plugin.Logger(ctx).Error("parsedManifestFileContentUncached", "failed to convert content into a concrete type", err, "path", path)
+						return nil, err
+					}
+
+					parsedContents = append(parsedContents, parsedContent{
+						Data:       targetObj,
+						Kind:       childObj.GetKind(),
+						Path:       path,
+						SourceType: "manifest",
+						StartLine:  pos + 1, // Since starts from 0
+						EndLine:    pos + len(blockLength),
+					})
+				}
+			}
+
 			// Convert the content to concrete type based on the resource kind
 			targetObj, err := convertUnstructuredDataToType(obj)
 			if err != nil {
