@@ -8,7 +8,7 @@ Apart from querying the deployed resources, the plugin also supports scanning th
 
 - **[Get started →](https://hub.steampipe.io/plugins/turbot/kubernetes)**
 - Documentation: [Table definitions & examples](https://hub.steampipe.io/plugins/turbot/kubernetes/tables)
-- Community: [Slack Channel](https://steampipe.io/community/join)
+- Community: [Join #steampipe on Slack →](https://turbot.com/community/join)
 - Get involved: [Issues](https://github.com/turbot/steampipe-plugin-kubernetes/issues)
 
 ## Quick start
