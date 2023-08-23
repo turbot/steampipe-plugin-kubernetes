@@ -88,7 +88,7 @@ func listK8sClusterRoles(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 	}
 
 	for _, content := range parsedContents {
-		clusterRole := content.Data.(*v1.ClusterRole)
+		clusterRole := content.ParsedData.(*v1.ClusterRole)
 
 		d.StreamListItem(ctx, ClusterRole{*clusterRole, content})
 
@@ -171,7 +171,7 @@ func getK8sClusterRole(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 	}
 
 	for _, content := range parsedContents {
-		clusterRole := content.Data.(*v1.ClusterRole)
+		clusterRole := content.ParsedData.(*v1.ClusterRole)
 
 		if clusterRole.Name == name {
 			return ClusterRole{*clusterRole, content}, nil

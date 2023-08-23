@@ -455,7 +455,7 @@ func listK8sPods(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 	}
 
 	for _, content := range parsedContents {
-		pod := content.Data.(*v1.Pod)
+		pod := content.ParsedData.(*v1.Pod)
 
 		d.StreamListItem(ctx, Pod{*pod, content})
 
@@ -552,7 +552,7 @@ func getK8sPod(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) 
 	}
 
 	for _, content := range parsedContents {
-		pod := content.Data.(*v1.Pod)
+		pod := content.ParsedData.(*v1.Pod)
 
 		if pod.Name == name && pod.Namespace == namespace {
 			return Pod{*pod, content}, nil

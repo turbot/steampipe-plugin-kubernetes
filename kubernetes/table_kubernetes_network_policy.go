@@ -104,7 +104,7 @@ func listK8sNetworkPolicies(ctx context.Context, d *plugin.QueryData, _ *plugin.
 	}
 
 	for _, content := range parsedContents {
-		networkPolicy := content.Data.(*v1.NetworkPolicy)
+		networkPolicy := content.ParsedData.(*v1.NetworkPolicy)
 
 		d.StreamListItem(ctx, NetworkPolicy{*networkPolicy, content})
 
@@ -195,7 +195,7 @@ func getK8sNetworkPolicy(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 	}
 
 	for _, content := range parsedContents {
-		networkPolicy := content.Data.(*v1.NetworkPolicy)
+		networkPolicy := content.ParsedData.(*v1.NetworkPolicy)
 
 		if networkPolicy.Name == name && networkPolicy.Namespace == namespace {
 			return NetworkPolicy{*networkPolicy, content}, nil

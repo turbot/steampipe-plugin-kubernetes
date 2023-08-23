@@ -654,7 +654,7 @@ func mergeTags(labels map[string]string, annotations map[string]string) map[stri
 //// Utility functions for manifest files
 
 type parsedContent struct {
-	Data       any
+	ParsedData any
 	Kind       string
 	Path       string
 	SourceType string
@@ -774,7 +774,7 @@ func parsedManifestFileContentUncached(ctx context.Context, d *plugin.QueryData,
 			}
 
 			parsedContents = append(parsedContents, parsedContent{
-				Data:       targetObj,
+				ParsedData: targetObj,
 				Kind:       obj.GetKind(),
 				Path:       path,
 				SourceType: "manifest",

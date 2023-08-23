@@ -179,7 +179,7 @@ func listK8sDaemonSets(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 	}
 
 	for _, content := range parsedContents {
-		daemonSet := content.Data.(*v1.DaemonSet)
+		daemonSet := content.ParsedData.(*v1.DaemonSet)
 
 		d.StreamListItem(ctx, DaemonSet{*daemonSet, content})
 
@@ -270,7 +270,7 @@ func getK8sDaemonSet(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 	}
 
 	for _, content := range parsedContents {
-		daemonSet := content.Data.(*v1.DaemonSet)
+		daemonSet := content.ParsedData.(*v1.DaemonSet)
 
 		if daemonSet.Name == name && daemonSet.Namespace == namespace {
 			return DaemonSet{*daemonSet, content}, nil

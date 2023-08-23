@@ -200,7 +200,7 @@ func listK8sServices(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 	}
 
 	for _, content := range parsedContents {
-		service := content.Data.(*v1.Service)
+		service := content.ParsedData.(*v1.Service)
 
 		d.StreamListItem(ctx, Service{*service, content})
 
@@ -290,7 +290,7 @@ func getK8sService(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDa
 	}
 
 	for _, content := range parsedContents {
-		service := content.Data.(*v1.Service)
+		service := content.ParsedData.(*v1.Service)
 
 		if service.Name == name && service.Namespace == namespace {
 			return Service{*service, content}, nil

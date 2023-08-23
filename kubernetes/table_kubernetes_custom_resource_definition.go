@@ -69,7 +69,7 @@ func listK8sCustomResourceDefinitions(ctx context.Context, d *plugin.QueryData, 
 	}
 
 	for _, content := range parsedContents {
-		crd := content.Data.(*v1.CustomResourceDefinition)
+		crd := content.ParsedData.(*v1.CustomResourceDefinition)
 
 		d.StreamListItem(ctx, CustomResourceDefinition{*crd, content})
 
@@ -148,7 +148,7 @@ func getK8sCustomResourceDefinition(ctx context.Context, d *plugin.QueryData, _ 
 	}
 
 	for _, content := range parsedContents {
-		crd := content.Data.(*v1.CustomResourceDefinition)
+		crd := content.ParsedData.(*v1.CustomResourceDefinition)
 
 		if crd.Name == name {
 			return CustomResourceDefinition{*crd, content}, nil

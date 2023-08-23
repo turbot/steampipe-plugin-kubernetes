@@ -112,7 +112,7 @@ func listK8sResourceQuotas(ctx context.Context, d *plugin.QueryData, h *plugin.H
 	}
 
 	for _, content := range parsedContents {
-		resourceQuota := content.Data.(*v1.ResourceQuota)
+		resourceQuota := content.ParsedData.(*v1.ResourceQuota)
 
 		d.StreamListItem(ctx, ResourceQuota{*resourceQuota, content})
 
@@ -202,7 +202,7 @@ func getK8sResourceQuota(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 	}
 
 	for _, content := range parsedContents {
-		resourceQuota := content.Data.(*v1.ResourceQuota)
+		resourceQuota := content.ParsedData.(*v1.ResourceQuota)
 
 		if resourceQuota.Name == name && resourceQuota.Namespace == namespace {
 			return ResourceQuota{*resourceQuota, content}, nil

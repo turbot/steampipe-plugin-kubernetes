@@ -84,7 +84,7 @@ func listK8sRoles(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 	}
 
 	for _, content := range parsedContents {
-		role := content.Data.(*v1.Role)
+		role := content.ParsedData.(*v1.Role)
 
 		d.StreamListItem(ctx, Role{*role, content})
 
@@ -175,7 +175,7 @@ func getK8sRole(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData)
 	}
 
 	for _, content := range parsedContents {
-		role := content.Data.(*v1.Role)
+		role := content.ParsedData.(*v1.Role)
 
 		if role.Name == name && role.Namespace == namespace {
 			return Role{*role, content}, nil

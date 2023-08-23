@@ -112,7 +112,7 @@ func listK8sIngresses(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 	}
 
 	for _, content := range parsedContents {
-		ingress := content.Data.(*v1.Ingress)
+		ingress := content.ParsedData.(*v1.Ingress)
 
 		d.StreamListItem(ctx, Ingress{*ingress, content})
 
@@ -203,7 +203,7 @@ func getK8sIngress(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDa
 	}
 
 	for _, content := range parsedContents {
-		ingress := content.Data.(*v1.Ingress)
+		ingress := content.ParsedData.(*v1.Ingress)
 
 		if ingress.Name == name && ingress.Namespace == namespace {
 			return Ingress{*ingress, content}, nil

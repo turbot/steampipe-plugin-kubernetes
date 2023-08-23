@@ -161,7 +161,7 @@ func listK8sDynamicCRDs(ctx context.Context, cn *connection.ConnectionCache, c *
 	// Also, skip the duplicate CRDs to avoid the conflicts.
 	for _, pattern := range filterCrds {
 		for _, item := range parsedContents {
-			crd := item.Data.(*v1.CustomResourceDefinition)
+			crd := item.ParsedData.(*v1.CustomResourceDefinition)
 
 			if helpers.StringSliceContains(temp_crd_names, crd.Name) {
 				continue

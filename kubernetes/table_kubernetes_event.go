@@ -140,7 +140,7 @@ func listK8sEvents(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDa
 	}
 
 	for _, content := range parsedContents {
-		event := content.Data.(*v1.Event)
+		event := content.ParsedData.(*v1.Event)
 
 		d.StreamListItem(ctx, Event{*event, content})
 
@@ -231,7 +231,7 @@ func getK8sEvent(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 	}
 
 	for _, content := range parsedContents {
-		event := content.Data.(*v1.Event)
+		event := content.ParsedData.(*v1.Event)
 
 		if event.Name == name && event.Namespace == namespace {
 			return Event{*event, content}, nil

@@ -149,7 +149,7 @@ func listK8sReplicaSets(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 	}
 
 	for _, content := range parsedContents {
-		replicaSet := content.Data.(*v1.ReplicaSet)
+		replicaSet := content.ParsedData.(*v1.ReplicaSet)
 
 		d.StreamListItem(ctx, ReplicaSet{*replicaSet, content})
 
@@ -240,7 +240,7 @@ func getK8sReplicaSet(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 	}
 
 	for _, content := range parsedContents {
-		replicaSet := content.Data.(*v1.ReplicaSet)
+		replicaSet := content.ParsedData.(*v1.ReplicaSet)
 
 		if replicaSet.Name == name && replicaSet.Namespace == namespace {
 			return ReplicaSet{*replicaSet, content}, nil

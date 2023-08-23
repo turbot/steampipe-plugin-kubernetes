@@ -183,7 +183,7 @@ func listK8sNodes(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 	}
 
 	for _, content := range parsedContents {
-		node := content.Data.(*v1.Node)
+		node := content.ParsedData.(*v1.Node)
 
 		d.StreamListItem(ctx, Node{*node, content})
 
@@ -267,7 +267,7 @@ func getK8sNode(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData)
 	}
 
 	for _, content := range parsedContents {
-		node := content.Data.(*v1.Node)
+		node := content.ParsedData.(*v1.Node)
 
 		if node.Name == name {
 			return Node{*node, content}, nil

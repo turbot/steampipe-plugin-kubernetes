@@ -142,7 +142,7 @@ func listK8sCronJobs(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 	}
 
 	for _, content := range parsedContents {
-		cronJob := content.Data.(*v1.CronJob)
+		cronJob := content.ParsedData.(*v1.CronJob)
 
 		d.StreamListItem(ctx, CronJob{*cronJob, content})
 
@@ -233,7 +233,7 @@ func getK8sCronJob(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDa
 	}
 
 	for _, content := range parsedContents {
-		cronJob := content.Data.(*v1.CronJob)
+		cronJob := content.ParsedData.(*v1.CronJob)
 
 		if cronJob.Name == name && cronJob.Namespace == namespace {
 			return CronJob{*cronJob, content}, nil

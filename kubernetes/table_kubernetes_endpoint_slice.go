@@ -94,7 +94,7 @@ func listK8sEnpointSlices(ctx context.Context, d *plugin.QueryData, _ *plugin.Hy
 	}
 
 	for _, content := range parsedContents {
-		endpointSlice := content.Data.(*v1.EndpointSlice)
+		endpointSlice := content.ParsedData.(*v1.EndpointSlice)
 
 		d.StreamListItem(ctx, EndpointSlice{*endpointSlice, content})
 
@@ -185,7 +185,7 @@ func getK8sEnpointSlice(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 	}
 
 	for _, content := range parsedContents {
-		endpointSlice := content.Data.(*v1.EndpointSlice)
+		endpointSlice := content.ParsedData.(*v1.EndpointSlice)
 
 		if endpointSlice.Name == name && endpointSlice.Namespace == namespace {
 			return EndpointSlice{*endpointSlice, content}, nil

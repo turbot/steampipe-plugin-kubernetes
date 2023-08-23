@@ -103,7 +103,7 @@ func listK8sNamespaces(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 	}
 
 	for _, content := range parsedContents {
-		namespace := content.Data.(*v1.Namespace)
+		namespace := content.ParsedData.(*v1.Namespace)
 
 		d.StreamListItem(ctx, Namespace{*namespace, content})
 
@@ -191,7 +191,7 @@ func getK8sNamespace(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 	}
 
 	for _, content := range parsedContents {
-		namespace := content.Data.(*v1.Namespace)
+		namespace := content.ParsedData.(*v1.Namespace)
 
 		if namespace.Name == name {
 			return Namespace{*namespace, content}, nil
