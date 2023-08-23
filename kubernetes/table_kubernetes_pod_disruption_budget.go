@@ -100,7 +100,7 @@ func listPDBs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (
 	}
 
 	for _, content := range parsedContents {
-		pdb := content.Data.(*v1.PodDisruptionBudget)
+		pdb := content.ParsedData.(*v1.PodDisruptionBudget)
 
 		d.StreamListItem(ctx, PodDisruptionBudget{*pdb, content})
 
@@ -191,7 +191,7 @@ func getPDB(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (in
 	}
 
 	for _, content := range parsedContents {
-		pdb := content.Data.(*v1.PodDisruptionBudget)
+		pdb := content.ParsedData.(*v1.PodDisruptionBudget)
 
 		if pdb.Name == name && pdb.Namespace == namespace {
 			return PodDisruptionBudget{*pdb, content}, nil

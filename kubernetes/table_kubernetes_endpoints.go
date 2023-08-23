@@ -84,7 +84,7 @@ func listK8sEnpoints(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 	}
 
 	for _, content := range parsedContents {
-		endpoints := content.Data.(*v1.Endpoints)
+		endpoints := content.ParsedData.(*v1.Endpoints)
 
 		d.StreamListItem(ctx, Endpoints{*endpoints, content})
 
@@ -175,7 +175,7 @@ func getK8sEndpoint(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateD
 	}
 
 	for _, content := range parsedContents {
-		endpoints := content.Data.(*v1.Endpoints)
+		endpoints := content.ParsedData.(*v1.Endpoints)
 
 		if endpoints.Name == name && endpoints.Namespace == namespace {
 			return Endpoints{*endpoints, content}, nil

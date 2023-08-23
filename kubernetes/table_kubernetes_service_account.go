@@ -95,7 +95,7 @@ func listK8sServiceAccounts(ctx context.Context, d *plugin.QueryData, _ *plugin.
 	}
 
 	for _, content := range parsedContents {
-		serviceAccount := content.Data.(*v1.ServiceAccount)
+		serviceAccount := content.ParsedData.(*v1.ServiceAccount)
 
 		d.StreamListItem(ctx, ServiceAccount{*serviceAccount, content})
 
@@ -186,7 +186,7 @@ func getK8sServiceAccount(ctx context.Context, d *plugin.QueryData, _ *plugin.Hy
 	}
 
 	for _, content := range parsedContents {
-		serviceAccount := content.Data.(*v1.ServiceAccount)
+		serviceAccount := content.ParsedData.(*v1.ServiceAccount)
 
 		if serviceAccount.Name == name && serviceAccount.Namespace == namespace {
 			return ServiceAccount{*serviceAccount, content}, nil

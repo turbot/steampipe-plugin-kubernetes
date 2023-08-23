@@ -185,7 +185,7 @@ func listK8sDeployments(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 	}
 
 	for _, content := range parsedContents {
-		deployment := content.Data.(*v1.Deployment)
+		deployment := content.ParsedData.(*v1.Deployment)
 
 		d.StreamListItem(ctx, Deployment{*deployment, content})
 
@@ -277,7 +277,7 @@ func getK8sDeployment(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 	}
 
 	for _, content := range parsedContents {
-		deployment := content.Data.(*v1.Deployment)
+		deployment := content.ParsedData.(*v1.Deployment)
 
 		if deployment.Name == name && deployment.Namespace == namespace {
 			return Deployment{*deployment, content}, nil

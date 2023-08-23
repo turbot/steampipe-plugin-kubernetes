@@ -222,7 +222,7 @@ func listPodSecurityPolicy(ctx context.Context, d *plugin.QueryData, _ *plugin.H
 	}
 
 	for _, content := range parsedContents {
-		podSecurityPolicy := content.Data.(*v1beta1.PodSecurityPolicy)
+		podSecurityPolicy := content.ParsedData.(*v1beta1.PodSecurityPolicy)
 
 		d.StreamListItem(ctx, PodSecurityPolicy{*podSecurityPolicy, content})
 
@@ -306,7 +306,7 @@ func getPodSecurityPolicy(ctx context.Context, d *plugin.QueryData, _ *plugin.Hy
 	}
 
 	for _, content := range parsedContents {
-		podSecurityPolicy := content.Data.(*v1beta1.PodSecurityPolicy)
+		podSecurityPolicy := content.ParsedData.(*v1beta1.PodSecurityPolicy)
 
 		if podSecurityPolicy.Name == name {
 			return PodSecurityPolicy{*podSecurityPolicy, content}, nil

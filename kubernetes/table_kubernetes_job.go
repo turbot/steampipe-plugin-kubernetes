@@ -172,7 +172,7 @@ func listK8sJobs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 	}
 
 	for _, content := range parsedContents {
-		job := content.Data.(*v1.Job)
+		job := content.ParsedData.(*v1.Job)
 
 		d.StreamListItem(ctx, Job{*job, content})
 
@@ -263,7 +263,7 @@ func getK8sJob(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) 
 	}
 
 	for _, content := range parsedContents {
-		job := content.Data.(*v1.Job)
+		job := content.ParsedData.(*v1.Job)
 
 		if job.Name == name && job.Namespace == namespace {
 			return Job{*job, content}, nil

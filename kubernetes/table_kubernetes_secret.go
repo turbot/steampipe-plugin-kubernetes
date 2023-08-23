@@ -103,7 +103,7 @@ func listK8sSecrets(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateD
 	}
 
 	for _, content := range parsedContents {
-		secret := content.Data.(*v1.Secret)
+		secret := content.ParsedData.(*v1.Secret)
 
 		d.StreamListItem(ctx, Secret{*secret, content})
 
@@ -198,7 +198,7 @@ func getK8sSecret(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 	}
 
 	for _, content := range parsedContents {
-		secret := content.Data.(*v1.Secret)
+		secret := content.ParsedData.(*v1.Secret)
 
 		if secret.Name == name && secret.Namespace == namespace {
 			return Secret{*secret, content}, nil

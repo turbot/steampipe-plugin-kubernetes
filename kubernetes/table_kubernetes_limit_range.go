@@ -86,7 +86,7 @@ func listK8sLimitRanges(ctx context.Context, d *plugin.QueryData, h *plugin.Hydr
 	}
 
 	for _, content := range parsedContents {
-		limitRange := content.Data.(*v1.LimitRange)
+		limitRange := content.ParsedData.(*v1.LimitRange)
 
 		d.StreamListItem(ctx, LimitRange{*limitRange, content})
 
@@ -176,7 +176,7 @@ func getK8sLimitRange(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 	}
 
 	for _, content := range parsedContents {
-		limitRange := content.Data.(*v1.LimitRange)
+		limitRange := content.ParsedData.(*v1.LimitRange)
 
 		if limitRange.Name == name && limitRange.Namespace == namespace {
 			return LimitRange{*limitRange, content}, nil

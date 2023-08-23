@@ -221,7 +221,7 @@ func renderedHelmTemplateContentUncached(ctx context.Context, d *plugin.QueryDat
 			}
 
 			parsedContents = append(parsedContents, parsedContent{
-				Data:       targetObj,
+				ParsedData: targetObj,
 				Kind:       obj.GetKind(),
 				Path:       t.Path,
 				SourceType: fmt.Sprintf("helm_rendered:%s", t.ConfigKey),

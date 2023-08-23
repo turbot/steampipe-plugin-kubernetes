@@ -170,7 +170,7 @@ func listK8sStatefulSets(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 	}
 
 	for _, content := range parsedContents {
-		statefulSet := content.Data.(*v1.StatefulSet)
+		statefulSet := content.ParsedData.(*v1.StatefulSet)
 
 		d.StreamListItem(ctx, StatefulSet{*statefulSet, content})
 
@@ -261,7 +261,7 @@ func getK8sStatefulSet(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 	}
 
 	for _, content := range parsedContents {
-		statefulSet := content.Data.(*v1.StatefulSet)
+		statefulSet := content.ParsedData.(*v1.StatefulSet)
 
 		if statefulSet.Name == name && statefulSet.Namespace == namespace {
 			return StatefulSet{*statefulSet, content}, nil

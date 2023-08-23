@@ -149,7 +149,7 @@ func listK8sReplicaControllers(ctx context.Context, d *plugin.QueryData, _ *plug
 	}
 
 	for _, content := range parsedContents {
-		replicationController := content.Data.(*v1.ReplicationController)
+		replicationController := content.ParsedData.(*v1.ReplicationController)
 
 		d.StreamListItem(ctx, ReplicationController{*replicationController, content})
 
@@ -240,7 +240,7 @@ func getK8sReplicaController(ctx context.Context, d *plugin.QueryData, _ *plugin
 	}
 
 	for _, content := range parsedContents {
-		replicationController := content.Data.(*v1.ReplicationController)
+		replicationController := content.ParsedData.(*v1.ReplicationController)
 
 		if replicationController.Name == name && replicationController.Namespace == namespace {
 			return ReplicationController{*replicationController, content}, nil

@@ -148,7 +148,7 @@ func listK8sPVCs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 	}
 
 	for _, content := range parsedContents {
-		persistentVolumeClaim := content.Data.(*v1.PersistentVolumeClaim)
+		persistentVolumeClaim := content.ParsedData.(*v1.PersistentVolumeClaim)
 
 		d.StreamListItem(ctx, PersistentVolumeClaim{*persistentVolumeClaim, content})
 
@@ -239,7 +239,7 @@ func getK8sPVC(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) 
 	}
 
 	for _, content := range parsedContents {
-		persistentVolumeClaim := content.Data.(*v1.PersistentVolumeClaim)
+		persistentVolumeClaim := content.ParsedData.(*v1.PersistentVolumeClaim)
 
 		if persistentVolumeClaim.Name == name && persistentVolumeClaim.Namespace == namespace {
 			return PersistentVolumeClaim{*persistentVolumeClaim, content}, nil

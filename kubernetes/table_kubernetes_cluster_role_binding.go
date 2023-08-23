@@ -102,7 +102,7 @@ func listK8sClusterRoleBindings(ctx context.Context, d *plugin.QueryData, _ *plu
 	}
 
 	for _, content := range parsedContents {
-		clusterRoleBinding := content.Data.(*v1.ClusterRoleBinding)
+		clusterRoleBinding := content.ParsedData.(*v1.ClusterRoleBinding)
 
 		d.StreamListItem(ctx, ClusterRoleBinding{*clusterRoleBinding, content})
 
@@ -186,7 +186,7 @@ func getK8sClusterRoleBinding(ctx context.Context, d *plugin.QueryData, _ *plugi
 	}
 
 	for _, content := range parsedContents {
-		clusterRoleBinding := content.Data.(*v1.ClusterRoleBinding)
+		clusterRoleBinding := content.ParsedData.(*v1.ClusterRoleBinding)
 
 		if clusterRoleBinding.Name == name {
 			return ClusterRoleBinding{*clusterRoleBinding, content}, nil

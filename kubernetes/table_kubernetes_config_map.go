@@ -95,7 +95,7 @@ func listK8sConfigMaps(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 	}
 
 	for _, content := range parsedContents {
-		configMap := content.Data.(*v1.ConfigMap)
+		configMap := content.ParsedData.(*v1.ConfigMap)
 
 		d.StreamListItem(ctx, ConfigMap{*configMap, content})
 
@@ -186,7 +186,7 @@ func getK8sConfigMap(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 	}
 
 	for _, content := range parsedContents {
-		configMap := content.Data.(*v1.ConfigMap)
+		configMap := content.ParsedData.(*v1.ConfigMap)
 
 		if configMap.Name == name && configMap.Namespace == namespace {
 			return ConfigMap{*configMap, content}, nil

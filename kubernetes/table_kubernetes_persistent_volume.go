@@ -152,7 +152,7 @@ func listK8sPVs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData)
 	}
 
 	for _, content := range parsedContents {
-		persistentVolume := content.Data.(*v1.PersistentVolume)
+		persistentVolume := content.ParsedData.(*v1.PersistentVolume)
 
 		d.StreamListItem(ctx, PersistentVolume{*persistentVolume, content})
 
@@ -236,7 +236,7 @@ func getK8sPV(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (
 	}
 
 	for _, content := range parsedContents {
-		persistentVolume := content.Data.(*v1.PersistentVolume)
+		persistentVolume := content.ParsedData.(*v1.PersistentVolume)
 
 		if persistentVolume.Name == name {
 			return PersistentVolume{*persistentVolume, content}, nil

@@ -104,7 +104,7 @@ func listK8sRoleBindings(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 	}
 
 	for _, content := range parsedContents {
-		roleBinding := content.Data.(*v1.RoleBinding)
+		roleBinding := content.ParsedData.(*v1.RoleBinding)
 
 		d.StreamListItem(ctx, RoleBinding{*roleBinding, content})
 
@@ -195,7 +195,7 @@ func getK8sRoleBinding(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 	}
 
 	for _, content := range parsedContents {
-		roleBinding := content.Data.(*v1.RoleBinding)
+		roleBinding := content.ParsedData.(*v1.RoleBinding)
 
 		if roleBinding.Name == name && roleBinding.Namespace == namespace {
 			return RoleBinding{*roleBinding, content}, nil

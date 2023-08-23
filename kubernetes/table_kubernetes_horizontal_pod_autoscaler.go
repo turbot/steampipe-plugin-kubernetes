@@ -152,7 +152,7 @@ func listK8sHPAs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 	}
 
 	for _, content := range parsedContents {
-		hpa := content.Data.(*v1.HorizontalPodAutoscaler)
+		hpa := content.ParsedData.(*v1.HorizontalPodAutoscaler)
 
 		d.StreamListItem(ctx, HorizontalPodAutoscaler{*hpa, content})
 
@@ -242,7 +242,7 @@ func getK8sHPA(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) 
 	}
 
 	for _, content := range parsedContents {
-		hpa := content.Data.(*v1.HorizontalPodAutoscaler)
+		hpa := content.ParsedData.(*v1.HorizontalPodAutoscaler)
 
 		if hpa.Name == name && hpa.Namespace == namespace {
 			return HorizontalPodAutoscaler{*hpa, content}, nil

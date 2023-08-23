@@ -20,7 +20,7 @@ func tableHelmTemplates(ctx context.Context) *plugin.Table {
 		Columns: []*plugin.Column{
 			{Name: "chart_name", Type: proto.ColumnType_STRING, Description: "The name of the chart."},
 			{Name: "path", Type: proto.ColumnType_STRING, Description: "The path to the template file."},
-			{Name: "raw", Type: proto.ColumnType_STRING, Description: "Data is the template as byte data."},
+			{Name: "raw", Type: proto.ColumnType_STRING, Description: "Raw is the template as byte data."},
 		},
 	}
 }
