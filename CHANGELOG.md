@@ -2,7 +2,7 @@
 
 _Bug fixes_
 
-- Fixed the `data` columns of `kubernetes_config_map` and `kubernetes_secret` tables to correctly return data instead of `nil`. ([#150](https://github.com/turbot/steampipe-plugin-kubernetes/pull/150)) (Thanks [@hileef](https://github.com/hileef) for the contribution!!)
+- Fixed the `data` column of `kubernetes_config_map` and `kubernetes_secret` tables to correctly return data instead of `nil`. ([#150](https://github.com/turbot/steampipe-plugin-kubernetes/pull/150)) (Thanks [@hileef](https://github.com/hileef) for the contribution!!)
 
 ## v0.22.0 [2023-07-05]
 
