@@ -1,3 +1,9 @@
+## v0.22.1 [2023-08-24]
+
+_Bug fixes_
+
+- Fixed the `parsedContent` struct to rename the field from `Data` to `ParsedData` to avoid conflicts with other structs in which `parsedContent` is being merged. This fixes the `configmap` and `secret` tables to return correct data instead of empty row. ([#150](https://github.com/turbot/steampipe-plugin-kubernetes/pull/150)) (Thanks [@hileef](https://github.com/hileef) for the contribution!!)
+
 ## v0.22.0 [2023-07-05]
 
 _Enhancements_
