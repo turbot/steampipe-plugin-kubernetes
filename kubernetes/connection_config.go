@@ -11,6 +11,7 @@ type kubernetesConfig struct {
 	CustomResourceTables []string               `hcl:"custom_resource_tables,optional"`
 	ManifestFilePaths    []string               `hcl:"manifest_file_paths,optional" steampipe:"watch"`
 	SourceType           *string                `hcl:"source_type,optional"`
+	SourceTypes          []string               `hcl:"source_types,optional"`
 	HelmRenderedCharts   map[string]chartConfig `hcl:"helm_rendered_charts,optional"`
 }
 

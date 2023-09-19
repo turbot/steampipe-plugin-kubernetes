@@ -44,23 +44,27 @@ var parsedHelmChartCached = plugin.HydrateFunc(parsedHelmChartUncached).Memoize(
 // getParsedHelmChart instead.
 func parsedHelmChartUncached(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (any, error) {
 	// Read the config
-	helmConfig := GetConfig(d.Connection)
+	kubernetesConfig := GetConfig(d.Connection)
 
-	// Return nil, if the source_type is set to other than "all" or "helm"
-	if helmConfig.SourceType != nil &&
-		!helpers.StringSliceContains([]string{"all", "helm"}, *helmConfig.SourceType) {
+	// Check for the sourceTypes argument in the config.
+	// Default set to include values.
+	// TODO: Convert source_type to source_types
+	var sources = []string{"deployed", "helm", "manifest"}
+	if kubernetesConfig.SourceTypes != nil {
+		sources = kubernetesConfig.SourceTypes
+	}
+
+	if !helpers.StringSliceContains(sources, "helm") {
 		return nil, nil
 	}
 
 	var charts []*parsedHelmChart
 
-	for _, v := range helmConfig.HelmRenderedCharts {
-		// Return error if source_tpe arg is explicitly set to "helm" in the config, but
+	for _, v := range kubernetesConfig.HelmRenderedCharts {
+		// Return error if source_types arg includes "helm" in the config, but
 		// helm_chart_dir arg is not set.
-		if helmConfig.SourceType != nil &&
-			*helmConfig.SourceType == "helm" &&
-			v.ChartPath == "" {
-			return nil, errors.New("helm_chart_dir must be set in the config while the source_type is 'helm'")
+		if v.ChartPath == "" {
+			return nil, errors.New("helm_chart_dir must be set in the config while source_types includes 'helm'")
 		}
 
 		// Return empty parsedHelmChart object if no Helm chart directory path provided in the config
@@ -124,7 +128,7 @@ func getUniqueValueFilesFromConfig(ctx context.Context, d *plugin.QueryData) []s
 
 // getHelmClient creates the client for Helm
 func getHelmClient(ctx context.Context, namespace string) (helmClient.Client, error) {
-	// Return nil, if no namespace provided
+	// Return nil if no namespace provided
 	if namespace == "" {
 		return nil, nil
 	}

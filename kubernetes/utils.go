@@ -75,7 +75,7 @@ func GetNewClientset(ctx context.Context, d *plugin.QueryData) (*kubernetes.Clie
 		return nil, err
 	}
 
-	// Return nil, if the config is set only to list the manifest resources.
+	// Return nil if deployed resources should not be included
 	if kubeconfig == nil {
 		return nil, nil
 	}
@@ -142,7 +142,7 @@ func GetNewClientCRD(ctx context.Context, d *plugin.QueryData) (*apiextension.Cl
 		return nil, err
 	}
 
-	// Return nil, if the config is set to only list the manifest resources.
+	// Return nil if deployed resources should not be included
 	if kubeconfig == nil {
 		return nil, nil
 	}
@@ -196,7 +196,7 @@ func GetNewClientCRDRaw(ctx context.Context, cc *connection.ConnectionCache, c *
 		return nil, err
 	}
 
-	// Return nil, if the config is set to only list the manifest resources.
+	// Return nil if deployed resources should not be included
 	if kubeconfig == nil {
 		return nil, nil
 	}
@@ -336,24 +336,16 @@ func getK8Config(ctx context.Context, d *plugin.QueryData) (clientcmd.ClientConf
 	// get kubernetes config info
 	kubernetesConfig := GetConfig(d.Connection)
 
-	// Check for the sourceType argument in the config. Valid values are: "deployed", "manifest" and "all".
-	// Default set to "all".
-	var source SourceType = "all"
-	if kubernetesConfig.SourceType != nil {
-		source = SourceType(*kubernetesConfig.SourceType)
-		if err := source.IsValid(); err != nil {
-			plugin.Logger(ctx).Debug("getK8Config", "invalid_source_type_error", "connection", d.Connection.Name, "error", err)
-			return nil, err
-		}
+	// Check for the sourceTypes argument in the config
+	// Default set to include values
+	// TODO: Convert source_type to source_types
+	var sources = []string{"deployed", "helm", "manifest"}
+	if kubernetesConfig.SourceTypes != nil {
+		sources = kubernetesConfig.SourceTypes
 	}
 
-	// By default source type is set to "all", which indicates querying the table will return both deployed, helm and manifest resources.
-	// If the source type is explicitly set, other plugin will list resources based on that. For example:
-	// If set to "manifest", the table will only return the manifest resources.
-	// If set to "helm", the table will return the resources after rendering the templates defined in the configured chart.
-	// Similarly, setting the value as "deployed" will return all the deployed resources.
-	if source.String() == "manifest" || source.String() == "helm" {
-		plugin.Logger(ctx).Debug("getK8Config", "Returning nil for API server client.", "Source type", source.String(), "connection", d.Connection.Name)
+	if !helpers.StringSliceContains(sources, "deployed") {
+		plugin.Logger(ctx).Debug("getK8Config", "Returning nil for API server client.", "source_types", sources, "connection", d.Connection.Name)
 		return nil, nil
 	}
 
@@ -427,24 +419,16 @@ func getK8ConfigRaw(ctx context.Context, cc *connection.ConnectionCache, c *plug
 	// get kubernetes config info
 	kubernetesConfig := GetConfig(c)
 
-	// Check for the sourceType argument in the config. Valid values are: "deployed", "manifest" and "all".
-	// Default set to "all".
-	var source SourceType = "all"
-	if kubernetesConfig.SourceType != nil {
-		source = SourceType(*kubernetesConfig.SourceType)
-		if err := source.IsValid(); err != nil {
-			plugin.Logger(ctx).Debug("getK8ConfigRaw", "invalid_source_type_error", "connection", c.Name, "error", err)
-			return nil, err
-		}
+	// Check for the sourceTypes argument in the config.
+	// Default set to include values.
+	// TODO: Convert source_type to source_types
+	var sources = []string{"deployed", "helm", "manifest"}
+	if kubernetesConfig.SourceTypes != nil {
+		sources = kubernetesConfig.SourceTypes
 	}
 
-	// By default source type is set to "all", which indicates querying the table will return all the deployed, helm and manifest resources.
-	// If the source type is explicitly set, other plugin will list resources based on that. For example:
-	// If set to "manifest", the table will only return the manifest resources.
-	// If set to "helm", the table will return the resources after rendering the templates defined in the configured chart.
-	// Similarly, setting the value as "deployed" will return all the deployed resources.
-	if source.String() == "manifest" || source.String() == "helm" {
-		plugin.Logger(ctx).Debug("getK8ConfigRaw", "Returning nil for API server client.", "Source type", source.String(), "connection", c.Name)
+	if !helpers.StringSliceContains(sources, "deployed") {
+		plugin.Logger(ctx).Debug("getK8ConfigRaw", "Returning nil for API server client.", "source_types", sources, "connection", c.Name)
 		return nil, nil
 	}
 
@@ -794,25 +778,29 @@ func parsedManifestFileContentUncached(ctx context.Context, d *plugin.QueryData,
 // Returns the list of file paths/glob patterns after resolving all the given manifest file paths.
 func resolveManifestFilePaths(ctx context.Context, d *plugin.QueryData) ([]string, error) {
 	// Read the config
-	k8sConfig := GetConfig(d.Connection)
+	kubernetesConfig := GetConfig(d.Connection)
 
-	// Return nil, if the source_type is set other than "manifest", or "all"
-	if k8sConfig.SourceType != nil &&
-		!helpers.StringSliceContains([]string{"all", "manifest"}, *k8sConfig.SourceType) {
+	// Check for the sourceTypes argument in the config. Valid values are: "deployed", "manifest" and "all".
+	// Default set to include values.
+	// TODO: Convert source_type to source_types
+	var sources = []string{"deployed", "helm", "manifest"}
+	if kubernetesConfig.SourceTypes != nil {
+		sources = kubernetesConfig.SourceTypes
+	}
+
+	if !helpers.StringSliceContains(sources, "manifest") {
 		return nil, nil
 	}
 
-	// Return error if source_tpe arg is explicitly set to "manifest" in the config, but
+	// Return error if source_types arg includes "manifest" in the config, but
 	// manifest_file_paths arg is not set.
-	if k8sConfig.SourceType != nil &&
-		*k8sConfig.SourceType == "manifest" &&
-		k8sConfig.ManifestFilePaths == nil {
-		return nil, errors.New("manifest_file_paths must be set in the config while the source_type is 'manifest'")
+	if kubernetesConfig.ManifestFilePaths == nil {
+		return nil, errors.New("manifest_file_paths must be set in the config while the source_types includes 'manifest'")
 	}
 
 	// Gather file path matches for the glob
 	var matches, resolvedPaths []string
-	paths := k8sConfig.ManifestFilePaths
+	paths := kubernetesConfig.ManifestFilePaths
 	for _, i := range paths {
 
 		// List the files in the given source directory
