@@ -1,4 +1,4 @@
-# Table: kubernetes_pod
+# Table: kubernetes_pod_template
 
 A PodTemplate is a Kubernetes resource that defines the desired specification for Pods created or managed by various controllers, such as Deployments, StatefulSets, and CronJobs. It allows you to define a reusable configuration for Pods, reducing duplication and simplifying updates across multiple resources.
 
