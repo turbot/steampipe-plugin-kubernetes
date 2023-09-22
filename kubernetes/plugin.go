@@ -71,6 +71,7 @@ func pluginTableDefinitions(ctx context.Context, d *plugin.TableMapData) (map[st
 		"kubernetes_pod":                        tableKubernetesPod(ctx),
 		"kubernetes_pod_disruption_budget":      tableKubernetesPDB(ctx),
 		"kubernetes_pod_security_policy":        tableKubernetesPodSecurityPolicy(ctx),
+		"kubernetes_pod_template":               tableKubernetesPodTemplate(ctx),
 		"kubernetes_replicaset":                 tableKubernetesReplicaSet(ctx),
 		"kubernetes_replication_controller":     tableKubernetesReplicaController(ctx),
 		"kubernetes_resource_quota":             tableKubernetesResourceQuota(ctx),
