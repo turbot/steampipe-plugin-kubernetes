@@ -73,7 +73,7 @@ type PodTemplate struct {
 
 func listK8sPodTemplates(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
 	logger := plugin.Logger(ctx)
-	logger.Trace("listK8sPodTemplates")
+	logger.Debug("listK8sPodTemplates")
 
 	// Get the client for querying the K8s APIs for the provided context.
 	// If the connection is configured for the manifest files, the client will return nil.
@@ -111,12 +111,8 @@ func listK8sPodTemplates(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 	// Limiting the results
 	limit := d.QueryContext.Limit
 	if d.QueryContext.Limit != nil {
-		if *limit < input.Limit {
-			if *limit < 1 {
-				input.Limit = 1
-			} else {
-				input.Limit = *limit
-			}
+		if *limit < 500 {
+			input.Limit = *limit
 		}
 	}
 
@@ -155,7 +151,7 @@ func listK8sPodTemplates(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 
 func getK8sPodTemplate(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
 	logger := plugin.Logger(ctx)
-	logger.Trace("getK8sPodTemplate")
+	logger.Debug("getK8sPodTemplate")
 
 	// Get the client for querying the K8s APIs for the provided context.
 	// If the connection is configured for the manifest files, the client will return nil.

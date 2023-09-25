@@ -40,7 +40,7 @@ where
   c -> 'securityContext' ->> 'privileged' = 'true';
 ```
 
-### List pod templates with pod has access to the host process ID, IPC, or network namespace
+### List pod templates with pod access to the host process ID, IPC, or network namespace
 
 ```sql
 select
@@ -80,7 +80,7 @@ select
     template;
 ```
 
-### List pod templates with pod having a container with --profiling argument is set to false
+### List pod templates that have a container with profiling argument set to false
 
 ```sql
 select
