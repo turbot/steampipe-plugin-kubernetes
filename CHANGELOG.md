@@ -1,3 +1,14 @@
+## v0.23.0 [2023-09-26]
+
+_What's new?_
+
+- New tables added
+  - [kubernetes_pod_template](https://hub.steampipe.io/plugins/turbot/kubernetes/tables/kubernetes_pod_template) ([#170](https://github.com/turbot/steampipe-plugin-kubernetes/pull/170))
+
+_Dependencies_
+
+- Recompiled plugin with [steampipe-plugin-sdk v5.5.1](https://github.com/turbot/steampipe-plugin-sdk/blob/main/CHANGELOG.md#v551-2023-07-26). ([#152](https://github.com/turbot/steampipe-plugin-kubernetes/pull/152))
+
 ## v0.22.1 [2023-08-24]
 
 _Bug fixes_
