@@ -62,22 +62,22 @@ where
 
 ```sql
 select
-    name,
-    coalesce(uid, concat(path, ':', start_line)) as uid,
-    array_agg(c ->> 'name') as containers,
-    array_agg(c ->> 'image') as images,
-    template -> 'metadata' -> 'labels' as pod_labels
-  from
-    kubernetes_pod_template,
-    jsonb_array_elements(template -> 'spec' -> 'containers') as c
-  where
-    source_type = 'deployed'
-  group by
-    name,
-    uid,
-    path,
-    start_line,
-    template;
+  name,
+  coalesce(uid, concat(path, ':', start_line)) as uid,
+  array_agg(c ->> 'name') as containers,
+  array_agg(c ->> 'image') as images,
+  template -> 'metadata' -> 'labels' as pod_labels 
+from
+  kubernetes_pod_template,
+  jsonb_array_elements(template -> 'spec' -> 'containers') as c 
+where
+  source_type = 'deployed' 
+group by
+  name,
+  uid,
+  path,
+  start_line,
+  template;
 ```
 
 ### List pod templates that have a container with profiling argument set to false
@@ -88,33 +88,40 @@ select
   namespace,
   template -> 'metadata' ->> 'name' as pod_name,
   c ->> 'name' as pod_container_name,
-  c ->> 'image' as pod_container_image
+  c ->> 'image' as pod_container_image 
 from
   kubernetes_pod_template,
-  jsonb_array_elements(template -> 'spec' -> 'containers') as c
+  jsonb_array_elements(template -> 'spec' -> 'containers') as c 
 where
-  (c -> 'command') @> '["kube-scheduler"]'
-  and (c -> 'command') @> '["--profiling=false"]';
+  (
+    c -> 'command'
+  )
+  @ > '["kube-scheduler"]' 
+  and 
+  (
+    c -> 'command'
+  )
+  @ > '["--profiling=false"]';
 ```
 
-### List manifest resources
+### List manifest pod template resources
 
 ```sql
 select
-    name,
-    coalesce(uid, concat(path, ':', start_line)) as uid,
-    array_agg(c ->> 'name') as containers,
-    array_agg(c ->> 'image') as images,
-    template -> 'metadata' -> 'labels' as pod_labels
-  from
-    kubernetes_pod_template,
-    jsonb_array_elements(template -> 'spec' -> 'containers') as c
-  where
-    path is not null
-  group by
-    name,
-    uid,
-    path,
-    start_line,
-    template;
+  name,
+  coalesce(uid, concat(path, ':', start_line)) as uid,
+  array_agg(c ->> 'name') as containers,
+  array_agg(c ->> 'image') as images,
+  template -> 'metadata' -> 'labels' as pod_labels 
+from
+  kubernetes_pod_template,
+  jsonb_array_elements(template -> 'spec' -> 'containers') as c 
+where
+  path is not null 
+group by
+  name,
+  uid,
+  path,
+  start_line,
+  template;
 ```
