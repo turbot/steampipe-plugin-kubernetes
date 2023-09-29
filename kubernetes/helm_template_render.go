@@ -77,7 +77,7 @@ func getHelmRenderedTemplatesUncached(ctx context.Context, d *plugin.QueryData, 
 	if err != nil {
 		return nil, err
 	}
-	helmConfig := GetConfig(d.Connection)
+	kubernetesConfig := GetConfig(d.Connection)
 
 	var renderedTemplates []HelmRenderedTemplate
 	for _, chart := range charts {
@@ -89,7 +89,7 @@ func getHelmRenderedTemplatesUncached(ctx context.Context, d *plugin.QueryData, 
 		}
 
 		var processedHelmConfigs []string
-		for name, c := range helmConfig.HelmRenderedCharts {
+		for name, c := range kubernetesConfig.HelmRenderedCharts {
 			if c.ChartPath == chart.Path && !helpers.StringSliceContains(processedHelmConfigs, name) {
 
 				// Add the processed Helm render configs into processedHelmConfigs to avoid duplicate entries

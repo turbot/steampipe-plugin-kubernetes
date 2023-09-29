@@ -28,13 +28,12 @@ connection "kubernetes" {
   # If no kubeconfig file can be found, the plugin will attempt to use the service account Kubernetes gives to pods.
   # This authentication method is intended for clients that expect to be running inside a pod running on Kubernetes.
 
-  # Specify the source of the resource. Possible values: `deployed`, `helm`, `manifest`, and `all`.
-  # Default set to `all`. Set the argument to override the default value.
-  # If the value is set to `deployed`, tables will show all the deployed resources.
-  # If set to `helm`, tables will only show resources from the configured helm charts.
-  # If set to `manifest`, tables will show all the resources from the kubernetes manifest. Make sure that the `manifest_file_paths` arg is set.
-  # If `all`, tables will show all the deployed and manifest resources.
-  # source_type = "all"
+  # Specify the source(s) of the resource(s). Possible values: `deployed`, `helm` and `manifest`.
+  # Defaults to all possible values. Set the argument to override the default value.
+  # If `deployed` is contained in the value, tables will show all the deployed resources.
+  # If `helm` is contained in the value, tables will show resources from the configured helm charts.
+  # If `manifest` is contained in the value, tables will show all the resources from the kubernetes manifest. Make sure that the `manifest_file_paths` arg is set.
+  # source_types = ["deployed", "helm", "manifest"]
 
   # Manifest File Configuration
 
