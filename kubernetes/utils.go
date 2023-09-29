@@ -58,6 +58,15 @@ func (sourceType SourceType) String() string {
 	return string(sourceType)
 }
 
+// ToSourceTypes is used to convert SourceType to []string
+func (sourceType SourceType) ToSourceTypes() []string {
+	if sourceType == All {
+		return []string{Deployed.String(), Helm.String(), Manifest.String()}
+	} else {
+		return []string{sourceType.String()}
+	}
+}
+
 // GetNewClientset :: gets client for querying k8s apis for the provided context
 func GetNewClientset(ctx context.Context, d *plugin.QueryData) (*kubernetes.Clientset, error) {
 	logger := plugin.Logger(ctx)
@@ -338,10 +347,15 @@ func getK8Config(ctx context.Context, d *plugin.QueryData) (clientcmd.ClientConf
 
 	// Check for the sourceTypes argument in the config
 	// Default set to include values
-	// TODO: Convert source_type to source_types
-	var sources = []string{"deployed", "helm", "manifest"}
+	var sources = All.ToSourceTypes()
 	if kubernetesConfig.SourceTypes != nil {
 		sources = kubernetesConfig.SourceTypes
+	}
+	// TODO: Remove once `SourceType` is obsolete
+	if kubernetesConfig.SourceTypes == nil && kubernetesConfig.SourceType != nil {
+		if *kubernetesConfig.SourceType != "all" { // if is all, sources is already set by default
+			sources = []string{*kubernetesConfig.SourceType}
+		}
 	}
 
 	if !helpers.StringSliceContains(sources, "deployed") {
@@ -421,10 +435,15 @@ func getK8ConfigRaw(ctx context.Context, cc *connection.ConnectionCache, c *plug
 
 	// Check for the sourceTypes argument in the config.
 	// Default set to include values.
-	// TODO: Convert source_type to source_types
-	var sources = []string{"deployed", "helm", "manifest"}
+	var sources = All.ToSourceTypes()
 	if kubernetesConfig.SourceTypes != nil {
 		sources = kubernetesConfig.SourceTypes
+	}
+	// TODO: Remove once `SourceType` is obsolete
+	if kubernetesConfig.SourceTypes == nil && kubernetesConfig.SourceType != nil {
+		if *kubernetesConfig.SourceType != "all" { // if is all, sources is already set by default
+			sources = []string{*kubernetesConfig.SourceType}
+		}
 	}
 
 	if !helpers.StringSliceContains(sources, "deployed") {
@@ -780,12 +799,17 @@ func resolveManifestFilePaths(ctx context.Context, d *plugin.QueryData) ([]strin
 	// Read the config
 	kubernetesConfig := GetConfig(d.Connection)
 
-	// Check for the sourceTypes argument in the config. Valid values are: "deployed", "manifest" and "all".
+	// Check for the sourceTypes argument in the config. Valid values are: "deployed", "manifest" and "helm".
 	// Default set to include values.
-	// TODO: Convert source_type to source_types
-	var sources = []string{"deployed", "helm", "manifest"}
+	var sources = All.ToSourceTypes()
 	if kubernetesConfig.SourceTypes != nil {
 		sources = kubernetesConfig.SourceTypes
+	}
+	// TODO: Remove once `SourceType` is obsolete
+	if kubernetesConfig.SourceTypes == nil && kubernetesConfig.SourceType != nil {
+		if *kubernetesConfig.SourceType != "all" { // if is all, sources is already set by default
+			sources = []string{*kubernetesConfig.SourceType}
+		}
 	}
 
 	if !helpers.StringSliceContains(sources, "manifest") {
