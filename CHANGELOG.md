@@ -1,3 +1,17 @@
+## v0.24.0 [2023-09-29]
+
+_Deprecated_
+
+- The `source_type` config argument has been deprecated and will be removed in the next major version. Please use the `source_types` config argument instead. If both config arguments are set, `source_types` will take precedence. For backward compatibility, please see below for old and new value equivalents: ([#167](https://github.com/turbot/steampipe-plugin-kubernetes/pull/167))
+  - `source_type = 'all'` : `source_types = ["deployed", "helm", "manifest"]`
+  - `source_type = 'deployed'` : `source_types = ["deployed"]`
+  - `source_type = 'helm'` : `source_types = ["helm"]`
+  - `source_type = 'manifest'` : `source_types = ["manifest"]`
+
+_What's new?_
+
+- Added the `source_types` config argument, which allows specifying a combination of source types to load per connection. ([#167](https://github.com/turbot/steampipe-plugin-kubernetes/pull/167))
+
 ## v0.23.0 [2023-09-26]
 
 _What's new?_
