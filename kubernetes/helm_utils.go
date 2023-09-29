@@ -48,10 +48,15 @@ func parsedHelmChartUncached(ctx context.Context, d *plugin.QueryData, _ *plugin
 
 	// Check for the sourceTypes argument in the config.
 	// Default set to include values.
-	// TODO: Convert source_type to source_types
-	var sources = []string{"deployed", "helm", "manifest"}
+	var sources = All.ToSourceTypes()
 	if kubernetesConfig.SourceTypes != nil {
 		sources = kubernetesConfig.SourceTypes
+	}
+	// TODO: Remove once `SourceType` is obsolete
+	if kubernetesConfig.SourceTypes == nil && kubernetesConfig.SourceType != nil {
+		if *kubernetesConfig.SourceType != "all" { // if is all, sources is already set by default
+			sources = []string{*kubernetesConfig.SourceType}
+		}
 	}
 
 	if !helpers.StringSliceContains(sources, "helm") {
