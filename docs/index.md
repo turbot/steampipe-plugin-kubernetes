@@ -179,7 +179,7 @@ connection "kubernetes" {
 
 **Note**: If any path matches on `*` without `.yml` or `.yaml` or `.json`, all files (including non-Kubernetes manifest files) in the directory will be matched, which may cause errors if incompatible file types exist.
 
-By default the plugin always lists the resources deployed in the current Kubernetes cluster context. If you want to restrict this behavior to read resource configurations from the configured manifest files only, add the `source_type` argument to the config and set the value to `manifest`. For example:
+By default the plugin always lists the resources deployed in the current Kubernetes cluster context. If you want to restrict this behavior to read resource configurations from the configured manifest files only, add the `source_types` argument to the config and set the value to `manifest`. For example:
 
 ```hcl
 connection "kubernetes" {
@@ -187,7 +187,7 @@ connection "kubernetes" {
 
   manifest_file_paths = [ ... ]
 
-  source_type = "manifest"
+  source_types = ["manifest"]
 }
 ```
 
