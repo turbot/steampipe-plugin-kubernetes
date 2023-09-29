@@ -43,6 +43,7 @@ connection "kubernetes" {
   plugin         = "kubernetes"
   config_path    = "~/.kube/config"
   config_context = "myCluster"
+  source_types   = ["deployed"]
 }
 ```
 
@@ -113,12 +114,14 @@ connection "kubernetes_cluster_aks" {
   plugin         = "kubernetes"
   config_path    = "~/.kube/config"
   config_context = "myAKSCluster"
+  source_types   = ["deployed"]
 }
 
 connection "kubernetes_cluster_eks" {
   plugin         = "kubernetes"
   config_path    = "~/.kube/config"
   config_context = "arn:aws:eks:us-east-1:123456789012:cluster/myEKSCluster"
+  source_types   = ["deployed"]
 }
 ```
 
@@ -174,6 +177,8 @@ connection "kubernetes" {
     "github.com/GoogleCloudPlatform/microservices-demo//release//kubernetes-manifests.yaml",
     "s3::https://bucket.s3.us-east-1.amazonaws.com/test_folder//*.yml"
   ]
+  
+  source_types = ["manifest"]
 }
 ```
 
@@ -209,6 +214,8 @@ connection "kubernetes" {
   plugin = "kubernetes"
 
   manifest_file_paths = [ "*.yml", "*.yaml", "*.json", "/path/to/dir/main.yml" ]
+  
+  source_types = ["manifest"]
 }
 ```
 
@@ -230,6 +237,8 @@ connection "kubernetes" {
   plugin = "kubernetes"
 
   manifest_file_paths = [ "bitbucket.org/atlassian/kubectl-run//test/kustomization//deploy.yml" ]
+  
+  source_types = ["manifest"]
 }
 ```
 
@@ -255,6 +264,8 @@ connection "kubernetes" {
     "s3::https://bucket-2.s3.us-east-1.amazonaws.com//*.yml?aws_profile=<AWS_PROFILE>",
     "s3::https://bucket-2.s3.us-east-1.amazonaws.com/test_folder//*.yaml?aws_profile=<AWS_PROFILE>"
   ]
+  
+  source_types = ["manifest"]
 }
 ```
 
@@ -299,6 +310,8 @@ connection "kubernetes" {
     "s3::https://bucket-1.s3.us-east-1.amazonaws.com/test_folder//*.yml",
     "s3::https://bucket-2.s3.us-east-1.amazonaws.com/test_folder//**/*.yaml"
   ]
+  
+  source_types = ["manifest"]
 }
 ```
 
@@ -332,6 +345,8 @@ connection "kubernetes" {
       values_file_paths = [] # works with values from chart's default values.yaml file
     }
   }
+  
+  source_types = ["helm"]
 }
 ```
 
