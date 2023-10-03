@@ -812,14 +812,12 @@ func resolveManifestFilePaths(ctx context.Context, d *plugin.QueryData) ([]strin
 		}
 	}
 
+	// Return no files if manifest not set in source_types or if we omit setting any file paths
 	if !helpers.StringSliceContains(sources, "manifest") {
 		return nil, nil
 	}
-
-	// Return error if source_types arg includes "manifest" in the config, but
-	// manifest_file_paths arg is not set.
 	if kubernetesConfig.ManifestFilePaths == nil {
-		return nil, errors.New("manifest_file_paths must be set in the config while the source_types includes 'manifest'")
+		return nil, nil
 	}
 
 	// Gather file path matches for the glob
