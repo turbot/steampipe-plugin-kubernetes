@@ -1,3 +1,13 @@
+## v0.25.1 [2023-10-03]
+
+_Bug fixes_
+
+- Fixed the plugin to prevent crashes when `source_types` config argument contains `manifest` but `manifest_file_paths` is not defined. ([#177](https://github.com/turbot/steampipe-plugin-kubernetes/pull/177))
+
+_Dependencies_
+
+- Recompiled plugin with [steampipe-plugin-sdk v5.6.2](https://github.com/turbot/steampipe-plugin-sdk/blob/main/CHANGELOG.md#v562-2023-10-03) which prevents nil pointer reference errors for implicit hydrate configs. ([#178](https://github.com/turbot/steampipe-plugin-kubernetes/pull/178))
+
 ## v0.25.0 [2023-10-02]
 
 _Dependencies_
