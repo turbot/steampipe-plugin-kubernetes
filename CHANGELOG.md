@@ -2,7 +2,7 @@
 
 _Bug fixes_
 
-- Fixed the plugin to not crash when `source_types` config argument contains `manifest` but `manifest_file_paths` is not defined. ([#177](https://github.com/turbot/steampipe-plugin-kubernetes/pull/177))
+- Fixed the plugin to no longer crash when `source_types` config argument contains `manifest` but `manifest_file_paths` is not defined. ([#177](https://github.com/turbot/steampipe-plugin-kubernetes/pull/177))
 
 _Dependencies_
 
