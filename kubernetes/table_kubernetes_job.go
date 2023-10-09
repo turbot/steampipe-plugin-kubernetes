@@ -213,7 +213,7 @@ func listK8sJobs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 	pageLeft := true
 
 	for pageLeft {
-		response, err = clientset.BatchV1().Jobs("").List(ctx, input)
+		response, err = clientset.BatchV1().Jobs(d.EqualsQualString("namespace")).List(ctx, input)
 		if err != nil {
 			return nil, err
 		}

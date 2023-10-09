@@ -136,7 +136,7 @@ func listK8sConfigMaps(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 	pageLeft := true
 
 	for pageLeft {
-		response, err = clientset.CoreV1().ConfigMaps("").List(ctx, input)
+		response, err = clientset.CoreV1().ConfigMaps(d.EqualsQualString("namespace")).List(ctx, input)
 		if err != nil {
 			return nil, err
 		}

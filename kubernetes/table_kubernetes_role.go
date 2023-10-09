@@ -125,7 +125,7 @@ func listK8sRoles(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 	pageLeft := true
 
 	for pageLeft {
-		response, err = clientset.RbacV1().Roles("").List(ctx, input)
+		response, err = clientset.RbacV1().Roles(d.EqualsQualString("namespace")).List(ctx, input)
 		if err != nil {
 			return nil, err
 		}

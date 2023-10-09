@@ -241,7 +241,7 @@ func listK8sServices(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 	pageLeft := true
 
 	for pageLeft {
-		response, err = clientset.CoreV1().Services("").List(ctx, input)
+		response, err = clientset.CoreV1().Services(d.EqualsQualString("namespace")).List(ctx, input)
 		if err != nil {
 			return nil, err
 		}

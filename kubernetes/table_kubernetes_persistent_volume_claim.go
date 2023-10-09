@@ -189,7 +189,7 @@ func listK8sPVCs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 	pageLeft := true
 
 	for pageLeft {
-		response, err = clientset.CoreV1().PersistentVolumeClaims("").List(ctx, input)
+		response, err = clientset.CoreV1().PersistentVolumeClaims(d.EqualsQualString("namespace")).List(ctx, input)
 		if err != nil {
 			return nil, err
 		}

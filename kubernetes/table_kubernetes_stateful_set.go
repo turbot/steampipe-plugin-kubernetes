@@ -211,7 +211,7 @@ func listK8sStatefulSets(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 	pageLeft := true
 
 	for pageLeft {
-		response, err = clientset.AppsV1().StatefulSets("").List(ctx, input)
+		response, err = clientset.AppsV1().StatefulSets(d.EqualsQualString("namespace")).List(ctx, input)
 		if err != nil {
 			return nil, err
 		}

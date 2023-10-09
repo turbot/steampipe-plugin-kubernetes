@@ -148,7 +148,7 @@ func listK8sSecrets(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateD
 	pageLeft := true
 
 	for pageLeft {
-		response, err = clientset.CoreV1().Secrets("").List(ctx, input)
+		response, err = clientset.CoreV1().Secrets(d.EqualsQualString("namespace")).List(ctx, input)
 		if err != nil {
 			return nil, err
 		}
