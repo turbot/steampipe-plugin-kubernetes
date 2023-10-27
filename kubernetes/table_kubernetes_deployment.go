@@ -227,7 +227,7 @@ func listK8sDeployments(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 
 	for pageLeft {
 
-		response, err = clientset.AppsV1().Deployments("").List(ctx, input)
+		response, err = clientset.AppsV1().Deployments(d.EqualsQualString("namespace")).List(ctx, input)
 		if err != nil {
 			return nil, err
 		}

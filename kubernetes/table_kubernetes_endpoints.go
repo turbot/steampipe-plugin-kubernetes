@@ -125,7 +125,7 @@ func listK8sEnpoints(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 	pageLeft := true
 
 	for pageLeft {
-		response, err = clientset.CoreV1().Endpoints("").List(ctx, input)
+		response, err = clientset.CoreV1().Endpoints(d.EqualsQualString("namespace")).List(ctx, input)
 		if err != nil {
 			return nil, err
 		}

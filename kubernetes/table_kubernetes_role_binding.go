@@ -145,7 +145,7 @@ func listK8sRoleBindings(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 	pageLeft := true
 
 	for pageLeft {
-		response, err = clientset.RbacV1().RoleBindings("").List(ctx, input)
+		response, err = clientset.RbacV1().RoleBindings(d.EqualsQualString("namespace")).List(ctx, input)
 		if err != nil {
 			return nil, err
 		}

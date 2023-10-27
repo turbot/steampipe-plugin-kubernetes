@@ -182,7 +182,7 @@ func listK8sCronJobs(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrate
 	var response *v1.CronJobList
 	pageLeft := true
 	for pageLeft {
-		response, err = clientset.BatchV1().CronJobs("").List(ctx, input)
+		response, err = clientset.BatchV1().CronJobs(d.EqualsQualString("namespace")).List(ctx, input)
 		if err != nil {
 			logger.Error("listK8sCronJobs", "list_err", err)
 			return nil, err

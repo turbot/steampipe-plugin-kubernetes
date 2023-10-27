@@ -190,7 +190,7 @@ func listK8sReplicaSets(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydr
 	pageLeft := true
 
 	for pageLeft {
-		response, err = clientset.AppsV1().ReplicaSets("").List(ctx, input)
+		response, err = clientset.AppsV1().ReplicaSets(d.EqualsQualString("namespace")).List(ctx, input)
 		if err != nil {
 			return nil, err
 		}

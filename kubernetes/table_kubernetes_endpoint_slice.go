@@ -135,7 +135,7 @@ func listK8sEnpointSlices(ctx context.Context, d *plugin.QueryData, _ *plugin.Hy
 	pageLeft := true
 
 	for pageLeft {
-		response, err = clientset.DiscoveryV1().EndpointSlices("").List(ctx, input)
+		response, err = clientset.DiscoveryV1().EndpointSlices(d.EqualsQualString("namespace")).List(ctx, input)
 		if err != nil {
 			return nil, err
 		}

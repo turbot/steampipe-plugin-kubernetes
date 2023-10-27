@@ -153,7 +153,7 @@ func listK8sResourceQuotas(ctx context.Context, d *plugin.QueryData, h *plugin.H
 	pageLeft := true
 
 	for pageLeft {
-		response, err = clientset.CoreV1().ResourceQuotas("").List(ctx, input)
+		response, err = clientset.CoreV1().ResourceQuotas(d.EqualsQualString("namespace")).List(ctx, input)
 		if err != nil {
 			return nil, err
 		}

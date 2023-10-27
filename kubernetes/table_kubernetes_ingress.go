@@ -153,7 +153,7 @@ func listK8sIngresses(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydrat
 	pageLeft := true
 
 	for pageLeft {
-		response, err = clientset.NetworkingV1().Ingresses("").List(ctx, input)
+		response, err = clientset.NetworkingV1().Ingresses(d.EqualsQualString("namespace")).List(ctx, input)
 		if err != nil {
 			return nil, err
 		}

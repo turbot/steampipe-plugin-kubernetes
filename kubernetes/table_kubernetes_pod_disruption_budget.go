@@ -141,7 +141,7 @@ func listPDBs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (
 	pageLeft := true
 
 	for pageLeft {
-		response, err = clientset.PolicyV1().PodDisruptionBudgets("").List(ctx, input)
+		response, err = clientset.PolicyV1().PodDisruptionBudgets(d.EqualsQualString("namespace")).List(ctx, input)
 		if err != nil {
 			return nil, err
 		}

@@ -127,7 +127,7 @@ func listK8sLimitRanges(ctx context.Context, d *plugin.QueryData, h *plugin.Hydr
 	pageLeft := true
 
 	for pageLeft {
-		response, err = clientset.CoreV1().LimitRanges("").List(ctx, input)
+		response, err = clientset.CoreV1().LimitRanges(d.EqualsQualString("namespace")).List(ctx, input)
 		if err != nil {
 			return nil, err
 		}

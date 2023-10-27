@@ -636,10 +636,6 @@ func getCommonOptionalKeyQualsValueForFieldSelector(d *plugin.QueryData) []strin
 		fieldSelectors = append(fieldSelectors, fmt.Sprintf("metadata.name=%v", d.EqualsQualString("name")))
 	}
 
-	if d.EqualsQualString("namespace") != "" {
-		fieldSelectors = append(fieldSelectors, fmt.Sprintf("metadata.namespace=%v", d.EqualsQualString("namespace")))
-	}
-
 	return fieldSelectors
 }
 

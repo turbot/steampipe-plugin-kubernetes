@@ -145,7 +145,7 @@ func listK8sNetworkPolicies(ctx context.Context, d *plugin.QueryData, _ *plugin.
 	pageLeft := true
 
 	for pageLeft {
-		response, err = clientset.NetworkingV1().NetworkPolicies("").List(ctx, input)
+		response, err = clientset.NetworkingV1().NetworkPolicies(d.EqualsQualString("namespace")).List(ctx, input)
 		if err != nil {
 			return nil, err
 		}

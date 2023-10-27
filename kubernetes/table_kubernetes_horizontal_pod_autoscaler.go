@@ -193,7 +193,7 @@ func listK8sHPAs(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 	pageLeft := true
 
 	for pageLeft {
-		response, err = clientset.AutoscalingV1().HorizontalPodAutoscalers("").List(ctx, input)
+		response, err = clientset.AutoscalingV1().HorizontalPodAutoscalers(d.EqualsQualString("namespace")).List(ctx, input)
 		if err != nil {
 			plugin.Logger(ctx).Error("listK8sHPAs", "api_err", err)
 			return nil, err
