@@ -1,8 +1,8 @@
-## v0.25.2 [2023-10-27]
+## v0.25.2 [2023-11-21]
 
 _Bug fixes_
 
-- Fixed the plugin to pass the namespace qualifier to the kubernetes API client when querying namespace scoped resources. ([#181](https://github.com/turbot/steampipe-plugin-kubernetes/pull/181)) (Thanks [@pdecat](https://github.com/pdecat) for the contribution!!)
+- Fixed the plugin to pass the namespace qualifier to the Kubernetes API client when querying namespace scoped resources. ([#181](https://github.com/turbot/steampipe-plugin-kubernetes/pull/181)) (Thanks [@pdecat](https://github.com/pdecat) for the contribution!!)
 
 ## v0.25.1 [2023-10-03]
 
