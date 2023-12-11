@@ -8,6 +8,7 @@ short_name: "kubernetes"
 description: "Steampipe plugin for Kubernetes components."
 og_description: "Query Kubernetes with SQL! Open source CLI. No DB required."
 og_image: "/images/plugins/turbot/kubernetes-social-graphic.png"
+engines: ["steampipe", "sqlite", "postgres", "export"]
 ---
 
 # Kubernetes + Steampipe
