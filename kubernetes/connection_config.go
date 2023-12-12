@@ -6,11 +6,11 @@ import (
 
 type kubernetesConfig struct {
 	ConfigPaths          []string               `hcl:"config_paths,optional"`
-	ConfigPath           *string                `hcl:"config_path,optional"`
-	ConfigContext        *string                `hcl:"config_context,optional"`
+	ConfigPath           *string                `hcl:"config_path"`
+	ConfigContext        *string                `hcl:"config_context"`
 	CustomResourceTables []string               `hcl:"custom_resource_tables,optional"`
 	ManifestFilePaths    []string               `hcl:"manifest_file_paths,optional" steampipe:"watch"`
-	SourceType           *string                `hcl:"source_type,optional"`
+	SourceType           *string                `hcl:"source_type"`
 	SourceTypes          []string               `hcl:"source_types,optional"`
 	HelmRenderedCharts   map[string]chartConfig `hcl:"helm_rendered_charts,optional"`
 }
