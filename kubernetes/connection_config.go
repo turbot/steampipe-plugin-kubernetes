@@ -17,7 +17,7 @@ type kubernetesConfig struct {
 
 type chartConfig struct {
 	ChartPath       string   `hcl:"chart_path" cty:"chart_path"`
-	ValuesFilePaths []string `hcl:"values_file_paths" cty:"values_file_paths"`
+	ValuesFilePaths []string `hcl:"values_file_paths,optional" cty:"values_file_paths"`
 }
 
 // GetConfig :: retrieve and cast connection config from query data
