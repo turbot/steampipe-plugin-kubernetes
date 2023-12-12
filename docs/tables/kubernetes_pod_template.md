@@ -1,14 +1,22 @@
-# Table: kubernetes_pod_template
+---
+title: "Steampipe Table: kubernetes_pod_template - Query Kubernetes Pod Templates using SQL"
+description: "Allows users to query Kubernetes Pod Templates, specifically providing insights into the template's metadata, specification, and status."
+---
 
-A PodTemplate is a Kubernetes resource that defines the desired specification for Pods created or managed by various controllers, such as Deployments, StatefulSets, and CronJobs. It allows you to define a reusable configuration for Pods, reducing duplication and simplifying updates across multiple resources.
+# Table: kubernetes_pod_template - Query Kubernetes Pod Templates using SQL
 
-A Pod is a group of one or more containers, with shared storage and network resources, and a specification for how to run the containers.
+A Kubernetes Pod Template is a pod specification which produces the same pod each time it is instantiated. It is used to create a pod directly, or it is nested inside replication controllers, jobs, replicasets, etc. A Pod Template in a workload object must have a Labels field and it must match the selector of its controlling workload object.
+
+## Table Usage Guide
+
+The `kubernetes_pod_template` table provides insights into pod templates within Kubernetes. As a Kubernetes administrator, you can explore pod template-specific details through this table, including metadata, specifications, and status. Utilize it to uncover information about pod templates, such as those with specific labels, the replication controllers they are nested in, and the status of each pod template.
 
 ## Examples
 
 ### Basic info
+Discover the segments that show the age of pod templates in your Kubernetes environment, along with the count of various container types. This can help in managing resources and understanding the capacity usage within your system.
 
-```sql
+```sql+postgres
 select
   name,
   namespace,
@@ -24,9 +32,26 @@ order by
   name;
 ```
 
-### List pod templates with privileged pod containers
+```sql+sqlite
+select
+  name,
+  namespace,
+  julianday('now') - julianday(creation_timestamp) as age,
+  json_extract(template, '$.spec.node_name') as pod_node_name,
+  json_array_length(json_extract(template, '$.spec.containers')) as container_count,
+  json_array_length(json_extract(template, '$.spec.pod_init_containers')) as init_container_count,
+  json_array_length(json_extract(template, '$.spec.pod_ephemeral_containers')) as ephemeral_container_count
+from
+  kubernetes_pod_template
+order by
+  namespace,
+  name;
+```
 
-```sql
+### List pod templates with privileged pod containers
+Uncover the details of your system's pod templates which contain privileged pod containers. This allows you to assess the security implications and manage the risk associated with these privileged containers.
+
+```sql+postgres
 select
   name,
   namespace,
@@ -40,9 +65,24 @@ where
   c -> 'securityContext' ->> 'privileged' = 'true';
 ```
 
-### List pod templates with pod access to the host process ID, IPC, or network namespace
+```sql+sqlite
+select
+  name,
+  namespace,
+  json_extract(template, '$.metadata.name') as pod_name,
+  json_extract(c.value, '$.name') as container_name,
+  json_extract(c.value, '$.image') as container_image
+from
+  kubernetes_pod_template,
+  json_each(json_extract(template, '$.spec.containers')) as c
+where
+  json_extract(c.value, '$.securityContext.privileged') = 'true';
+```
 
-```sql
+### List pod templates with pod access to the host process ID, IPC, or network namespace
+Explore which pod templates have access to the host process ID, IPC, or network namespace. This is useful for identifying potential security risks and ensuring appropriate access control in a Kubernetes environment.
+
+```sql+postgres
 select
   name,
   namespace,
@@ -58,9 +98,26 @@ where
   or (template -> 'spec' -> 'host_network')::boolean;
 ```
 
-### `kubectl get podtemplates` columns
+```sql+sqlite
+select
+  name,
+  namespace,
+  json_extract(template, '$.metadata.name') as pod_name,
+  json_extract(template, '$.spec.host_pid') as pod_host_pid,
+  json_extract(template, '$.spec.host_ipc') as pod_host_ipc,
+  json_extract(template, '$.spec.host_network') as pod_host_network
+from
+  kubernetes_pod_template
+where
+  json_extract(template, '$.spec.host_pid') = 1
+  or json_extract(template, '$.spec.host_ipc') = 1
+  or json_extract(template, '$.spec.host_network') = 1;
+```
 
-```sql
+### `kubectl get podtemplates` columns
+Determine the areas in which Kubernetes pod templates are deployed. This query helps in identifying the containers and images used, along with the associated pod labels, providing a comprehensive summary of your Kubernetes deployment.
+
+```sql+postgres
 select
   name,
   coalesce(uid, concat(path, ':', start_line)) as uid,
@@ -80,9 +137,30 @@ group by
   template;
 ```
 
-### List pod templates that have a container with profiling argument set to false
+```sql+sqlite
+select
+  name,
+  coalesce(uid, path || ':' || start_line) as uid,
+  group_concat(json_extract(c.value, '$.name')) as containers,
+  group_concat(json_extract(c.value, '$.image')) as images,
+  json_extract(template, '$.metadata.labels') as pod_labels 
+from
+  kubernetes_pod_template,
+  json_each(json_extract(template, '$.spec.containers')) as c 
+where
+  source_type = 'deployed' 
+group by
+  name,
+  uid,
+  path,
+  start_line,
+  template;
+```
 
-```sql
+### List pod templates that have a container with profiling argument set to false
+Determine the areas in which pod templates contain a container with a disabled profiling argument. This is useful for ensuring optimal performance and security within your Kubernetes environment.
+
+```sql+postgres
 select
   name as pod_template_name,
   namespace,
@@ -104,9 +182,14 @@ where
   @ > '["--profiling=false"]';
 ```
 
-### List manifest pod template resources
+```sql+sqlite
+Error: The corresponding SQLite query is unavailable.
+```
 
-```sql
+### List manifest pod template resources
+This query allows you to analyze the resources of manifest pod templates in a Kubernetes cluster. It's particularly useful for gaining insights into the containers, images, and pod labels associated with each pod template, helping to enhance management and optimization of the cluster.
+
+```sql+postgres
 select
   name,
   coalesce(uid, concat(path, ':', start_line)) as uid,
@@ -116,6 +199,26 @@ select
 from
   kubernetes_pod_template,
   jsonb_array_elements(template -> 'spec' -> 'containers') as c 
+where
+  path is not null 
+group by
+  name,
+  uid,
+  path,
+  start_line,
+  template;
+```
+
+```sql+sqlite
+select
+  name,
+  coalesce(uid, path || ':' || start_line) as uid,
+  group_concat(json_extract(c.value, '$.name')) as containers,
+  group_concat(json_extract(c.value, '$.image')) as images,
+  json_extract(template, '$.metadata.labels') as pod_labels 
+from
+  kubernetes_pod_template,
+  json_each(json_extract(template, '$.spec.containers')) as c 
 where
   path is not null 
 group by
