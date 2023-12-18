@@ -47,7 +47,7 @@ func getCustomResourcesDynamicColumns(ctx context.Context, versionSchemaSpec int
 	columns := []*plugin.Column{}
 
 	// default metadata columns
-	allColumns := []string{"name", "uid", "kind", "api_version", "namespace", "creation_timestamp", "labels", "start_line", "end_line", "path", "source_type", "context_name"}
+	allColumns := []string{"name", "uid", "kind", "api_version", "namespace", "creation_timestamp", "labels", "start_line", "end_line", "path", "source_type", "annotations", "context_name"}
 
 	// add the spec columns
 	flag := 0
@@ -162,6 +162,7 @@ func listK8sCustomResources(ctx context.Context, crdName string, resourceName st
 				Kind:              deployment.GetKind(),
 				Namespace:         deployment.GetNamespace(),
 				CreationTimestamp: deployment.GetCreationTimestamp(),
+				Annotations:       deployment.GetAnnotations(),
 				Labels:            deployment.GetLabels(),
 				Spec:              data["spec"],
 				Status:            data["status"],
@@ -204,6 +205,7 @@ func listK8sCustomResources(ctx context.Context, crdName string, resourceName st
 				APIVersion:        crd.GetAPIVersion(),
 				Kind:              crd.GetKind(),
 				Namespace:         crd.GetNamespace(),
+				Annotations:       crd.GetAnnotations(),
 				CreationTimestamp: crd.GetCreationTimestamp(),
 				Labels:            crd.GetLabels(),
 				Spec:              data["spec"],
