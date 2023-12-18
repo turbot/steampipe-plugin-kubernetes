@@ -173,7 +173,7 @@ Similarly, the plugin also allows reading the CRDs and custom resource configura
 ```hcl
 connection "kubernetes" {
   plugin = "kubernetes"
-  
+
   custom_resource_tables = ["*"]
 
   # both CRD and custom resource configurations are from manifests
@@ -186,7 +186,7 @@ connection "kubernetes" {
 ```hcl
 connection "kubernetes" {
   plugin = "kubernetes"
-  
+
   custom_resource_tables = ["*"]
 
   # CRD is already deployed, and the resource configuration will be taken from manifest
@@ -222,6 +222,21 @@ from
   kubernetes_certificate
 where
   creation_timestamp = now() - interval '24 hrs';
+```
+
+### List certificates by annotation key
+
+```sql
+select
+  name,
+  uid,
+  namespace,
+  annotations,
+  labels
+from
+  kubernetes_certificate
+where
+  annotations -> 'foo' is not null;
 ```
 
 ### List ISCA certificates
