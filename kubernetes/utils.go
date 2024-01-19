@@ -986,12 +986,12 @@ func treeToList(tree *goYaml.Node, prefix []string, rows *Rows, preComments []st
 	}
 }
 
-func keysToSnakeCase(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	keys := d.Value.([]string)
-	snakes := []string{}
-	re := regexp.MustCompile(`[^A-Za-z0-9_]`)
-	for _, k := range keys {
-		snakes = append(snakes, re.ReplaceAllString(k, "_"))
-	}
-	return strings.Join(snakes, "."), nil
-}
+// func keysToSnakeCase(_ context.Context, d *transform.TransformData) (interface{}, error) {
+// 	keys := d.Value.([]string)
+// 	snakes := []string{}
+// 	re := regexp.MustCompile(`[^A-Za-z0-9_]`)
+// 	for _, k := range keys {
+// 		snakes = append(snakes, re.ReplaceAllString(k, "_"))
+// 	}
+// 	return strings.Join(snakes, "."), nil
+// }

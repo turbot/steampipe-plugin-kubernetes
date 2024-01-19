@@ -46,7 +46,6 @@ Analyze the settings to understand the default configurations set in a specific 
 ```sql+postgres
 select
   path,
-  key_path,
   value,
   start_line,
   start_column
@@ -61,7 +60,6 @@ order by
 ```sql+sqlite
 select
   path,
-  key_path,
   value,
   start_line,
   start_column
@@ -79,7 +77,6 @@ Explore which values are being used from a specific file in your Helm configurat
 ```sql+postgres
 select
   path,
-  key_path,
   value,
   start_line,
   start_column
@@ -94,7 +91,6 @@ order by
 ```sql+sqlite
 select
   path,
-  key_path,
   value,
   start_line,
   start_column
