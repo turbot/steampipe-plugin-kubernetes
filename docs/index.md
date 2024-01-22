@@ -8,11 +8,12 @@ short_name: "kubernetes"
 description: "Steampipe plugin for Kubernetes components."
 og_description: "Query Kubernetes with SQL! Open source CLI. No DB required."
 og_image: "/images/plugins/turbot/kubernetes-social-graphic.png"
+engines: ["steampipe", "sqlite", "postgres", "export"]
 ---
 
 # Kubernetes + Steampipe
 
-[Steampipe](https://steampipe.io) is an open source CLI to instantly query cloud APIs using SQL.
+[Steampipe](https://steampipe.io) is an open-source zero-ETL engine to instantly query cloud APIs using SQL.
 
 [Kubernetes](https://kubernetes.io) is an open-source system for automating deployment, scaling, and management of containerized applications.
 

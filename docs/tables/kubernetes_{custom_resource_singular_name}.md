@@ -1,4 +1,15 @@
-# Table: kubernetes_{custom_resource_singular_name}
+---
+title: "Steampipe Table: kubernetes_{custom_resource_singular_name} - Query Kubernetes Custom Resources using SQL"
+description: "Allows users to query Kubernetes Custom Resources, specifically the custom resource definitions (CRDs) and their corresponding details."
+---
+
+# Table: kubernetes_{custom_resource_singular_name} - Query Kubernetes Custom Resources using SQL
+
+Kubernetes Custom Resources are extensions of the Kubernetes API. A Custom Resource Definition (CRD) is a built-in API that allows you to define your own custom types of resources. These custom resources act like any other native Kubernetes object, providing the same functionalities.
+
+## Table Usage Guide
+
+The `kubernetes_{custom_resource_singular_name}` table provides insights into the custom resources within Kubernetes. As a Kubernetes administrator, you can explore custom resource-specific details through this table, including their definitions, specifications, and associated metadata. Utilize it to uncover information about custom resources, such as their status, the version of the custom resource definition they are associated with, and their scope.
 
 Query data from the custom resource called `kubernetes_{custom_resource_singular_name}`, e.g., `kubernetes_certificate`, `kubernetes_capacityrequest`. A table is automatically created to represent each custom resource.
 
@@ -197,8 +208,20 @@ connection "kubernetes" {
 ## Examples
 
 ### List all certificates
+Explore which certificates are present, their unique identifiers, and the time of their creation to gain insights into the system's security infrastructure and its evolution over time. This information is crucial for maintaining the security integrity of the system and planning future updates or modifications.
 
-```sql
+```sql+postgres
+select
+  name,
+  uid,
+  namespace,
+  creation_timestamp,
+  api_version
+from
+  kubernetes_certificate;
+```
+
+```sql+sqlite
 select
   name,
   uid,
@@ -210,8 +233,9 @@ from
 ```
 
 ### List certificates added in the last 24 hours
+Discover the certificates that have been added recently to maintain an up-to-date understanding of your Kubernetes environment. This can be useful for tracking changes and ensuring new additions are properly configured and secured.
 
-```sql
+```sql+postgres
 select
   name,
   uid,
@@ -225,8 +249,9 @@ where
 ```
 
 ### List certificates by annotation key
+Explore which Kubernetes certificates are designated as certificate authorities by annotation key.
 
-```sql
+```sql+postgres
 select
   name,
   uid,
@@ -239,9 +264,23 @@ where
   annotations -> 'foo' is not null;
 ```
 
-### List ISCA certificates
+```sql+sqlite
+select
+  name,
+  uid,
+  namespace,
+  json_extract(annotations, '$.foo') as foo_annotation,
+  labels
+from
+  kubernetes_certificate
+where
+  json_extract(annotations, '$.foo') is not null;
+```
 
-```sql
+### List ISCA certificates
+Explore which Kubernetes certificates are designated as certificate authorities. This is useful to understand the hierarchy and trust relationships within your Kubernetes environment.
+
+```sql+postgres
 select
   name,
   uid,
@@ -254,9 +293,23 @@ where
   is_ca;
 ```
 
-### List expired certificates
+```sql+sqlite
+select
+  name,
+  uid,
+  namespace,
+  creation_timestamp,
+  api_version
+from
+  kubernetes_certificate
+where
+  is_ca = 1;
+```
 
-```sql
+### List expired certificates
+Identify instances where your Kubernetes certificates have expired. This is beneficial in maintaining the security and integrity of your system by ensuring all certificates are up to date.
+
+```sql+postgres
 select
   name,
   uid,
@@ -267,4 +320,17 @@ from
   kubernetes_certificate
 where
   now() > to_timestamp(not_after,'YYYY-MM-DD');
+```
+
+```sql+sqlite
+select
+  name,
+  uid,
+  namespace,
+  creation_timestamp,
+  api_version
+from
+  kubernetes_certificate
+where
+  datetime('now') > datetime(not_after);
 ```
