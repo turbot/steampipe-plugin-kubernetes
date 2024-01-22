@@ -88,6 +88,7 @@ func k8sCRDResourceCommonColumns(columns []*plugin.Column) []*plugin.Column {
 		{Name: "labels", Type: proto.ColumnType_JSON, Description: "Map of string keys and values that can be used to organize and categorize (scope and select) objects. May match selectors of replication controllers and services."},
 		{Name: "context_name", Type: proto.ColumnType_STRING, Description: "Kubectl config context name.", Transform: transform.FromField("ContextName").Transform(transform.NullIfZeroValue)},
 		{Name: "source_type", Type: proto.ColumnType_STRING, Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest."},
+		{Name: "annotations", Type: proto.ColumnType_JSON, Description: "Annotations is an unstructured key value map stored with a resource that may be set by external tools to store and retrieve arbitrary metadata."},
 	}
 	allColumns = append(allColumns, columns...)
 	allColumns = append(allColumns, manifestResourceColumns()...)
