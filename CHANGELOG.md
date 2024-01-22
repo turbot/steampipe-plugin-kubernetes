@@ -1,3 +1,10 @@
+## v0.27.0 [2024-01-22]
+
+_Enhancements_
+
+- Added the `annotations` columns on all CRD resources. ([#202](https://github.com/turbot/steampipe-plugin-kubernetes/pull/202))
+- Updated the API version for table `kubernetes_horizontal_pod_autoscaler`. ([#190](https://github.com/turbot/steampipe-plugin-kubernetes/pull/190))
+
 ## v0.26.0 [2023-12-12]
 
 _What's new?_
