@@ -22,7 +22,7 @@ func tableHelmValue(ctx context.Context) *plugin.Table {
 		},
 		Columns: []*plugin.Column{
 			{Name: "path", Type: proto.ColumnType_STRING, Description: "Name is the path-like name of the template."},
-			{Name: "key_path", Type: proto.ColumnType_LTREE, Transform: transform.FromField("Key").Transform(keysToSnakeCase), Description: "Specifies full path of a key in YML file."},
+			// {Name: "key_path", Type: proto.ColumnType_LTREE, Transform: transform.FromField("Key").Transform(keysToSnakeCase), Description: "Specifies full path of a key in YML file."},
 			{Name: "value", Type: proto.ColumnType_STRING, Description: "Specifies the value of the corresponding key."},
 			{Name: "keys", Type: proto.ColumnType_JSON, Transform: transform.FromField("Key"), Description: "The array representation of path of a key."},
 			{Name: "start_line", Type: proto.ColumnType_INT, Description: "Specifies the line number where the value is located."},
