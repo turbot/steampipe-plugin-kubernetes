@@ -18,6 +18,8 @@ builds:
 
     id: "steampipe"
     binary: "{{ .ProjectName }}.plugin"
+    flags:
+      - -tags=netgo
 
 archives:
   - format: gz
