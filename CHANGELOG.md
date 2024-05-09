@@ -1,11 +1,9 @@
 ## v0.28.0 [2024-05-09]
 
-_What's new?_
-
 _Enhancements_
 
 - The `context_name` column has now been assigned as a connection key column across all the tables which facilitates more precise and efficient querying across multiple Kubernetes connections. ([#217](https://github.com/turbot/steampipe-plugin-kubernetes/pull/217))
-- Updated the `Makefile` and the `.goreleaser` file to build the `netgo` package for both Linux and Darwin systems. ([#219](https://github.com/turbot/steampipe-plugin-kubernetes/pull/219))
+- The Plugin and the Steampipe Anywhere binaries are now built with the `netgo` package. ([#219](https://github.com/turbot/steampipe-plugin-kubernetes/pull/219))
 - Added the `version` flag to the plugin's Export tool. ([#65](https://github.com/turbot/steampipe-export/pull/65))
 
 _Dependencies_
