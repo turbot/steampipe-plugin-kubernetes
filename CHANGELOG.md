@@ -1,3 +1,18 @@
+## v0.28.0 [2024-05-09]
+
+_What's new?_
+
+_Enhancements_
+
+- The `context_name` column has now been assigned as a connection key column across all the tables which facilitates more precise and efficient querying across multiple Kubernetes connections. ([#217](https://github.com/turbot/steampipe-plugin-kubernetes/pull/217))
+- Updated the `Makefile` and the `.goreleaser` file to build the `netgo` package for both Linux and Darwin systems. ([#219](https://github.com/turbot/steampipe-plugin-kubernetes/pull/219))
+- Added the `version` flag to the plugin's Export tool. ([#65](https://github.com/turbot/steampipe-export/pull/65))
+
+_Dependencies_
+
+- Recompiled plugin with [steampipe-plugin-sdk v5.10.0](https://github.com/turbot/steampipe-plugin-sdk/blob/main/CHANGELOG.md#v5100-2024-04-10) that adds support for connection key columns. ([#217](https://github.com/turbot/steampipe-plugin-kubernetes/pull/217))
+- Recompiled plugin with [github.com/hashicorp/go-getter v1.7.4](https://github.com/hashicorp/go-getter/releases/tag/v1.7.4). ([#218](https://github.com/turbot/steampipe-plugin-kubernetes/pull/218))
+
 ## v0.27.0 [2024-01-22]
 
 _Enhancements_
