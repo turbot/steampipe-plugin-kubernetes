@@ -123,10 +123,9 @@ func pluginTableDefinitions(ctx context.Context, d *plugin.TableMapData) (map[st
 		if tables["kubernetes_"+crd.Spec.Names.Singular] == nil {
 			ctx = context.WithValue(ctx, contextKey("TableName"), "kubernetes_"+crd.Spec.Names.Singular)
 			tables["kubernetes_"+crd.Spec.Names.Singular] = tableKubernetesCustomResource(ctx)
-		} else {
-			ctx = context.WithValue(ctx, contextKey("TableName"), "kubernetes_"+crd.Spec.Names.Singular+"_"+re.ReplaceAllString(crd.Spec.Group, "_"))
-			tables["kubernetes_"+crd.Spec.Names.Singular+"_"+re.ReplaceAllString(crd.Spec.Group, "_")] = tableKubernetesCustomResource(ctx)
 		}
+		ctx = context.WithValue(ctx, contextKey("TableName"), "kubernetes_"+crd.Spec.Names.Singular+"_"+re.ReplaceAllString(crd.Spec.Group, "_"))
+		tables["kubernetes_"+crd.Spec.Names.Singular+"_"+re.ReplaceAllString(crd.Spec.Group, "_")] = tableKubernetesCustomResource(ctx)
 	}
 
 	return tables, nil
