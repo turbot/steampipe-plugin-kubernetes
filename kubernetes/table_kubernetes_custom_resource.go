@@ -50,9 +50,9 @@ func getCustomResourcesDynamicColumns(ctx context.Context, versionSchemaSpec int
 	allColumns := []string{"name", "uid", "kind", "api_version", "namespace", "creation_timestamp", "labels", "start_line", "end_line", "path", "source_type", "annotations", "context_name"}
 
 	// add the spec columns
-	flag := 0
 	schemaSpec := versionSchemaSpec.(v1.JSONSchemaProps)
 	for k, v := range schemaSpec.Properties {
+		flag := 0
 		for _, specColumn := range allColumns {
 			if specColumn == strcase.ToSnake(k) {
 				flag = 1
@@ -78,9 +78,9 @@ func getCustomResourcesDynamicColumns(ctx context.Context, versionSchemaSpec int
 	}
 
 	// add the status columns
-	flag = 0
 	schemaStatus := versionSchemaStatus.(v1.JSONSchemaProps)
 	for k, v := range schemaStatus.Properties {
+		flag := 0
 		for _, statusColumn := range allColumns {
 			if statusColumn == strcase.ToSnake(k) {
 				flag = 1
