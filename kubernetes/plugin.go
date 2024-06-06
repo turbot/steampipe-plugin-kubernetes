@@ -103,29 +103,21 @@ func pluginTableDefinitions(ctx context.Context, d *plugin.TableMapData) (map[st
 		ctx = context.WithValue(ctx, contextKey("CustomResourceNameSingular"), crd.Spec.Names.Singular)
 		ctx = context.WithValue(ctx, contextKey("GroupName"), crd.Spec.Group)
 		for _, version := range crd.Spec.Versions {
-			if version.Served {
-				ctx = context.WithValue(ctx, contextKey("ActiveVersion"), version.Name)
-				if version.Schema != nil && version.Schema.OpenAPIV3Schema != nil {
-					ctx = context.WithValue(ctx, contextKey("VersionSchemaSpec"), version.Schema.OpenAPIV3Schema.Properties["spec"])
-					ctx = context.WithValue(ctx, contextKey("VersionSchemaStatus"), version.Schema.OpenAPIV3Schema.Properties["status"])
-					if len(version.Schema.OpenAPIV3Schema.Description) > 0 {
-						ctx = context.WithValue(ctx, contextKey("VersionSchemaDescription"), strings.TrimSuffix(version.Schema.OpenAPIV3Schema.Description, ".")+".")
-					}
+			// if version.Served {
+			ctx = context.WithValue(ctx, contextKey("ActiveVersion"), version.Name)
+			if version.Schema != nil && version.Schema.OpenAPIV3Schema != nil {
+				ctx = context.WithValue(ctx, contextKey("VersionSchemaSpec"), version.Schema.OpenAPIV3Schema.Properties["spec"])
+				ctx = context.WithValue(ctx, contextKey("VersionSchemaStatus"), version.Schema.OpenAPIV3Schema.Properties["status"])
+				if len(version.Schema.OpenAPIV3Schema.Description) > 0 {
+					ctx = context.WithValue(ctx, contextKey("VersionSchemaDescription"), strings.TrimSuffix(version.Schema.OpenAPIV3Schema.Description, ".")+".")
 				}
 			}
-		}
 
-		// add the tables in snake case
-		// if there is any name collision, plugin will create the dynamic tables in below order:
-		// plugin will use singular name for the first one, e.g. kubernetes_certificate
-		// plugin will use fully qualified names for the subsequent ones, e.g. kubernetes_certificate_cert_manager_io
-		re := regexp.MustCompile(`[-.]`)
-		if tables["kubernetes_"+crd.Spec.Names.Singular] == nil {
-			ctx = context.WithValue(ctx, contextKey("TableName"), "kubernetes_"+crd.Spec.Names.Singular)
-			tables["kubernetes_"+crd.Spec.Names.Singular] = tableKubernetesCustomResource(ctx)
-		} else {
+			re := regexp.MustCompile(`[-.]`)
+			plugin.Logger(ctx).Warn("Table created with name ===>>>", "kubernetes_"+crd.Spec.Names.Singular+"_"+re.ReplaceAllString(crd.Spec.Group, "_")+"_"+version.Name)
 			ctx = context.WithValue(ctx, contextKey("TableName"), "kubernetes_"+crd.Spec.Names.Singular+"_"+re.ReplaceAllString(crd.Spec.Group, "_"))
-			tables["kubernetes_"+crd.Spec.Names.Singular+"_"+re.ReplaceAllString(crd.Spec.Group, "_")] = tableKubernetesCustomResource(ctx)
+			tables["kubernetes_"+crd.Spec.Names.Singular+"_"+re.ReplaceAllString(crd.Spec.Group, "_")+"_"+version.Name] = tableKubernetesCustomResource(ctx)
+
 		}
 	}
 
