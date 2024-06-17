@@ -1,3 +1,9 @@
+## v0.28.1 [2024-06-17]
+
+_Bug fixes_
+
+- Fixed the issue of missing and inconsistent columns in Kubernetes CRD tables. ([#229](https://github.com/turbot/steampipe-plugin-kubernetes/pull/229)) (Thanks [@dongho-jung](https://github.com/dongho-jung) for the contribution!!)
+
 ## v0.28.0 [2024-05-09]
 
 _Enhancements_
