@@ -14,7 +14,6 @@ import (
 	"strings"
 
 	"github.com/turbot/go-kit/helpers"
-	"github.com/turbot/go-kit/types"
 	"github.com/turbot/steampipe-plugin-sdk/v5/connection"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
@@ -187,19 +186,18 @@ func listK8sDynamicCRDs(ctx context.Context, cn *connection.ConnectionCache, c *
 	// the deployed resources are not expected when the source_type is "manifest".
 	if clientset != nil {
 		input := metav1.ListOptions{
-			Limit:          500,
-			TimeoutSeconds: types.Int64(5),
+			Limit: 500,
 		}
 
 		pageLeft := true
 		for pageLeft {
 			response, err := clientset.ApiextensionsV1().CustomResourceDefinitions().List(ctx, input)
 			if err != nil {
+				plugin.Logger(ctx).Error("listK8sDynamicCRDs", "list_err", err)
 				// At the plugin load time, if the config is not setup properly, return nil
 				if strings.Contains(err.Error(), "/apis/apiextensions.k8s.io/v1/customresourcedefinitions?limit=500") {
 					return nil, nil
 				}
-				plugin.Logger(ctx).Error("listK8sDynamicCRDs", "list_err", err)
 				return nil, err
 			}
 
