@@ -1,3 +1,13 @@
+## v0.29.0 [2024-07-26]
+
+_Enhancements_
+
+- Updated the plugin to use fully qualified names while creating CRD tables to make sure that you can query the exact custom resource if there are multiple resources with the same singular name. ([#228](https://github.com/turbot/steampipe-plugin-kubernetes/pull/228)) (Thanks [@afarid](https://github.com/afarid) for the contribution!!)
+
+_Bug fixes_
+
+- Fixed the `kubernetes_custom_resource_definition` table to correctly list out all the CRDs on a cluuster instead of returning a truncated set. ([#235](https://github.com/turbot/steampipe-plugin-kubernetes/pull/235)) (Thanks [@afarid](https://github.com/afarid) for the contribution!!)
+
 ## v0.28.1 [2024-06-17]
 
 _Bug fixes_
