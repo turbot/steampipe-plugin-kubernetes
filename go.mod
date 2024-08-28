@@ -1,15 +1,15 @@
 module github.com/turbot/steampipe-plugin-kubernetes
 
-go 1.21.0
+go 1.22.4
 
-toolchain go1.21.3
+toolchain go1.22.6
 
 require (
 	github.com/iancoleman/strcase v0.3.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mittwald/go-helm-client v0.11.5
 	github.com/turbot/go-kit v0.10.0-rc.0
-	github.com/turbot/steampipe-plugin-sdk/v5 v5.10.1
+	github.com/turbot/steampipe-plugin-sdk/v5 v5.10.3
 	golang.org/x/text v0.15.0
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.10.0
