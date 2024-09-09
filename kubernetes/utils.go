@@ -373,7 +373,7 @@ func getK8Config(ctx context.Context, d *plugin.QueryData) (clientcmd.ClientConf
 
 	if kubernetesConfig.ConfigPath != nil {
 		configPaths = []string{*kubernetesConfig.ConfigPath}
-	} else if kubernetesConfig.ConfigPaths != nil && len(kubernetesConfig.ConfigPaths) > 0 {
+	} else if len(kubernetesConfig.ConfigPaths) > 0 {
 		plugin.Logger(ctx).Warn("config_paths parameter is deprecated and will be removed after 31st July 2023, please use config_path instead.")
 		configPaths = kubernetesConfig.ConfigPaths
 	} else if v := os.Getenv("KUBECONFIG"); v != "" {
@@ -461,7 +461,7 @@ func getK8ConfigRaw(ctx context.Context, cc *connection.ConnectionCache, c *plug
 
 	if kubernetesConfig.ConfigPath != nil {
 		configPaths = []string{*kubernetesConfig.ConfigPath}
-	} else if kubernetesConfig.ConfigPaths != nil && len(kubernetesConfig.ConfigPaths) > 0 {
+	} else if len(kubernetesConfig.ConfigPaths) > 0 {
 		plugin.Logger(ctx).Warn("config_paths parameter is deprecated and will be removed after 31st July 2023, please use config_path instead.")
 		configPaths = kubernetesConfig.ConfigPaths
 	} else if v := os.Getenv("KUBECONFIG"); v != "" {
