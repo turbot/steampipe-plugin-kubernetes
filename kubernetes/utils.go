@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -994,4 +995,71 @@ func keysToSnakeCase(_ context.Context, d *transform.TransformData) (interface{}
 		snakes = append(snakes, re.ReplaceAllString(k, "_"))
 	}
 	return strings.Join(snakes, "."), nil
+}
+
+// normalizeCPUToMilliCores converts CPU quantities to millicores (m), rounding up if necessary.
+func normalizeCPUToMilliCores(cpu string) (int64, error) {
+	if strings.HasSuffix(cpu, "m") {
+		// Already in millicores
+		value, err := strconv.ParseFloat(strings.TrimSuffix(cpu, "m"), 64)
+		if err != nil {
+			return 0, fmt.Errorf("invalid CPU value: %s", cpu)
+		}
+		return int64(math.Ceil(value)), nil
+	}
+
+	// Convert cores to millicores
+	value, err := strconv.ParseFloat(cpu, 64)
+	if err != nil {
+		return 0, fmt.Errorf("invalid CPU value: %s", cpu)
+	}
+
+	milliCores := value * 1000
+	return int64(math.Ceil(milliCores)), nil
+}
+
+// normalizeMemoryToBytes converts memory quantities to bytes, rounding up if necessary.
+func normalizeMemoryToBytes(memory string) (int64, error) {
+	var valuePart, unitPart string
+	for i, r := range memory {
+		if r < '0' || r > '9' {
+			valuePart = memory[:i]
+			unitPart = memory[i:]
+			break
+		}
+	}
+	if valuePart == "" {
+		return 0, fmt.Errorf("invalid memory value: %s", memory)
+	}
+
+	value, err := strconv.ParseFloat(valuePart, 64)
+	if err != nil {
+		return 0, fmt.Errorf("invalid memory value: %s", memory)
+	}
+
+	unitPart = strings.TrimSpace(unitPart)
+	multiplier, exists := memoryUnits[unitPart]
+	if !exists {
+		return 0, fmt.Errorf("unknown unit: %s", unitPart)
+	}
+
+	bytes := value * multiplier
+	return int64(math.Ceil(bytes)), nil
+}
+
+// Unit multipliers for memory
+var memoryUnits = map[string]float64{
+	"B":  1,
+	"Ki": math.Pow(2, 10),
+	"Mi": math.Pow(2, 20),
+	"Gi": math.Pow(2, 30),
+	"Ti": math.Pow(2, 40),
+	"Pi": math.Pow(2, 50),
+	"Ei": math.Pow(2, 60),
+	"k":  1e3,
+	"M":  1e6,
+	"G":  1e9,
+	"T":  1e12,
+	"P":  1e15,
+	"E":  1e18,
 }
