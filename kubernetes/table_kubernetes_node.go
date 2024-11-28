@@ -63,6 +63,54 @@ func tableKubernetesNode(ctx context.Context) *plugin.Table {
 
 			//// NodeStatus Columns
 			{
+				Name:        "capacity_cpu",
+				Type:        proto.ColumnType_STRING,
+				Description: "Raw capacity CPU value as provided by the system.",
+				Transform:   transform.FromP(transformNodeCpuAndMemory, "Capacity.CPU"),
+			},
+			{
+				Name:        "capacity_memory",
+				Type:        proto.ColumnType_STRING,
+				Description: "Raw capacity memory value as provided by the system.",
+				Transform:   transform.FromP(transformNodeCpuAndMemory, "Capacity.Memory"),
+			},
+			{
+				Name:        "allocatable_cpu",
+				Type:        proto.ColumnType_STRING,
+				Description: "Raw allocatable CPU value as provided by the system.",
+				Transform:   transform.FromP(transformNodeCpuAndMemory, "Allocatable.CPU"),
+			},
+			{
+				Name:        "allocatable_memory",
+				Type:        proto.ColumnType_STRING,
+				Description: "Raw allocatable memory value as provided by the system.",
+				Transform:   transform.FromP(transformNodeCpuAndMemory, "Allocatable.Memory"),
+			},
+			{
+				Name:        "capacity_cpu_std",
+				Type:        proto.ColumnType_INT,
+				Description: "Standardized capacity CPU value in millicores (m).",
+				Transform:   transform.FromP(transformNodeCpuAndMemoryUnit, "Capacity.CPU"),
+			},
+			{
+				Name:        "capacity_memory_std",
+				Type:        proto.ColumnType_INT,
+				Description: "Standardized capacity memory value in bytes.",
+				Transform:   transform.FromP(transformNodeCpuAndMemoryUnit, "Capacity.Memory"),
+			},
+			{
+				Name:        "allocatable_cpu_std",
+				Type:        proto.ColumnType_INT,
+				Description: "Standardized allocatable CPU value in millicores (m).",
+				Transform:   transform.FromP(transformNodeCpuAndMemoryUnit, "Allocatable.CPU"),
+			},
+			{
+				Name:        "allocatable_memory_std",
+				Type:        proto.ColumnType_INT,
+				Description: "Standardized allocatable memory value in bytes.",
+				Transform:   transform.FromP(transformNodeCpuAndMemoryUnit, "Allocatable.Memory"),
+			},
+			{
 				Name:        "capacity",
 				Type:        proto.ColumnType_JSON,
 				Description: "Capacity represents the total resources of a node.",
@@ -311,4 +359,42 @@ func getNodeResourceContext(ctx context.Context, d *plugin.QueryData, h *plugin.
 func transformNodeTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(Node)
 	return mergeTags(obj.Labels, obj.Annotations), nil
+}
+
+func transformNodeCpuAndMemoryUnit(_ context.Context, d *transform.TransformData) (interface{}, error) {
+	param := d.Param.(string)
+
+	node := d.HydrateItem.(Node)
+
+	switch param {
+	case "Capacity.CPU":
+		return normalizeCPUToMilliCores(node.Status.Capacity.Cpu().String())
+	case "Capacity.Memory":
+		return normalizeMemoryToBytes(node.Status.Capacity.Memory().String())
+	case "Allocatable.CPU":
+		return normalizeCPUToMilliCores(node.Status.Allocatable.Cpu().String())
+	case "Allocatable.Memory":
+		return normalizeMemoryToBytes(node.Status.Allocatable.Memory().String())
+	}
+
+	return nil, nil
+}
+
+func transformNodeCpuAndMemory(_ context.Context, d *transform.TransformData) (interface{}, error) {
+	param := d.Param.(string)
+
+	node := d.HydrateItem.(Node)
+
+	switch param {
+	case "Capacity.CPU":
+		return node.Status.Capacity.Cpu().String(), nil
+	case "Capacity.Memory":
+		return node.Status.Capacity.Memory().String(), nil
+	case "Allocatable.CPU":
+		return node.Status.Allocatable.Cpu().String(), nil
+	case "Allocatable.Memory":
+		return node.Status.Allocatable.Memory().String(), nil
+	}
+
+	return nil, nil
 }

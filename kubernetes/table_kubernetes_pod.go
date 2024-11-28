@@ -55,6 +55,18 @@ func tableKubernetesPod(ctx context.Context) *plugin.Table {
 				Transform:   transform.FromField("Spec.Containers"),
 			},
 			{
+				Name:        "containers_resources_limits_std",
+				Type:        proto.ColumnType_JSON,
+				Description: "Standardized CPU and memory resource limits in millicores for each container in the pod.",
+				Transform:   transform.FromP(transformPodCpuAndMemoryUnit, "limit"),
+			},
+			{
+				Name:        "containers_resources_requests_std",
+				Type:        proto.ColumnType_JSON,
+				Description: "Standardized CPU and memory resource requests in millicores for each container in the pod.",
+				Transform:   transform.FromP(transformPodCpuAndMemoryUnit, "request"),
+			},
+			{
 				Name: "ephemeral_containers",
 				Type: proto.ColumnType_JSON,
 				Description: "List of ephemeral containers run in this pod. Ephemeral containers may be run in an existing " +
@@ -244,7 +256,6 @@ func tableKubernetesPod(ctx context.Context) *plugin.Table {
 					"configuration based on DNSPolicy.",
 				Transform: transform.FromField("Spec.DNSConfig"),
 			},
-
 			{
 				Name: "readiness_gates",
 				Type: proto.ColumnType_JSON,
@@ -596,6 +607,80 @@ func getPodResourceContext(ctx context.Context, d *plugin.QueryData, h *plugin.H
 func transformPodTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
 	obj := d.HydrateItem.(Pod)
 	return mergeTags(obj.Labels, obj.Annotations), nil
+}
+
+func transformPodCpuAndMemoryUnit(ctx context.Context, d *transform.TransformData) (interface{}, error) {
+	param := d.Param.(string)
+
+	pod := d.HydrateItem.(Pod)
+
+	containers := pod.Spec.DeepCopy().Containers
+
+	if param == "limit" {
+		limitCPUMemoryMaps := make([]map[string]interface{}, 0)
+	
+		limitCPUMemoryMap := make(map[string]interface{})
+	
+		for _, container := range containers {
+			limit := container.Resources.Limits
+			limitCPUMemoryMap["containerName"] = container.Name
+			limitCPUMemoryMap["containerImage"] = container.Image
+			if limit.Cpu().String() != "" && !limit.Cpu().IsZero(){
+				cpu, err := normalizeCPUToMilliCores(limit.Cpu().String())
+				if err != nil {
+					plugin.Logger(ctx).Error("kubernetes_pod.transformPodCpuAndMemoryUnit", "error in parsing the CPU value", err)
+					return nil, err
+				}
+				limitCPUMemoryMap["cpu"] = cpu
+			}
+	
+			if limit.Memory().String() != "" && !limit.Memory().IsZero(){
+				memory, err := normalizeMemoryToBytes(limit.Memory().String())
+				if err != nil {
+					plugin.Logger(ctx).Error("kubernetes_pod.transformPodCpuAndMemoryUnit", "error in parsing the memory value", err)
+					return nil, err
+				}
+				limitCPUMemoryMap["memory"] = memory
+			}
+			limitCPUMemoryMaps = append(limitCPUMemoryMaps, limitCPUMemoryMap)
+	
+		}
+
+		return limitCPUMemoryMaps, nil
+	} else if param == "request" {
+		requestCPUMemoryMaps := make([]map[string]interface{}, 0)
+	
+		requestCPUMemoryMap := make(map[string]interface{})
+	
+		for _, container := range containers {
+			request := container.Resources.Requests
+			requestCPUMemoryMap["containerName"] = container.Name
+			requestCPUMemoryMap["containerImage"] = container.Image
+			if request.Cpu().String() != "" && !request.Cpu().IsZero(){
+				cpu, err := normalizeCPUToMilliCores(request.Cpu().String())
+				if err != nil {
+					plugin.Logger(ctx).Error("kubernetes_pod.transformPodCpuAndMemoryUnit", "error in parsing the CPU value", err)
+					return nil, err
+				}
+				requestCPUMemoryMap["cpu"] = cpu
+			}
+	
+			if request.Memory().String() != "" && !request.Memory().IsZero(){
+				memory, err := normalizeMemoryToBytes(request.Memory().String())
+				if err != nil {
+					plugin.Logger(ctx).Error("kubernetes_pod.transformPodCpuAndMemoryUnit", "error in parsing the memory value", err)
+					return nil, err
+				}
+				requestCPUMemoryMap["memory"] = memory
+			}
+			requestCPUMemoryMaps = append(requestCPUMemoryMaps, requestCPUMemoryMap)
+	
+		}
+
+		return requestCPUMemoryMaps, nil
+	}
+
+	return nil, nil
 }
 
 // // UTILITY FUNCTION
