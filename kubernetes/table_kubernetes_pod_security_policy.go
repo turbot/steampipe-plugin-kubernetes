@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+	"errors"
 
 	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
@@ -12,14 +13,10 @@ func tableKubernetesPodSecurityPolicy(ctx context.Context) *plugin.Table {
 	return &plugin.Table{
 		Name:        "kubernetes_pod_security_policy",
 		Description: "A Pod Security Policy is a cluster-level resource that controls security sensitive aspects of the pod specification. The PodSecurityPolicy objects define a set of conditions that a pod must run with in order to be accepted into the system, as well as defaults for the related fields.",
-		// Get: &plugin.GetConfig{
-		// 	KeyColumns: plugin.SingleColumn("name"),
-		// 	Hydrate:    getPodSecurityPolicy,
-		// },
 		List: &plugin.ListConfig{
 			Hydrate: listPodSecurityPolicy,
 		},
-		// // PodSecurityPolicy, is a non-namespaced resource.
+		// PodSecurityPolicy, is a non-namespaced resource.
 		Columns: k8sCommonGlobalColumns([]*plugin.Column{
 
 			// PodSecurityPolicySpec
@@ -163,12 +160,12 @@ func tableKubernetesPodSecurityPolicy(ctx context.Context) *plugin.Table {
 				Description: "An allowlist of volume plugins. Empty indicates that no volumes may be used.",
 				Transform:   transform.FromField("Spec.Volumes"),
 			},
-			// {
-			// 	Name:        "context_name",
-			// 	Type:        proto.ColumnType_STRING,
-			// 	Description: "Kubectl config context name.",
-			// 	Hydrate:     getPodSecurityPolicyResourceContext,
-			// },
+			{
+				Name:        "context_name",
+				Type:        proto.ColumnType_STRING,
+				Description: "Kubectl config context name.",
+				Hydrate:     getPodSecurityPolicyResourceContext,
+			},
 
 			{
 				Name:        "source_type",
@@ -183,167 +180,51 @@ func tableKubernetesPodSecurityPolicy(ctx context.Context) *plugin.Table {
 				Description: ColumnDescriptionTitle,
 				Transform:   transform.FromField("Name"),
 			},
-			// {
-			// 	Name:        "tags",
-			// 	Type:        proto.ColumnType_JSON,
-			// 	Description: ColumnDescriptionTags,
-			// 	Transform:   transform.From(transformPodSecurityPolicyTags),
-			// },
+			{
+				Name:        "tags",
+				Type:        proto.ColumnType_JSON,
+				Description: ColumnDescriptionTags,
+				Transform:   transform.From(transformPodSecurityPolicyTags),
+			},
 		}),
 	}
 }
 
-// type PodSecurityPolicy struct {
-// 	v1beta1.PodSecurityPolicy
-// 	parsedContent
-// }
+type PodSecurityPolicy struct {
+	Labels      map[string]string
+	Annotations map[string]string
+	parsedContent
+}
 
 //// HYDRATE FUNCTIONS
 
 func listPodSecurityPolicy(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
-	// logger := plugin.Logger(ctx)
-	// logger.Trace("listPodSecurityPolicy")
-
-	// // Get the client for querying the K8s APIs for the provided context.
-	// // If the connection is configured for the manifest files, the client will return nil.
-	// clientset, err := GetNewClientset(ctx, d)
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	// // Check for manifest files
-	// parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "PodSecurityPolicy")
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	// for _, content := range parsedContents {
-	// 	podSecurityPolicy := content.ParsedData.(*v1beta1.PodSecurityPolicy)
-
-	// 	d.StreamListItem(ctx, PodSecurityPolicy{*podSecurityPolicy, content})
-
-	// 	// Context can be cancelled due to manual cancellation or the limit has been hit
-	// 	if d.RowsRemaining(ctx) == 0 {
-	// 		return nil, nil
-	// 	}
-	// }
-
-	// // Check for deployed resources
-	// if clientset == nil {
-	// 	return nil, nil
-	// }
-
-	// input := metav1.ListOptions{
-	// 	Limit: 500,
-	// }
-
-	// // Limiting the results
-	// limit := d.QueryContext.Limit
-	// if d.QueryContext.Limit != nil {
-	// 	if *limit < input.Limit {
-	// 		if *limit < 1 {
-	// 			input.Limit = 1
-	// 		} else {
-	// 			input.Limit = *limit
-	// 		}
-	// 	}
-	// }
-
-	// var response *v1beta1.PodSecurityPolicyList
-	// pageLeft := true
-
-	// for pageLeft {
-	// 	response, err = clientset.PolicyV1beta1().PodSecurityPolicies().List(ctx, input)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-
-	// 	if response.GetContinue() != "" {
-	// 		input.Continue = response.Continue
-	// 	} else {
-	// 		pageLeft = false
-	// 	}
-
-	// 	for _, podSecurityPolicy := range response.Items {
-	// 		d.StreamListItem(ctx, PodSecurityPolicy{podSecurityPolicy, parsedContent{SourceType: "deployed"}})
-
-	// 		// Context can be cancelled due to manual cancellation or the limit has been hit
-	// 		if d.RowsRemaining(ctx) == 0 {
-	// 			return nil, nil
-	// 		}
-	// 	}
-	// }
-
-	return nil, nil
+	err := errors.New("The kubernetes_pod_security_policy table has been deprecated and removed.")
+	return nil, err
 }
 
-// func getPodSecurityPolicy(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
-// 	logger := plugin.Logger(ctx)
-// 	logger.Trace("getPodSecurityPolicy")
+func getPodSecurityPolicyResourceContext(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+	obj := h.Item.(PodSecurityPolicy)
 
-// 	// Get the client for querying the K8s APIs for the provided context.
-// 	// If the connection is configured for the manifest files, the client will return nil.
-// 	clientset, err := GetNewClientset(ctx, d)
-// 	if err != nil {
-// 		return nil, err
-// 	}
+	// Set the context_name as nil
+	data := map[string]interface{}{}
+	if obj.Path != "" {
+		return data, nil
+	}
 
-// 	name := d.EqualsQuals["name"].GetStringValue()
+	// Else, set the current context as context_name
+	currentContext, err := getKubectlContext(ctx, d, nil)
+	if err != nil {
+		return data, nil
+	}
+	data["ContextName"] = currentContext.(string)
 
-// 	// return if  name is empty
-// 	if name == "" {
-// 		return nil, nil
-// 	}
-
-// 	// Get the manifest resource
-// 	parsedContents, err := fetchResourceFromManifestFileByKind(ctx, d, "PodSecurityPolicy")
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	for _, content := range parsedContents {
-// 		podSecurityPolicy := content.ParsedData.(*v1beta1.PodSecurityPolicy)
-
-// 		if podSecurityPolicy.Name == name {
-// 			return PodSecurityPolicy{*podSecurityPolicy, content}, nil
-// 		}
-// 	}
-
-// 	// Get the deployed resource
-// 	if clientset == nil {
-// 		return nil, nil
-// 	}
-
-// 	podSecurityPolicy, err := clientset.PolicyV1beta1().PodSecurityPolicies().Get(ctx, name, metav1.GetOptions{})
-// 	if err != nil && !isNotFoundError(err) {
-// 		return nil, err
-// 	}
-
-// 	return PodSecurityPolicy{*podSecurityPolicy, parsedContent{SourceType: "deployed"}}, nil
-// }
-
-// func getPodSecurityPolicyResourceContext(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
-// 	obj := h.Item.(PodSecurityPolicy)
-
-// 	// Set the context_name as nil
-// 	data := map[string]interface{}{}
-// 	if obj.Path != "" {
-// 		return data, nil
-// 	}
-
-// 	// Else, set the current context as context_name
-// 	currentContext, err := getKubectlContext(ctx, d, nil)
-// 	if err != nil {
-// 		return data, nil
-// 	}
-// 	data["ContextName"] = currentContext.(string)
-
-// 	return data, nil
-// }
+	return data, nil
+}
 
 // //// TRANSFORM FUNCTIONS
 
-// func transformPodSecurityPolicyTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
-// 	obj := d.HydrateItem.(PodSecurityPolicy)
-// 	return mergeTags(obj.Labels, obj.Annotations), nil
-// }
+func transformPodSecurityPolicyTags(_ context.Context, d *transform.TransformData) (interface{}, error) {
+	obj := d.HydrateItem.(PodSecurityPolicy)
+	return mergeTags(obj.Labels, obj.Annotations), nil
+}

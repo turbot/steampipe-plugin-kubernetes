@@ -159,13 +159,6 @@ func convertUnstructuredDataToType(obj *unstructured.Unstructured) (any, error) 
 			return nil, err
 		}
 		return targetObj, nil
-	// case "PodSecurityPolicy":
-	// 	targetObj := &policyv1beta1.PodSecurityPolicy{}
-	// 	err := runtime.DefaultUnstructuredConverter.FromUnstructured(obj.UnstructuredContent(), &targetObj)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// 	return targetObj, nil
 	case "PodTemplate":
 		targetObj := &corev1.PodTemplate{}
 		err := runtime.DefaultUnstructuredConverter.FromUnstructured(obj.UnstructuredContent(), &targetObj)
