@@ -199,7 +199,7 @@ type PodSecurityPolicy struct {
 //// HYDRATE FUNCTIONS
 
 func listPodSecurityPolicy(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
-	err := errors.New("The kubernetes_pod_security_policy table has been deprecated and removed.")
+	err := errors.New("The kubernetes_pod_security_policy table has been deprecated.")
 	return nil, err
 }
 
