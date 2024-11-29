@@ -8,7 +8,6 @@ import (
 	discoveryv1 "k8s.io/api/discovery/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -155,13 +154,6 @@ func convertUnstructuredDataToType(obj *unstructured.Unstructured) (any, error) 
 		return targetObj, nil
 	case "PodDisruptionBudget":
 		targetObj := &policyv1.PodDisruptionBudget{}
-		err := runtime.DefaultUnstructuredConverter.FromUnstructured(obj.UnstructuredContent(), &targetObj)
-		if err != nil {
-			return nil, err
-		}
-		return targetObj, nil
-	case "PodSecurityPolicy":
-		targetObj := &policyv1beta1.PodSecurityPolicy{}
 		err := runtime.DefaultUnstructuredConverter.FromUnstructured(obj.UnstructuredContent(), &targetObj)
 		if err != nil {
 			return nil, err
