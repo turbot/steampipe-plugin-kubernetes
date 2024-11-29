@@ -1,3 +1,13 @@
+## v1.1.0 [2024-11-29]
+
+_Deprecations_
+
+- Deprecated `kubernetes_pod_security_policy` table due to the lack of API support in [Kubernetes v1.25](https://kubernetes.io/blog/2022/08/23/kubernetes-v1-25-release/#what-s-new-major-themes). ([#262](https://github.com/turbot/steampipe-plugin-kubernetes/pull/262))
+
+_Dependencies_
+
+- Recompiled plugin with [helm.sh/helm/v3 v3.14.2](https://github.com/helm/helm/releases/tag/v3.14.2) to fix security vulnerabilities. ([#262](https://github.com/turbot/steampipe-plugin-kubernetes/pull/262))
+
 ## v1.0.0 [2024-10-22]
 
 There are no significant changes in this plugin version; it has been released to align with [Steampipe's v1.0.0](https://steampipe.io/changelog/steampipe-cli-v1-0-0) release. This plugin adheres to [semantic versioning](https://semver.org/#semantic-versioning-specification-semver), ensuring backward compatibility within each major version.
