@@ -1,3 +1,9 @@
+## v1.2.0 [2024-11-29]
+
+_Dependencies_
+
+- Updated the plugin's Osquery extension build to use the latest versions of `Go`, `helm.sh/helm/v3` and `docker` that fixes several security vulnerabilities.
+
 ## v1.1.0 [2024-11-29]
 
 _Deprecations_
