@@ -1020,7 +1020,9 @@ func normalizeCPUToMilliCores(cpu string) (int64, error) {
 
 // normalizeMemoryToBytes converts memory quantities to bytes, rounding up if necessary.
 func normalizeMemoryToBytes(memory string) (int64, error) {
-	var valuePart, unitPart string
+	// Set default value to arg value and unit to Bytes
+	valuePart := memory
+	unitPart := "B"
 	for i, r := range memory {
 		if r < '0' || r > '9' {
 			valuePart = memory[:i]
