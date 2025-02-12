@@ -1,3 +1,9 @@
+## v1.2.1 [2025-02-12]
+
+_Bug fixes_
+
+- Fixed the `containers_resources_requests_std` column of the `kubernetes_pod` table to correctly return data instead of an error when the memory field is defined in the unit of `bytes`. ([#273](https://github.com/turbot/steampipe-plugin-kubernetes/pull/273)) (Thanks [@omer-do](https://github.com/omer-do) for the contribution!) 
+
 ## v1.2.0 [2024-11-29]
 
 _Dependencies_
