@@ -1051,6 +1051,7 @@ func normalizeMemoryToBytes(memory string) (int64, error) {
 
 // Unit multipliers for memory
 var memoryUnits = map[string]float64{
+	"m":  1e-3,
 	"B":  1,
 	"Ki": math.Pow(2, 10),
 	"Mi": math.Pow(2, 20),
