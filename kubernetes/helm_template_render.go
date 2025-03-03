@@ -7,9 +7,9 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 
-	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
 
 	"helm.sh/helm/v3/pkg/action"
@@ -90,7 +90,7 @@ func getHelmRenderedTemplatesUncached(ctx context.Context, d *plugin.QueryData, 
 
 		var processedHelmConfigs []string
 		for name, c := range kubernetesConfig.HelmRenderedCharts {
-			if c.ChartPath == chart.Path && !helpers.StringSliceContains(processedHelmConfigs, name) {
+			if c.ChartPath == chart.Path && !slices.Contains(processedHelmConfigs, name) {
 
 				// Add the processed Helm render configs into processedHelmConfigs to avoid duplicate entries
 				processedHelmConfigs = append(processedHelmConfigs, name)
@@ -174,7 +174,7 @@ func renderedHelmTemplateContentUncached(ctx context.Context, d *plugin.QueryDat
 		// to avoid the conflicts when calculating the line numbers.
 		// If the current config is not yet processed
 		test := fmt.Sprintf("%s:%s", t.Path, t.ConfigKey)
-		if !helpers.StringSliceContains(processedConfigs, test) {
+		if !slices.Contains(processedConfigs, test) {
 			// Set the config as processed
 			processedConfigs = append(processedConfigs, test)
 

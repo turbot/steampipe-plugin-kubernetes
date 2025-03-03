@@ -10,10 +10,10 @@ import (
 	"context"
 	"path"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 
-	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/steampipe-plugin-sdk/v5/connection"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
@@ -168,7 +168,7 @@ func listK8sDynamicCRDs(ctx context.Context, cn *connection.ConnectionCache, c *
 		for _, item := range parsedContents {
 			crd := item.ParsedData.(*v1.CustomResourceDefinition)
 
-			if helpers.StringSliceContains(temp_crd_names, crd.Name) {
+			if slices.Contains(temp_crd_names, crd.Name) {
 				continue
 			} else if ok, _ := path.Match(pattern, crd.Name); ok {
 				crds = append(crds, *crd)
@@ -208,7 +208,7 @@ func listK8sDynamicCRDs(ctx context.Context, cn *connection.ConnectionCache, c *
 
 			for _, pattern := range filterCrds {
 				for _, item := range response.Items {
-					if helpers.StringSliceContains(temp_crd_names, item.Name) {
+					if slices.Contains(temp_crd_names, item.Name) {
 						continue
 					} else if ok, _ := path.Match(pattern, item.Name); ok {
 						crds = append(crds, item)

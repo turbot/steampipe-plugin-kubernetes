@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -30,7 +31,6 @@ import (
 
 	"github.com/mitchellh/go-homedir"
 	filehelpers "github.com/turbot/go-kit/files"
-	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/steampipe-plugin-sdk/v5/connection"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
@@ -359,7 +359,7 @@ func getK8Config(ctx context.Context, d *plugin.QueryData) (clientcmd.ClientConf
 		}
 	}
 
-	if !helpers.StringSliceContains(sources, "deployed") {
+	if !slices.Contains(sources, "deployed") {
 		plugin.Logger(ctx).Debug("getK8Config", "Returning nil for API server client.", "source_types", sources, "connection", d.Connection.Name)
 		return nil, nil
 	}
@@ -447,7 +447,7 @@ func getK8ConfigRaw(ctx context.Context, cc *connection.ConnectionCache, c *plug
 		}
 	}
 
-	if !helpers.StringSliceContains(sources, "deployed") {
+	if !slices.Contains(sources, "deployed") {
 		plugin.Logger(ctx).Debug("getK8ConfigRaw", "Returning nil for API server client.", "source_types", sources, "connection", c.Name)
 		return nil, nil
 	}
@@ -810,7 +810,7 @@ func resolveManifestFilePaths(ctx context.Context, d *plugin.QueryData) ([]strin
 	}
 
 	// Return no files if manifest not set in source_types or if we omit setting any file paths
-	if !helpers.StringSliceContains(sources, "manifest") {
+	if !slices.Contains(sources, "manifest") {
 		return nil, nil
 	}
 	if kubernetesConfig.ManifestFilePaths == nil {

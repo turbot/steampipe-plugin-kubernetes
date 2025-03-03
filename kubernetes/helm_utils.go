@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"gopkg.in/yaml.v3"
 
@@ -12,7 +13,6 @@ import (
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chart/loader"
 
-	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
 )
 
@@ -59,7 +59,7 @@ func parsedHelmChartUncached(ctx context.Context, d *plugin.QueryData, _ *plugin
 		}
 	}
 
-	if !helpers.StringSliceContains(sources, "helm") {
+	if !slices.Contains(sources, "helm") {
 		return nil, nil
 	}
 
@@ -107,7 +107,7 @@ func getUniqueHelmCharts(ctx context.Context, d *plugin.QueryData) ([]*parsedHel
 	}
 
 	for _, chart := range charts {
-		if !helpers.StringSliceContains(configuredChartPaths, chart.Path) {
+		if !slices.Contains(configuredChartPaths, chart.Path) {
 			uniqueCharts = append(uniqueCharts, chart)
 		}
 		configuredChartPaths = append(configuredChartPaths, chart.Path)
@@ -123,7 +123,7 @@ func getUniqueValueFilesFromConfig(ctx context.Context, d *plugin.QueryData) []s
 
 	for _, chart := range config.HelmRenderedCharts {
 		for _, path := range chart.ValuesFilePaths {
-			if !helpers.StringSliceContains(filePaths, path) {
+			if !slices.Contains(filePaths, path) {
 				filePaths = append(filePaths, path)
 			}
 		}
