@@ -1,3 +1,14 @@
+## v1.3.0 [2025-03-07]
+
+_Bug fixes_
+
+- Fixed the `containers_resources_requests_std` column of the `kubernetes_pod` table to correctly return data instead of an error when the memory field is defined in the unit of `millibyte`. ([#283](https://github.com/turbot/steampipe-plugin-kubernetes/pull/283)) (Thanks [@omer-do](https://github.com/omer-do) for the contribution!)
+
+_Dependencies_
+
+- Recompiled plugin with Go version `1.23.1`.
+- Recompiled plugin with [steampipe-plugin-sdk v5.11.3](https://github.com/turbot/steampipe-plugin-sdk/blob/develop/CHANGELOG.md#v5113-2025-02-11) that addresses critical and high vulnerabilities in dependent packages.
+
 ## v1.2.1 [2025-02-12]
 
 _Bug fixes_
