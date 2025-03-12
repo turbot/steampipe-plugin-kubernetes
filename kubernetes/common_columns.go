@@ -15,8 +15,8 @@ const (
 func manifestResourceColumns() []*plugin.Column {
 	return []*plugin.Column{
 		{Name: "path", Type: proto.ColumnType_STRING, Description: "The path to the manifest file.", Transform: transform.FromField("Path").Transform(transform.NullIfZeroValue)},
-		{Name: "start_line", Type: proto.ColumnType_INT, Description: "The path to the manifest file.", Transform: transform.FromField("StartLine").NullIfZero()},
-		{Name: "end_line", Type: proto.ColumnType_INT, Description: "The path to the manifest file.", Transform: transform.FromField("EndLine").NullIfZero()},
+		{Name: "start_line", Type: proto.ColumnType_INT, Description: "Specifies the line number where the value is located.", Transform: transform.FromField("StartLine").NullIfZero()},
+		{Name: "end_line", Type: proto.ColumnType_INT, Description: "Specifies the line number where the value is ended.", Transform: transform.FromField("EndLine").NullIfZero()},
 	}
 }
 
