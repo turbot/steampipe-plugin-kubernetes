@@ -8,6 +8,12 @@
 		"pod_management_policy": "OrderedReady",
 		"ready_replicas": 2,
 		"replicas": 2,
+		"selector": {
+			"matchLabels": {
+				"app": "nginx"
+			}
+		},
+		"selector_query": "app=nginx",
 		"revision_history_limit": 10,
 		"service_name": "nginx",
 		"update_strategy": {
