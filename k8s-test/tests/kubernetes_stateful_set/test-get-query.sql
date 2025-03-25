@@ -3,6 +3,8 @@ select
   namespace,
   service_name,
   replicas,
+  selector,
+  selector_query,
   collision_count,
   current_replicas,
   observed_generation,
