@@ -151,7 +151,7 @@ Steampipe will automatically create the `kubernetes_certificate` table, which ca
 | creation_timestamp | timestamp with time zone | CreationTimestamp is a timestamp representing the server time when this object was created.                                                                        |
 | dns_names          | jsonb                    | A list of DNS subjectAltNames to be set on the Certificate.                                                                                                        |
 | duration           | text                     | The requested 'duration' (i.e. lifetime) of the Certificate. Defaults to 90 days.                                                                                  |
-| end_line           | bigint                   | The path to the manifest file.                                                                                                                                     |
+| end_line           | bigint                   | Specifies the line number where the value is ended.                                                                                                                |
 | ip_addresses       | jsonb                    | A list of IP address subjectAltNames to be set on the Certificate.                                                                                                 |
 | is_ca              | boolean                  | IsCA will mark this Certificate as valid for certificate signing.                                                                                                  |
 | issuer_ref         | jsonb                    | A reference to the issuer for this certificate.                                                                                                                    |
@@ -163,7 +163,7 @@ Steampipe will automatically create the `kubernetes_certificate` table, which ca
 | renew_before       | text                     | How long before the currently issued certificate's expiry cert-manager should renew the certificate. Default to 2/3 of the duration.                               |
 | secret_name        | text                     | The name of the secret resource that will be automatically created and managed by this Certificate resource.                                                       |
 | source_type        | text                     | The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest.                  |
-| start_line         | bigint                   | The path to the manifest file.                                                                                                                                     |
+| start_line         | bigint                   | Specifies the line number where the value is located.                                                                                                              |
 | uid                | text                     | UID is the unique in time and space value for this object.                                                                                                         |
 +--------------------+--------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 ```
