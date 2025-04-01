@@ -1,6 +1,7 @@
 ---
 title: "Steampipe Table: kubernetes_role - Query Kubernetes Roles using SQL"
 description: "Allows users to query Roles in Kubernetes, specifically the permissions and privileges assigned to a Role, providing insights into access control and security configurations."
+folder: "Role"
 ---
 
 # Table: kubernetes_role - Query Kubernetes Roles using SQL

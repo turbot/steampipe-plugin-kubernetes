@@ -1,6 +1,7 @@
 ---
 title: "Steampipe Table: kubernetes_endpoint_slice - Query Kubernetes Endpoint Slices using SQL"
 description: "Allows users to query Kubernetes Endpoint Slices, providing insights into the set of endpoints that a service may route traffic to."
+folder: "Endpoint"
 ---
 
 # Table: kubernetes_endpoint_slice - Query Kubernetes Endpoint Slices using SQL

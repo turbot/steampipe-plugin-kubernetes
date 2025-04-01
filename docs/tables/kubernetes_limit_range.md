@@ -1,6 +1,7 @@
 ---
 title: "Steampipe Table: kubernetes_limit_range - Query Kubernetes Limit Ranges using SQL"
 description: "Allows users to query Kubernetes Limit Ranges, specifically the range of constraints for resources such as CPU and memory that can be consumed by containers in a namespace."
+folder: "Limit Range"
 ---
 
 # Table: kubernetes_limit_range - Query Kubernetes Limit Ranges using SQL

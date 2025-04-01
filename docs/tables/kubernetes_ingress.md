@@ -1,6 +1,7 @@
 ---
 title: "Steampipe Table: kubernetes_ingress - Query Kubernetes Ingresses using SQL"
 description: "Allows users to query Kubernetes Ingresses, specifically to obtain details about the network traffic routing rules, providing insights into application or service access patterns."
+folder: "Ingress"
 ---
 
 # Table: kubernetes_ingress - Query Kubernetes Ingresses using SQL

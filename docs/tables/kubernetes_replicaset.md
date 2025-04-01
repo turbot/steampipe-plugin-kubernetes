@@ -1,6 +1,7 @@
 ---
 title: "Steampipe Table: kubernetes_replicaset - Query Kubernetes ReplicaSets using SQL"
 description: "Allows users to query Kubernetes ReplicaSets, providing details about the current state of each ReplicaSet, including the number of replicas, the desired number of replicas, and the labels and selectors used to identify its pods."
+folder: "ReplicaSet"
 ---
 
 # Table: kubernetes_replicaset - Query Kubernetes ReplicaSets using SQL

@@ -1,6 +1,7 @@
 ---
 title: "Steampipe Table: kubernetes_role_binding - Query Kubernetes Role Bindings using SQL"
 description: "Allows users to query Role Bindings in Kubernetes, providing insights into the permissions granted to specific users, groups, or service accounts within a namespace."
+folder: "Role"
 ---
 
 # Table: kubernetes_role_binding - Query Kubernetes Role Bindings using SQL

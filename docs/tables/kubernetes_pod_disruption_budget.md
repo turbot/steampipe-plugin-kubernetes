@@ -1,6 +1,7 @@
 ---
 title: "Steampipe Table: kubernetes_pod_disruption_budget - Query Kubernetes Pod Disruption Budgets using SQL"
 description: "Allows users to query Kubernetes Pod Disruption Budgets, specifically providing information about the minimum available pods and selector details, offering insights into the disruption allowance of the pods."
+folder: "Pod"
 ---
 
 # Table: kubernetes_pod_disruption_budget - Query Kubernetes Pod Disruption Budgets using SQL

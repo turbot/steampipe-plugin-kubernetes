@@ -1,6 +1,7 @@
 ---
 title: "Steampipe Table: helm_value - Query Kubernetes Helm Values using SQL"
 description: "Allows users to query Helm Values in Kubernetes, specifically the configuration values for Helm Charts, providing insights into the configurations of different Kubernetes applications."
+folder: "Helm"
 ---
 
 # Table: helm_value - Query Kubernetes Helm Values using SQL

@@ -1,6 +1,7 @@
 ---
 title: "Steampipe Table: kubernetes_service_account - Query Kubernetes Service Accounts using SQL"
 description: "Allows users to query Kubernetes Service Accounts, providing detailed information about each service account's metadata, secrets, image pull secrets, and automount service account token."
+folder: "Service Account"
 ---
 
 # Table: kubernetes_service_account - Query Kubernetes Service Accounts using SQL

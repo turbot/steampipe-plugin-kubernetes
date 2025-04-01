@@ -1,6 +1,7 @@
 ---
 title: "Steampipe Table: kubernetes_cluster_role_binding - Query Kubernetes Cluster Role Bindings using SQL"
 description: "Allows users to query Kubernetes Cluster Role Bindings, providing insights into binded roles within a Kubernetes cluster."
+folder: "Cluster"
 ---
 
 # Table: kubernetes_cluster_role_binding - Query Kubernetes Cluster Role Bindings using SQL

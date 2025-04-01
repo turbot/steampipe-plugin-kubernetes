@@ -1,6 +1,7 @@
 ---
 title: "Steampipe Table: kubernetes_cronjob - Query Kubernetes CronJobs using SQL"
 description: "Allows users to query Kubernetes CronJobs, providing insights into scheduled tasks within the Kubernetes environment."
+folder: "CronJob"
 ---
 
 # Table: kubernetes_cronjob - Query Kubernetes CronJobs using SQL

@@ -1,6 +1,7 @@
 ---
 title: "Steampipe Table: helm_chart - Query Kubernetes Helm Charts using SQL"
 description: "Allows users to query Kubernetes Helm Charts, providing insights into chart details like its version, status, and associated metadata."
+folder: "Helm"
 ---
 
 # Table: helm_chart - Query Kubernetes Helm Charts using SQL

@@ -1,6 +1,7 @@
 ---
 title: "Steampipe Table: kubernetes_node - Query Kubernetes Nodes using SQL"
 description: "Allows users to query Nodes in Kubernetes, providing details about the node's status, capacity, and allocatable resources."
+folder: "Node"
 ---
 
 # Table: kubernetes_node - Query Kubernetes Nodes using SQL

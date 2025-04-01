@@ -1,6 +1,7 @@
 ---
 title: "Steampipe Table: kubernetes_network_policy - Query Kubernetes Network Policies using SQL"
 description: "Allows users to query Kubernetes Network Policies, specifically to retrieve information about the network traffic rules applied to pods in a Kubernetes cluster."
+folder: "Network Policy"
 ---
 
 # Table: kubernetes_network_policy - Query Kubernetes Network Policies using SQL

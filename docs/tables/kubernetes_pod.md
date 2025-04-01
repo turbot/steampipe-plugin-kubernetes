@@ -1,6 +1,7 @@
 ---
 title: "Steampipe Table: kubernetes_pod - Query Kubernetes Pods using SQL"
 description: "Allows users to query Kubernetes Pods, providing insights into the status, configuration, and usage of Pods within a Kubernetes cluster."
+folder: "Pod"
 ---
 
 # Table: kubernetes_pod - Query Kubernetes Pods using SQL

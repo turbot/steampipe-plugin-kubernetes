@@ -1,6 +1,7 @@
 ---
 title: "Steampipe Table: kubernetes_pod_security_policy - Query Kubernetes Pod Security Policies using SQL"
 description: "Allows users to query Kubernetes Pod Security Policies, providing details about the security configurations and restrictions that apply to pods in a Kubernetes cluster."
+folder: "Pod"
 ---
 
 # Table: kubernetes_pod_security_policy - Query Kubernetes Pod Security Policies using SQL

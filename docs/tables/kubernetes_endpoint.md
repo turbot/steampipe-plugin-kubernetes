@@ -1,6 +1,7 @@
 ---
 title: "Steampipe Table: kubernetes_endpoint - Query Kubernetes Endpoints using SQL"
 description: "Allows users to query Kubernetes Endpoints, providing a detailed overview of each endpoint's configuration and status."
+folder: "Endpoint"
 ---
 
 # Table: kubernetes_endpoint - Query Kubernetes Endpoints using SQL

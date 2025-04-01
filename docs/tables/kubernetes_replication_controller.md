@@ -1,6 +1,7 @@
 ---
 title: "Steampipe Table: kubernetes_replication_controller - Query Kubernetes Replication Controllers using SQL"
 description: "Allows users to query Kubernetes Replication Controllers, providing insights into the status, configuration, and specifications of these controllers within a Kubernetes environment."
+folder: "Replication Controller"
 ---
 
 # Table: kubernetes_replication_controller - Query Kubernetes Replication Controllers using SQL

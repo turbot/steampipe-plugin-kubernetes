@@ -1,6 +1,7 @@
 ---
 title: "Steampipe Table: kubernetes_service - Query Kubernetes Services using SQL"
 description: "Allows users to query Kubernetes Services, particularly the configuration and status of services within a Kubernetes cluster."
+folder: "Service"
 ---
 
 # Table: kubernetes_service - Query Kubernetes Services using SQL

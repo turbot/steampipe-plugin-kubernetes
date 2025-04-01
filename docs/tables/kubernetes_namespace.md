@@ -1,6 +1,7 @@
 ---
 title: "Steampipe Table: kubernetes_namespace - Query Kubernetes Namespaces using SQL"
 description: "Allows users to query Kubernetes Namespaces, specifically the metadata and status of each namespace, providing insights into resource allocation and usage."
+folder: "Namespace"
 ---
 
 # Table: kubernetes_namespace - Query Kubernetes Namespaces using SQL
