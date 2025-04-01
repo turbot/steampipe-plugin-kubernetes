@@ -1,6 +1,7 @@
 ---
 title: "Steampipe Table: helm_template - Query Kubernetes Helm Templates using SQL"
 description: "Allows users to query Helm Templates in Kubernetes, specifically providing details about the chart, metadata, and template files, offering insights into Kubernetes deployment configurations."
+folder: "Helm"
 ---
 
 # Table: helm_template - Query Kubernetes Helm Templates using SQL

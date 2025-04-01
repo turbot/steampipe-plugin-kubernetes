@@ -1,6 +1,7 @@
 ---
 title: "Steampipe Table: kubernetes_cluster_role - Query Kubernetes Cluster Roles using SQL"
 description: "Allows users to query Kubernetes Cluster Roles, specifically the permissions and rules associated with each role, providing insights into the access controls in a Kubernetes cluster."
+folder: "Cluster"
 ---
 
 # Table: kubernetes_cluster_role - Query Kubernetes Cluster Roles using SQL

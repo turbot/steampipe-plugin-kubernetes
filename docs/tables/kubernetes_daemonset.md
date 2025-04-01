@@ -1,6 +1,7 @@
 ---
 title: "Steampipe Table: kubernetes_daemonset - Query Kubernetes DaemonSets using SQL"
 description: "Allows users to query Kubernetes DaemonSets, specifically to retrieve data about each DaemonSet's status, spec, and metadata."
+folder: "DaemonSet"
 ---
 
 # Table: kubernetes_daemonset - Query Kubernetes DaemonSets using SQL

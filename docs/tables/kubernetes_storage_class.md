@@ -1,6 +1,7 @@
 ---
 title: "Steampipe Table: kubernetes_storage_class - Query Kubernetes Storage Classes using SQL"
 description: "Allows users to query Storage Classes in Kubernetes, providing detailed insights into the different types of storage available in a Kubernetes cluster."
+folder: "Storage"
 ---
 
 # Table: kubernetes_storage_class - Query Kubernetes Storage Classes using SQL

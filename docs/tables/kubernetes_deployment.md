@@ -1,6 +1,7 @@
 ---
 title: "Steampipe Table: kubernetes_deployment - Query Kubernetes Deployments using SQL"
 description: "Allows users to query Deployments in Kubernetes, specifically information about deployed applications and their replicas, providing insights into application management and scaling."
+folder: "Deployment"
 ---
 
 # Table: kubernetes_deployment - Query Kubernetes Deployments using SQL
