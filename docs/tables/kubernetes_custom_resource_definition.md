@@ -1,6 +1,7 @@
 ---
 title: "Steampipe Table: kubernetes_custom_resource_definition - Query Kubernetes Custom Resource Definitions using SQL"
 description: "Allows users to query Custom Resource Definitions in Kubernetes, providing details about the structure and configuration of the custom resources."
+folder: "CRD"
 ---
 
 # Table: kubernetes_custom_resource_definition - Query Kubernetes Custom Resource Definitions using SQL

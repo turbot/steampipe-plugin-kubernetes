@@ -1,6 +1,7 @@
 ---
 title: "Steampipe Table: kubernetes_job - Query Kubernetes Jobs using SQL"
 description: "Allows users to query Kubernetes Jobs, providing insights into the detailed status of each job, including the number of successful completions and the parallelism limit."
+folder: "Job"
 ---
 
 # Table: kubernetes_job - Query Kubernetes Jobs using SQL

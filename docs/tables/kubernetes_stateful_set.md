@@ -1,6 +1,7 @@
 ---
 title: "Steampipe Table: kubernetes_stateful_set - Query Kubernetes Stateful Sets using SQL"
 description: "Allows users to query Kubernetes Stateful Sets, specifically providing details about the stateful applications running in a Kubernetes environment."
+folder: "Stateful Set"
 ---
 
 # Table: kubernetes_stateful_set - Query Kubernetes Stateful Sets using SQL

@@ -1,6 +1,7 @@
 ---
 title: "Steampipe Table: kubernetes_config_map - Query Kubernetes Config Maps using SQL"
 description: "Allows users to query Kubernetes Config Maps, providing insights into configuration data and application settings within a Kubernetes cluster."
+folder: "Config"
 ---
 
 # Table: kubernetes_config_map - Query Kubernetes Config Maps using SQL

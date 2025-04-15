@@ -1,6 +1,7 @@
 ---
 title: "Steampipe Table: kubernetes_secret - Query Kubernetes Secrets using SQL"
 description: "Allows users to query Kubernetes Secrets, providing insights into the sensitive information like passwords, OAuth tokens, and ssh keys that are stored."
+folder: "Secret"
 ---
 
 # Table: kubernetes_secret - Query Kubernetes Secrets using SQL

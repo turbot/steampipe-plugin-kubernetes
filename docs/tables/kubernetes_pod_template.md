@@ -1,6 +1,7 @@
 ---
 title: "Steampipe Table: kubernetes_pod_template - Query Kubernetes Pod Templates using SQL"
 description: "Allows users to query Kubernetes Pod Templates, specifically providing insights into the template's metadata, specification, and status."
+folder: "Pod"
 ---
 
 # Table: kubernetes_pod_template - Query Kubernetes Pod Templates using SQL

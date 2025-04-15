@@ -1,6 +1,7 @@
 ---
 title: "Steampipe Table: kubernetes_persistent_volume_claim - Query Kubernetes Persistent Volume Claims using SQL"
 description: "Allows users to query Kubernetes Persistent Volume Claims, specifically providing information about the status, capacity, and access modes of each claim."
+folder: "Persistent Volume"
 ---
 
 # Table: kubernetes_persistent_volume_claim - Query Kubernetes Persistent Volume Claims using SQL

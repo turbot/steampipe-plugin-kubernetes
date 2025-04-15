@@ -1,6 +1,7 @@
 ---
 title: "Steampipe Table: kubernetes_persistent_volume - Query Kubernetes Persistent Volumes using SQL"
 description: "Allows users to query Kubernetes Persistent Volumes, providing insights into the storage resources available in a Kubernetes cluster."
+folder: "Persistent Volume"
 ---
 
 # Table: kubernetes_persistent_volume - Query Kubernetes Persistent Volumes using SQL

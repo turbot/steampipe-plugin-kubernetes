@@ -1,6 +1,7 @@
 ---
 title: "Steampipe Table: kubernetes_event - Query Kubernetes Events using SQL"
 description: "Allows users to query Kubernetes Events, specifically the details of events occurring within a Kubernetes system, providing insights into system behaviors and potential issues."
+folder: "Event"
 ---
 
 # Table: kubernetes_event - Query Kubernetes Events using SQL

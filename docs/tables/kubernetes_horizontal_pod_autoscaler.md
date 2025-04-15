@@ -1,6 +1,7 @@
 ---
 title: "Steampipe Table: kubernetes_horizontal_pod_autoscaler - Query Kubernetes Horizontal Pod Autoscalers using SQL"
 description: "Allows users to query Kubernetes Horizontal Pod Autoscalers, providing insights into the configuration and current status of autoscalers in the Kubernetes cluster."
+folder: "Horizontal Pod Autoscaler"
 ---
 
 # Table: kubernetes_horizontal_pod_autoscaler - Query Kubernetes Horizontal Pod Autoscalers using SQL

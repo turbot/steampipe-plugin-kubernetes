@@ -1,6 +1,7 @@
 ---
 title: "Steampipe Table: kubernetes_resource_quota - Query Kubernetes Resource Quotas using SQL"
 description: "Allows users to query Resource Quotas in Kubernetes, providing insights into resource usage and restrictions within a namespace."
+folder: "Resource Quota"
 ---
 
 # Table: kubernetes_resource_quota - Query Kubernetes Resource Quotas using SQL

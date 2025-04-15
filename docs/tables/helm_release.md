@@ -1,6 +1,7 @@
 ---
 title: "Steampipe Table: helm_release - Query Kubernetes Helm Releases using SQL"
 description: "Allows users to query Helm Releases in Kubernetes, specifically information about the release, the chart used for the release, and the configuration values used."
+folder: "Helm"
 ---
 
 # Table: helm_release - Query Kubernetes Helm Releases using SQL
