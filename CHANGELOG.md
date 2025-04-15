@@ -1,3 +1,14 @@
+## v1.4.0 [2025-04-15]
+
+_Enhancements_
+
+- Added `folder` metadata to the documentation of all the Kubernetes tables for improved organization on the Steampipe Hub. ([#294](https://github.com/turbot/steampipe-plugin-kubernetes/pull/294))
+- Added `selector` and `selector_query` columns to `kubernetes_stateful_set` tables. ([#293](https://github.com/turbot/steampipe-plugin-kubernetes/pull/293)) (Thanks [@dongho-jung](https://github.com/dongho-jung) for the contribution!!) 
+
+_Dependencies_
+
+- Recompiled plugin with [steampipe-plugin-sdk v5.11.5](https://github.com/turbot/steampipe-plugin-sdk/releases/tag/v5.11.5) ([#294](https://github.com/turbot/steampipe-plugin-kubernetes/pull/294))
+
 ## v1.3.0 [2025-03-07]
 
 _Bug fixes_
