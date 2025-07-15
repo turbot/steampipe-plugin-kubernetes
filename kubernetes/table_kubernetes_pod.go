@@ -618,14 +618,14 @@ func transformPodCpuAndMemoryUnit(ctx context.Context, d *transform.TransformDat
 
 	if param == "limit" {
 		limitCPUMemoryMaps := make([]map[string]interface{}, 0)
-	
-		limitCPUMemoryMap := make(map[string]interface{})
-	
+
 		for _, container := range containers {
+			// Create a new map for each container
+			limitCPUMemoryMap := make(map[string]interface{})
 			limit := container.Resources.Limits
 			limitCPUMemoryMap["containerName"] = container.Name
 			limitCPUMemoryMap["containerImage"] = container.Image
-			if limit.Cpu().String() != "" && !limit.Cpu().IsZero(){
+			if limit.Cpu().String() != "" && !limit.Cpu().IsZero() {
 				cpu, err := normalizeCPUToMilliCores(limit.Cpu().String())
 				if err != nil {
 					plugin.Logger(ctx).Error("kubernetes_pod.transformPodCpuAndMemoryUnit", "error in parsing the CPU value", err)
@@ -633,8 +633,8 @@ func transformPodCpuAndMemoryUnit(ctx context.Context, d *transform.TransformDat
 				}
 				limitCPUMemoryMap["cpu"] = cpu
 			}
-	
-			if limit.Memory().String() != "" && !limit.Memory().IsZero(){
+
+			if limit.Memory().String() != "" && !limit.Memory().IsZero() {
 				memory, err := normalizeMemoryToBytes(limit.Memory().String())
 				if err != nil {
 					plugin.Logger(ctx).Error("kubernetes_pod.transformPodCpuAndMemoryUnit", "error in parsing the memory value", err)
@@ -643,20 +643,19 @@ func transformPodCpuAndMemoryUnit(ctx context.Context, d *transform.TransformDat
 				limitCPUMemoryMap["memory"] = memory
 			}
 			limitCPUMemoryMaps = append(limitCPUMemoryMaps, limitCPUMemoryMap)
-	
 		}
 
 		return limitCPUMemoryMaps, nil
 	} else if param == "request" {
 		requestCPUMemoryMaps := make([]map[string]interface{}, 0)
-	
-		requestCPUMemoryMap := make(map[string]interface{})
-	
+
 		for _, container := range containers {
+			// Create a new map for each container
+			requestCPUMemoryMap := make(map[string]interface{})
 			request := container.Resources.Requests
 			requestCPUMemoryMap["containerName"] = container.Name
 			requestCPUMemoryMap["containerImage"] = container.Image
-			if request.Cpu().String() != "" && !request.Cpu().IsZero(){
+			if request.Cpu().String() != "" && !request.Cpu().IsZero() {
 				cpu, err := normalizeCPUToMilliCores(request.Cpu().String())
 				if err != nil {
 					plugin.Logger(ctx).Error("kubernetes_pod.transformPodCpuAndMemoryUnit", "error in parsing the CPU value", err)
@@ -664,8 +663,8 @@ func transformPodCpuAndMemoryUnit(ctx context.Context, d *transform.TransformDat
 				}
 				requestCPUMemoryMap["cpu"] = cpu
 			}
-	
-			if request.Memory().String() != "" && !request.Memory().IsZero(){
+
+			if request.Memory().String() != "" && !request.Memory().IsZero() {
 				memory, err := normalizeMemoryToBytes(request.Memory().String())
 				if err != nil {
 					plugin.Logger(ctx).Error("kubernetes_pod.transformPodCpuAndMemoryUnit", "error in parsing the memory value", err)
@@ -674,7 +673,6 @@ func transformPodCpuAndMemoryUnit(ctx context.Context, d *transform.TransformDat
 				requestCPUMemoryMap["memory"] = memory
 			}
 			requestCPUMemoryMaps = append(requestCPUMemoryMaps, requestCPUMemoryMap)
-	
 		}
 
 		return requestCPUMemoryMaps, nil
