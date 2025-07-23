@@ -1008,7 +1008,7 @@ func normalizeCPUToMilliCores(cpu string) (int64, error) {
 		return int64(math.Ceil(value)), nil
 	}
 
-	// Convert cores to millicores
+	// Convert cores to millicores (handles scientific notation like "500e-3")
 	value, err := strconv.ParseFloat(cpu, 64)
 	if err != nil {
 		return 0, fmt.Errorf("invalid CPU value: %s", cpu)
@@ -1020,16 +1020,36 @@ func normalizeCPUToMilliCores(cpu string) (int64, error) {
 
 // normalizeMemoryToBytes converts memory quantities to bytes, rounding up if necessary.
 func normalizeMemoryToBytes(memory string) (int64, error) {
-	// Set default value to arg value and unit to Bytes
+	// Handle scientific notation by trying to parse the full string as a float first
+	if value, err := strconv.ParseFloat(memory, 64); err == nil {
+		// If it parses successfully as a pure number (including scientific notation), treat as bytes
+		return int64(math.Ceil(value)), nil
+	}
+
+	// Find the boundary between number and unit more carefully
+	// Look for the start of alphabetic characters that don't include 'e' or 'E' (for scientific notation)
 	valuePart := memory
 	unitPart := "B"
+
 	for i, r := range memory {
-		if r < '0' || r > '9' {
+		// If we find an alphabetic character that's not 'e' or 'E', or if we find 'e'/'E'
+		// followed by an alphabetic character (not a digit or +/-), then we've found the unit
+		if (r >= 'A' && r <= 'Z' && r != 'E') || (r >= 'a' && r <= 'z' && r != 'e') {
 			valuePart = memory[:i]
 			unitPart = memory[i:]
 			break
 		}
+		// Handle the case where 'e' or 'E' is followed by a letter (not +/- or digit)
+		if (r == 'e' || r == 'E') && i+1 < len(memory) {
+			next := memory[i+1]
+			if (next >= 'A' && next <= 'Z') || (next >= 'a' && next <= 'z') {
+				valuePart = memory[:i]
+				unitPart = memory[i:]
+				break
+			}
+		}
 	}
+
 	if valuePart == "" {
 		return 0, fmt.Errorf("invalid memory value: %s", memory)
 	}
