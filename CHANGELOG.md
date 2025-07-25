@@ -1,3 +1,14 @@
+## v1.5.0 [2025-07-25]
+
+_Bug fixes_
+
+- Fixed the `containers_resources_limits_std` and `containers_resources_requests_std` columns in the `kubernetes_pod` table to correctly return data when pod resource limits or requests are expressed in scientific notation, preventing errors. ([#315](https://github.com/turbot/steampipe-plugin-kubernetes/pull/315))
+
+_Dependencies_
+
+- Recompiled plugin with Go version `1.24`.
+- Recompiled plugin with [steampipe-plugin-sdk v5.13.0](https://github.com/turbot/steampipe-plugin-sdk/blob/develop/CHANGELOG.md#v5130-2025-07-21) that addresses critical and high vulnerabilities in dependent packages.
+
 ## v1.4.0 [2025-04-15]
 
 _Enhancements_
