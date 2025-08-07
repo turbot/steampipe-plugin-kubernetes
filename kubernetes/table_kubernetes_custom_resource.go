@@ -118,6 +118,7 @@ type CRDResourceInfo struct {
 	Spec              interface{}
 	Labels            interface{}
 	Status            interface{}
+	Report            interface{}
 	Path              string
 	StartLine         int
 	EndLine           int
@@ -166,6 +167,7 @@ func listK8sCustomResources(ctx context.Context, crdName string, resourceName st
 				Labels:            deployment.GetLabels(),
 				Spec:              data["spec"],
 				Status:            data["status"],
+				Report:            data["report"],
 				StartLine:         content.StartLine,
 				EndLine:           content.EndLine,
 				Path:              content.Path,
@@ -210,6 +212,7 @@ func listK8sCustomResources(ctx context.Context, crdName string, resourceName st
 				Labels:            crd.GetLabels(),
 				Spec:              data["spec"],
 				Status:            data["status"],
+				Report:            data["report"],
 				SourceType:        "deployed",
 				ContextName:       currentContext.(string),
 			})
@@ -248,6 +251,10 @@ func extractStatusProperty(_ context.Context, d *transform.TransformData) (inter
 	status := ob.(map[string]interface{})
 	if status[param] != nil {
 		return status[param], nil
+	}
+	report := ob.(map[string]interface{})
+	if report[param] != nil {
+		return report[param], nil
 	}
 
 	return nil, nil
