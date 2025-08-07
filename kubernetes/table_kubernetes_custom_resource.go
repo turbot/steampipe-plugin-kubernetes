@@ -25,6 +25,7 @@ func tableKubernetesCustomResource(ctx context.Context) *plugin.Table {
 	activeVersion := ctx.Value(contextKey("ActiveVersion")).(string)
 	versionSchemaSpec := ctx.Value(contextKey("VersionSchemaSpec"))
 	versionSchemaStatus := ctx.Value(contextKey("VersionSchemaStatus"))
+	versionSchemaReport := ctx.Value(contextKey("VersionSchemaReport"))
 	tableName := ctx.Value(contextKey("TableName")).(string)
 
 	var description string
@@ -39,11 +40,11 @@ func tableKubernetesCustomResource(ctx context.Context) *plugin.Table {
 		List: &plugin.ListConfig{
 			Hydrate: listK8sCustomResources(ctx, crdName, resourceName, resourceNameSingular, groupName, activeVersion),
 		},
-		Columns: k8sCRDResourceCommonColumns(getCustomResourcesDynamicColumns(ctx, versionSchemaSpec, versionSchemaStatus)),
+		Columns: k8sCRDResourceCommonColumns(getCustomResourcesDynamicColumns(ctx, versionSchemaSpec, versionSchemaStatus, versionSchemaReport)),
 	}
 }
 
-func getCustomResourcesDynamicColumns(ctx context.Context, versionSchemaSpec interface{}, versionSchemaStatus interface{}) []*plugin.Column {
+func getCustomResourcesDynamicColumns(ctx context.Context, versionSchemaSpec interface{}, versionSchemaStatus interface{},versionSchemaReport interface{}) []*plugin.Column {
 	columns := []*plugin.Column{}
 
 	// default metadata columns
@@ -103,7 +104,32 @@ func getCustomResourcesDynamicColumns(ctx context.Context, versionSchemaSpec int
 			columns = append(columns, column)
 		}
 	}
-
+	// add the report columns
+	schemaReport := versionSchemaReport.(v1.JSONSchemaProps)
+	for k, v := range schemaReport.Properties {
+		flag := 0
+		for _, reportColumn := range allColumns {
+			if reportColumn == strcase.ToSnake(k) {
+				flag = 1
+				column := &plugin.Column{
+					Name:        "report_" + strcase.ToSnake(k),
+					Description: v.Description,
+					Transform:   transform.FromP(extractReportProperty, k),
+				}
+				setDynamicColumns(v, column)
+				columns = append(columns, column)
+			}
+		}
+		if flag == 0 {
+			column := &plugin.Column{
+				Name:        strcase.ToSnake(k),
+				Description: v.Description,
+				Transform:   transform.FromP(extractReportProperty, k),
+			}
+			setDynamicColumns(v, column)
+			columns = append(columns, column)
+		}
+	}
 	return columns
 }
 
@@ -118,6 +144,7 @@ type CRDResourceInfo struct {
 	Spec              interface{}
 	Labels            interface{}
 	Status            interface{}
+	Report            interface{}
 	Path              string
 	StartLine         int
 	EndLine           int
@@ -166,6 +193,7 @@ func listK8sCustomResources(ctx context.Context, crdName string, resourceName st
 				Labels:            deployment.GetLabels(),
 				Spec:              data["spec"],
 				Status:            data["status"],
+				Report:            data["report"],
 				StartLine:         content.StartLine,
 				EndLine:           content.EndLine,
 				Path:              content.Path,
@@ -210,6 +238,7 @@ func listK8sCustomResources(ctx context.Context, crdName string, resourceName st
 				Labels:            crd.GetLabels(),
 				Spec:              data["spec"],
 				Status:            data["status"],
+				Report:            data["report"],
 				SourceType:        "deployed",
 				ContextName:       currentContext.(string),
 			})
@@ -249,7 +278,19 @@ func extractStatusProperty(_ context.Context, d *transform.TransformData) (inter
 	if status[param] != nil {
 		return status[param], nil
 	}
+	return nil, nil
+}
 
+func extractReportProperty(_ context.Context, d *transform.TransformData) (interface{}, error) {
+	ob := d.HydrateItem.(*CRDResourceInfo).Report
+	if ob == nil {
+		return nil, nil
+	}
+	param := d.Param.(string)
+	report := ob.(map[string]interface{})
+	if report[param] != nil {
+		return report[param], nil
+	}
 	return nil, nil
 }
 
