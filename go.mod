@@ -17,7 +17,6 @@ require (
 	k8s.io/apiextensions-apiserver v0.31.1
 	k8s.io/apimachinery v0.31.1
 	k8s.io/client-go v0.31.1
-
 )
 
 require (
@@ -165,7 +164,7 @@ require (
 	github.com/stevenle/topsort v0.2.0 // indirect
 	github.com/stretchr/testify v1.10.0 // indirect
 	github.com/tkrajina/go-reflector v0.5.6 // indirect
-	github.com/ulikunitz/xz v0.5.12 // indirect
+	github.com/ulikunitz/xz v0.5.14 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
