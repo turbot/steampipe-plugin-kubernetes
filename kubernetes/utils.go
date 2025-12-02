@@ -725,9 +725,11 @@ func parsedManifestFileContentUncached(ctx context.Context, d *plugin.QueryData,
 			return nil, err
 		}
 
-		// Check for the start of the document
+		// Check for the start of the document. Split only on YAML document separators
+		// that appear at the start of a line, so that literal strings containing
+		// '---' (for example in a block scalar) do not break parsing.
 		pos := 0
-		for _, resource := range strings.Split(string(content), "---") {
+		for _, resource := range splitYAMLDocuments(string(content)) {
 			// Skip empty documents, `Decode` will fail on them
 			// Also, increment the pos to include the separator position (e.g. ---)
 			if len(resource) == 0 {
@@ -789,6 +791,15 @@ func parsedManifestFileContentUncached(ctx context.Context, d *plugin.QueryData,
 	}
 
 	return parsedContents, nil
+}
+
+// splitYAMLDocuments splits a YAML stream into documents using only valid YAML
+// document separators: lines that consist of '---' (with optional trailing
+// whitespace) at the start of a line. This avoids splitting on '---' that
+// appear inside block scalars or other string values.
+func splitYAMLDocuments(content string) []string {
+	docSeparator := regexp.MustCompile(`(?m)^---\s*$`)
+	return docSeparator.Split(content, -1)
 }
 
 // Returns the list of file paths/glob patterns after resolving all the given manifest file paths.
