@@ -798,7 +798,7 @@ func parsedManifestFileContentUncached(ctx context.Context, d *plugin.QueryData,
 // whitespace) at the start of a line. This avoids splitting on '---' that
 // appear inside block scalars or other string values.
 func splitYAMLDocuments(content string) []string {
-	docSeparator := regexp.MustCompile(`(?m)^---\s*$`)
+	docSeparator := regexp.MustCompile(`(?m)^---\s*(#.*)?$`)
 	return docSeparator.Split(content, -1)
 }
 
