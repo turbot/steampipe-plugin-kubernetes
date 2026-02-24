@@ -36,6 +36,12 @@ import (
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
 )
 
+// yamlDocSeparator matches YAML document separator lines: "---" at the start
+// of a line (column 0), optionally followed by trailing whitespace. Per the
+// YAML spec, an indented "---" inside a multi-line string value is NOT a
+// document separator, so we must anchor to the beginning of the line.
+var yamlDocSeparator = regexp.MustCompile(`(?m)^---\s*$`)
+
 type SourceType string
 
 const (
@@ -727,7 +733,7 @@ func parsedManifestFileContentUncached(ctx context.Context, d *plugin.QueryData,
 
 		// Check for the start of the document
 		pos := 0
-		for _, resource := range strings.Split(string(content), "---") {
+		for _, resource := range yamlDocSeparator.Split(string(content), -1) {
 			// Skip empty documents, `Decode` will fail on them
 			// Also, increment the pos to include the separator position (e.g. ---)
 			if len(resource) == 0 {
