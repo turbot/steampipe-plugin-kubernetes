@@ -104,13 +104,20 @@ func pluginTableDefinitions(ctx context.Context, d *plugin.TableMapData) (map[st
 		for _, version := range crd.Spec.Versions {
 			if version.Served {
 				ctx = context.WithValue(ctx, contextKey("ActiveVersion"), version.Name)
+				specSchema := v1.JSONSchemaProps{}
+				statusSchema := v1.JSONSchemaProps{}
+				reportSchema := v1.JSONSchemaProps{}
 				if version.Schema != nil && version.Schema.OpenAPIV3Schema != nil {
-					ctx = context.WithValue(ctx, contextKey("VersionSchemaSpec"), version.Schema.OpenAPIV3Schema.Properties["spec"])
-					ctx = context.WithValue(ctx, contextKey("VersionSchemaStatus"), version.Schema.OpenAPIV3Schema.Properties["status"])
+					specSchema = version.Schema.OpenAPIV3Schema.Properties["spec"]
+					statusSchema = version.Schema.OpenAPIV3Schema.Properties["status"]
+					reportSchema = version.Schema.OpenAPIV3Schema.Properties["report"]
 					if len(version.Schema.OpenAPIV3Schema.Description) > 0 {
 						ctx = context.WithValue(ctx, contextKey("VersionSchemaDescription"), strings.TrimSuffix(version.Schema.OpenAPIV3Schema.Description, ".")+".")
 					}
 				}
+				ctx = context.WithValue(ctx, contextKey("VersionSchemaSpec"), specSchema)
+				ctx = context.WithValue(ctx, contextKey("VersionSchemaStatus"), statusSchema)
+				ctx = context.WithValue(ctx, contextKey("VersionSchemaReport"), reportSchema)
 			}
 		}
 
