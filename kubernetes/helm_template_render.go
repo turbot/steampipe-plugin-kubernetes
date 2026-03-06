@@ -111,7 +111,7 @@ func getHelmRenderedTemplatesUncached(ctx context.Context, d *plugin.QueryData, 
 					continue
 				}
 
-				splitManifest := strings.Split(manifest.Manifest, "---")
+				splitManifest := yamlDocSeparator.Split(manifest.Manifest, -1)
 				for _, content := range splitManifest {
 					if len(content) == 0 {
 						continue
@@ -185,7 +185,7 @@ func renderedHelmTemplateContentUncached(ctx context.Context, d *plugin.QueryDat
 		}
 		lineInfo := temp[t.Path]
 
-		for _, resource := range strings.Split(t.Data, "---") {
+		for _, resource := range yamlDocSeparator.Split(t.Data, -1) {
 			// Skip empty documents, `Decode` will fail on them
 			// Also, increment the pos to include the separator position (e.g. ---)
 			if len(resource) == 0 {
@@ -347,7 +347,7 @@ func getRawTemplateLineInfo(ctx context.Context, d *plugin.QueryData) (map[strin
 			startLine := 0
 			count := 0
 
-			for _, content := range strings.Split(templateContent, "---") {
+			for _, content := range yamlDocSeparator.Split(templateContent, -1) {
 				// Skip empty documents, `Decode` will fail on them
 				// Also, increment the pos to include the separator position (e.g. ---)
 				if len(content) == 0 {
