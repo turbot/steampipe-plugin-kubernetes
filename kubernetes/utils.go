@@ -370,6 +370,16 @@ func getK8Config(ctx context.Context, d *plugin.QueryData) (clientcmd.ClientConf
 		return nil, nil
 	}
 
+	// If config_path contains inline kubeconfig YAML (not a file path), parse it directly without any disk I/O.
+	if kubernetesConfig.ConfigPath != nil {
+		if kubeconfig, ok, err := tryInlineKubeconfig(*kubernetesConfig.ConfigPath, kubernetesConfig.ConfigContext); err != nil {
+			return nil, err
+		} else if ok {
+			d.ConnectionManager.Cache.Set(cacheKey, kubeconfig)
+			return kubeconfig, nil
+		}
+	}
+
 	// Set default loader and overriding rules
 	loader := &clientcmd.ClientConfigLoadingRules{}
 	overrides := &clientcmd.ConfigOverrides{}
@@ -458,6 +468,19 @@ func getK8ConfigRaw(ctx context.Context, cc *connection.ConnectionCache, c *plug
 		return nil, nil
 	}
 
+	// If config_path contains inline kubeconfig YAML (not a file path), parse it directly without any disk I/O.
+	if kubernetesConfig.ConfigPath != nil {
+		if kubeconfig, ok, err := tryInlineKubeconfig(*kubernetesConfig.ConfigPath, kubernetesConfig.ConfigContext); err != nil {
+			return nil, err
+		} else if ok {
+			cacheErr := cc.Set(ctx, cacheKey, kubeconfig)
+			if cacheErr != nil {
+				logger.Error("getK8ConfigRaw", "cache-set", cacheErr)
+			}
+			return kubeconfig, nil
+		}
+	}
+
 	// Set default loader and overriding rules
 	loader := &clientcmd.ClientConfigLoadingRules{}
 	overrides := &clientcmd.ConfigOverrides{}
@@ -515,6 +538,76 @@ func getK8ConfigRaw(ctx context.Context, cc *connection.ConnectionCache, c *plug
 	}
 
 	return kubeconfig, nil
+}
+
+// tryInlineKubeconfig checks if configPath is inline YAML content (not a file path) using the pathOrContents.
+// If inline, it parses the content directly and returns the ClientConfig.
+// Returns ok=false if the value is a file path (caller should fall through to the standard loader).
+func tryInlineKubeconfig(configPath string, configContext *string) (clientcmd.ClientConfig, bool, error) {
+	_, isInline, err := pathOrContents(configPath)
+	if err != nil {
+		return nil, false, err
+	}
+	if !isInline {
+		return nil, false, nil
+	}
+
+	// Inline kubeconfig YAML — parse directly, zero disk I/O
+	overrides := &clientcmd.ConfigOverrides{}
+	if configContext != nil {
+		overrides.CurrentContext = *configContext
+		overrides.Context = clientcmdapi.Context{}
+	}
+
+	kubeconfig, err := clientcmd.NewClientConfigFromBytes([]byte(configPath))
+	if err != nil {
+		return nil, false, fmt.Errorf("failed to parse inline kubeconfig from config_path: %w", err)
+	}
+
+	// Apply context override if set
+	if configContext != nil {
+		rawConfig, err := kubeconfig.RawConfig()
+		if err != nil {
+			return nil, false, fmt.Errorf("failed to get raw config from inline kubeconfig: %w", err)
+		}
+		rawConfig.CurrentContext = *configContext
+		kubeconfig = clientcmd.NewNonInteractiveClientConfig(rawConfig, *configContext, overrides, nil)
+	}
+
+	return kubeconfig, true, nil
+}
+
+// pathOrContents checks if the given string is a file path or inline content.
+// If the value is a valid file path that exists on disk, it returns the expanded
+// path and isInline=false. Otherwise it returns the original value as inline
+// content with isInline=true.
+// This follows the same pattern as the GCP plugin's pathOrContents function.
+func pathOrContents(poc string) (string, bool, error) {
+	if len(poc) == 0 {
+		return poc, false, nil
+	}
+
+	path := poc
+	if path[0] == '~' {
+		var err error
+		path, err = homedir.Expand(path)
+		if err != nil {
+			return "", false, err
+		}
+	}
+
+	// Check for valid file path
+	if _, err := os.Stat(path); err == nil {
+		return path, false, nil
+	}
+
+	// If it looks like a file path but doesn't exist, return an error
+	if len(path) > 1 && (path[0] == '/' || path[0] == '\\') {
+		return "", false, fmt.Errorf("config_path: %s: no such file or directory", path)
+	}
+
+	// Otherwise, treat as inline content
+	return poc, true, nil
 }
 
 //// HYDRATE FUNCTIONS
