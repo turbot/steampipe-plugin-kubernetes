@@ -1,3 +1,9 @@
+## v1.5.2 [2026-03-06]
+
+_Bug fixes_
+
+- Fixed manifest and Helm template parsing to handle YAML document separators (`---`) inside multi-line string values, which previously caused all queries to fail with an unmarshaling error. ([#349](https://github.com/turbot/steampipe-plugin-kubernetes/pull/349))
+
 ## v1.5.1 [2025-10-13]
 
 _Dependencies_
