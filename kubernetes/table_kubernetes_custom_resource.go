@@ -186,37 +186,53 @@ func listK8sCustomResources(ctx context.Context, crdName string, resourceName st
 			Resource: resourceName,
 		}
 
-		response, err := clientset.Resource(resourceId).List(ctx, metav1.ListOptions{})
-		if err != nil {
-			// Handle not found error code
-			if strings.Contains(err.Error(), "could not find the requested resource") {
-				return nil, nil
-			}
-			return nil, err
+		input := metav1.ListOptions{
+			Limit: 500,
 		}
 
-		currentContext := getCurrentContext(ctx, d, nil)
+		var response *unstructured.UnstructuredList
+		pageLeft := true
 
-		for _, crd := range response.Items {
-			data := crd.Object
-			d.StreamListItem(ctx, &CRDResourceInfo{
-				Name:              crd.GetName(),
-				UID:               crd.GetUID(),
-				APIVersion:        crd.GetAPIVersion(),
-				Kind:              crd.GetKind(),
-				Namespace:         crd.GetNamespace(),
-				Annotations:       crd.GetAnnotations(),
-				CreationTimestamp: crd.GetCreationTimestamp(),
-				Labels:            crd.GetLabels(),
-				Spec:              data["spec"],
-				Status:            data["status"],
-				SourceType:        "deployed",
-				ContextName:       currentContext.(string),
-			})
+		for pageLeft {
 
-			// Context can be cancelled due to manual cancellation or the limit has been hit
-			if d.RowsRemaining(ctx) == 0 {
-				return nil, nil
+			response, err = clientset.Resource(resourceId).List(ctx, input)
+			if err != nil {
+				// Handle not found error code
+				if strings.Contains(err.Error(), "could not find the requested resource") {
+					return nil, nil
+				}
+				return nil, err
+			}
+
+			if response.GetContinue() != "" {
+				input.Continue = response.GetContinue()
+			} else {
+				pageLeft = false
+			}
+
+			currentContext := getCurrentContext(ctx, d, nil)
+
+			for _, crd := range response.Items {
+				data := crd.Object
+				d.StreamListItem(ctx, &CRDResourceInfo{
+					Name:              crd.GetName(),
+					UID:               crd.GetUID(),
+					APIVersion:        crd.GetAPIVersion(),
+					Kind:              crd.GetKind(),
+					Namespace:         crd.GetNamespace(),
+					Annotations:       crd.GetAnnotations(),
+					CreationTimestamp: crd.GetCreationTimestamp(),
+					Labels:            crd.GetLabels(),
+					Spec:              data["spec"],
+					Status:            data["status"],
+					SourceType:        "deployed",
+					ContextName:       currentContext.(string),
+				})
+
+				// Context can be cancelled due to manual cancellation or the limit has been hit
+				if d.RowsRemaining(ctx) == 0 {
+					return nil, nil
+				}
 			}
 		}
 
