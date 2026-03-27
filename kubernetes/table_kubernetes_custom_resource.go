@@ -37,7 +37,8 @@ func tableKubernetesCustomResource(ctx context.Context) *plugin.Table {
 		Name:        tableName,
 		Description: description,
 		List: &plugin.ListConfig{
-			Hydrate: listK8sCustomResources(ctx, crdName, resourceName, resourceNameSingular, groupName, activeVersion),
+			Hydrate:    listK8sCustomResources(ctx, crdName, resourceName, resourceNameSingular, groupName, activeVersion),
+			KeyColumns: getCommonOptionalKeyQuals(),
 		},
 		Columns: k8sCRDResourceCommonColumns(getCustomResourcesDynamicColumns(ctx, versionSchemaSpec, versionSchemaStatus)),
 	}
@@ -190,6 +191,17 @@ func listK8sCustomResources(ctx context.Context, crdName string, resourceName st
 			Limit: 500,
 		}
 
+		// Limiting the results
+		limit := d.QueryContext.Limit
+		if d.QueryContext.Limit != nil {
+			if *limit < input.Limit {
+				if *limit < 1 {
+					input.Limit = 1
+				} else {
+					input.Limit = *limit
+				}
+			}
+		}
 		var response *unstructured.UnstructuredList
 		pageLeft := true
 
