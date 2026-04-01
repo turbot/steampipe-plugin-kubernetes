@@ -43,7 +43,7 @@ func tableKubernetesKotsConfig(ctx context.Context) *plugin.Table {
 			{Name: "item_help_text", Type: proto.ColumnType_STRING, Description: "Help text for the config item.", Transform: transform.FromField("ItemHelpText")},
 
 			// Context
-			{Name: "context_name", Type: proto.ColumnType_STRING, Description: "Kubectl config context name.", Hydrate: getKotsConfigContext},
+			{Name: "context_name", Type: proto.ColumnType_STRING, Description: "Kubectl config context name.", Transform: transform.FromField("ContextName")},
 		},
 	}
 }
@@ -51,6 +51,7 @@ func tableKubernetesKotsConfig(ctx context.Context) *plugin.Table {
 type KotsConfigRow struct {
 	AppSlug          string
 	Namespace        string
+	ContextName      string
 	Sequence         int64
 	GroupName        string
 	GroupTitle       string
@@ -73,6 +74,12 @@ func listKotsConfig(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateD
 	appSlug := d.EqualsQualString("app_slug")
 	if appSlug == "" {
 		return nil, nil
+	}
+
+	// Resolve context name once
+	contextName := ""
+	if currentContext, err := getKubectlContext(ctx, d, nil); err == nil && currentContext != nil {
+		contextName = currentContext.(string)
 	}
 
 	namespaces, err := getKotsNamespaces(ctx, d)
@@ -125,6 +132,7 @@ func listKotsConfig(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateD
 				d.StreamListItem(ctx, KotsConfigRow{
 					AppSlug:          appSlug,
 					Namespace:        namespace,
+					ContextName:      contextName,
 					Sequence:         sequence,
 					GroupName:        group.Name,
 					GroupTitle:       group.Title,
@@ -148,12 +156,4 @@ func listKotsConfig(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateD
 	}
 
 	return nil, nil
-}
-
-func getKotsConfigContext(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
-	currentContext, err := getKubectlContext(ctx, d, nil)
-	if err != nil {
-		return nil, nil
-	}
-	return currentContext, nil
 }

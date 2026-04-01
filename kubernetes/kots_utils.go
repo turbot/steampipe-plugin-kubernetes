@@ -78,14 +78,55 @@ type KotsConfigResponse struct {
 }
 
 type KotsApp struct {
-	ID              string `json:"id"`
-	Slug            string `json:"slug"`
-	Name            string `json:"name"`
-	CurrentSequence int64  `json:"currentSequence"`
+	ID                string     `json:"id"`
+	Slug              string     `json:"slug"`
+	Name              string     `json:"name"`
+	IsAirgap          bool       `json:"isAirgap"`
+	CurrentSequence   int64      `json:"currentSequence"`
+	UpstreamURI       string     `json:"upstreamUri"`
+	IconURI           string     `json:"iconUri"`
+	CreatedAt         time.Time  `json:"createdAt"`
+	UpdatedAt         *time.Time `json:"updatedAt"`
+	LastUpdateCheckAt *time.Time `json:"lastUpdateCheckAt"`
+	HasPreflight      bool       `json:"hasPreflight"`
+	IsConfigurable    bool       `json:"isConfigurable"`
+	UpdateCheckerSpec string     `json:"updateCheckerSpec"`
+	AutoDeploy        string     `json:"autoDeploy"`
+	AppState          string     `json:"appState"`
+	LicenseType       string     `json:"licenseType"`
+	AllowRollback     bool       `json:"allowRollback"`
+	AllowSnapshots    bool       `json:"allowSnapshots"`
+	TargetKotsVersion string     `json:"targetKotsVersion"`
+	IsSemverRequired  bool       `json:"isSemverRequired"`
+	Downstream        KotsAppDownstream `json:"downstream"`
+}
+
+type KotsAppDownstream struct {
+	Name           string                     `json:"name"`
+	CurrentVersion *KotsAppDownstreamVersion  `json:"currentVersion"`
+}
+
+type KotsAppDownstreamVersion struct {
+	VersionLabel string     `json:"versionLabel"`
+	Sequence     int64      `json:"sequence"`
+	Status       string     `json:"status"`
+	CreatedOn    *time.Time `json:"createdOn,omitempty"`
+	DeployedAt   *time.Time `json:"deployedAt,omitempty"`
 }
 
 type KotsListAppsResponse struct {
 	Apps []KotsApp `json:"apps"`
+}
+
+type KotsAppStatusResponse struct {
+	AppStatus *KotsAppStatus `json:"appstatus"`
+}
+
+type KotsAppStatus struct {
+	AppID     string    `json:"appId"`
+	UpdatedAt time.Time `json:"updatedAt"`
+	State     string    `json:"state"`
+	Sequence  int64     `json:"sequence"`
 }
 
 // findKotsadmNamespaces discovers all namespaces that have a running kotsadm pod
@@ -358,6 +399,22 @@ func getKotsApps(session *kotsPortForwardSession) (*KotsListAppsResponse, error)
 	var response KotsListAppsResponse
 	if err := json.Unmarshal(body, &response); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal apps response: %w", err)
+	}
+
+	return &response, nil
+}
+
+// getKotsAppStatus fetches the runtime status of a KOTS app
+func getKotsAppStatus(session *kotsPortForwardSession, appSlug string) (*KotsAppStatusResponse, error) {
+	path := fmt.Sprintf("/api/v1/app/%s/status", url.PathEscape(appSlug))
+	body, err := kotsAPIGet(session, path)
+	if err != nil {
+		return nil, err
+	}
+
+	var response KotsAppStatusResponse
+	if err := json.Unmarshal(body, &response); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal app status response: %w", err)
 	}
 
 	return &response, nil
