@@ -66,6 +66,8 @@ func pluginTableDefinitions(ctx context.Context, d *plugin.TableMapData) (map[st
 		"kubernetes_event":                      tableKubernetesEvent(ctx),
 		"kubernetes_horizontal_pod_autoscaler":  tableKubernetesHorizontalPodAutoscaler(ctx),
 		"kubernetes_ingress":                    tableKubernetesIngress(ctx),
+		"kubernetes_kots_config":                tableKubernetesKotsConfig(ctx),
+		"kubernetes_kots_version":               tableKubernetesKotsVersion(ctx),
 		"kubernetes_job":                        tableKubernetesJob(ctx),
 		"kubernetes_limit_range":                tableKubernetesLimitRange(ctx),
 		"kubernetes_namespace":                  tableKubernetesNamespace(ctx),
