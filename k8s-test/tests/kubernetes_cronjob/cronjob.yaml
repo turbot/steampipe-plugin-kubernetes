@@ -4,6 +4,7 @@ metadata:
   name: hello
 spec:
   schedule: "* * * * *"
+  timeZone: "Europe/Berlin"
   jobTemplate:
     spec:
       template:

@@ -39,6 +39,12 @@ func tableKubernetesCronJob(ctx context.Context) *plugin.Table {
 				Transform:   transform.FromField("Spec.Schedule"),
 			},
 			{
+				Name:        "time_zone",
+				Type:        proto.ColumnType_STRING,
+				Description: "The time zone name for the given schedule.",
+				Transform:   transform.FromField("Spec.TimeZone"),
+			},
+			{
 				Name:        "starting_deadline_seconds",
 				Type:        proto.ColumnType_INT,
 				Description: "Optional deadline in seconds for starting the job if it misses scheduledtime for any reason.",
