@@ -24,6 +24,7 @@ select
   uid,
   failed_jobs_history_limit,
   schedule,
+  time_zone,
   suspend
 from
   kubernetes_cronjob;
@@ -36,6 +37,7 @@ select
   uid,
   failed_jobs_history_limit,
   schedule,
+  time_zone,
   suspend
 from
   kubernetes_cronjob;
