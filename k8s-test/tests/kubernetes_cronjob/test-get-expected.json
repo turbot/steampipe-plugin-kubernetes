@@ -2,6 +2,7 @@
   {
     "name": "hello",
     "namespace": "default",
-    "suspend": false
+    "suspend": false,
+    "time_zone": "Europe/Berlin"
   }
 ]

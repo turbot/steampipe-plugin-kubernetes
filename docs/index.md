@@ -88,6 +88,34 @@ By default, the plugin will use the kubeconfig in `~/.kube/config` with the curr
 
 You can also set the kubeconfig file path and context with the `config_path` and `config_context` config arguments respectively.
 
+The `config_path` argument can also be set to the kubeconfig contents directly instead of a file path. This is useful when the kubeconfig is generated programmatically or stored in a secret, and it avoids any disk I/O:
+
+```hcl
+connection "kubernetes" {
+  plugin      = "kubernetes"
+  config_path = <<-EOT
+apiVersion: v1
+kind: Config
+clusters:
+  - name: my-cluster
+    cluster:
+      server: https://my-cluster.example.com
+contexts:
+  - name: my-context
+    context:
+      cluster: my-cluster
+      user: my-user
+current-context: my-context
+users:
+  - name: my-user
+    user:
+      token: my-token
+EOT
+}
+```
+
+The value is treated as inline kubeconfig when it contains newlines and an `apiVersion:` key; otherwise it is treated as a file path.
+
 This plugin supports querying Kubernetes clusters using [OpenID Connect](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#openid-connect-tokens) (OIDC) authentication. No extra configuration is required to query clusters using OIDC.
 
 If no kubeconfig file is found, then the plugin will [attempt to access the API from within a pod](https://kubernetes.io/docs/tasks/run-application/access-api-from-pod/#accessing-the-api-from-within-a-pod) using the service account Kubernetes gives to pods.

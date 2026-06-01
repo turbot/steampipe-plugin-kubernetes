@@ -1,7 +1,8 @@
 select
   name,
   namespace,
-  suspend
+  suspend,
+  time_zone
 from
   kubernetes_cronjob
 where
