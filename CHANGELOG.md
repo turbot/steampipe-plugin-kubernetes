@@ -1,3 +1,10 @@
+## v1.6.0 [2026-05-31]
+
+_Enhancements_
+
+- Added support for passing inline kubeconfig contents to the `config_path` config argument. ([#354](https://github.com/turbot/steampipe-plugin-kubernetes/pull/354)) (Thanks [@Abhi011999](https://github.com/Abhi011999) for the contribution!)
+- Added `time_zone` column to the `kubernetes_cronjob` table. ([#365](https://github.com/turbot/steampipe-plugin-kubernetes/pull/365)) (Thanks [@mikkeloscar](https://github.com/mikkeloscar) for the contribution!)
+
 ## v1.5.2 [2026-03-06]
 
 _Bug fixes_
