@@ -47,7 +47,7 @@ func getCustomResourcesDynamicColumns(ctx context.Context, versionSchemaSpec int
 	columns := []*plugin.Column{}
 
 	// default metadata columns
-	allColumns := []string{"name", "uid", "kind", "api_version", "namespace", "creation_timestamp", "labels", "start_line", "end_line", "path", "source_type", "annotations", "context_name"}
+	allColumns := []string{"name", "uid", "kind", "api_version", "namespace", "creation_timestamp", "labels", "start_line", "end_line", "path", "source_type", "annotations", "context_name", "owner_references"}
 
 	// add the spec columns
 	schemaSpec := versionSchemaSpec.(v1.JSONSchemaProps)
@@ -118,6 +118,7 @@ type CRDResourceInfo struct {
 	Spec              interface{}
 	Labels            interface{}
 	Status            interface{}
+	OwnerReferences   interface{}
 	Path              string
 	StartLine         int
 	EndLine           int
@@ -164,6 +165,7 @@ func listK8sCustomResources(ctx context.Context, crdName string, resourceName st
 				CreationTimestamp: deployment.GetCreationTimestamp(),
 				Annotations:       deployment.GetAnnotations(),
 				Labels:            deployment.GetLabels(),
+				OwnerReferences:   deployment.GetOwnerReferences(),
 				Spec:              data["spec"],
 				Status:            data["status"],
 				StartLine:         content.StartLine,
@@ -208,6 +210,7 @@ func listK8sCustomResources(ctx context.Context, crdName string, resourceName st
 				Annotations:       crd.GetAnnotations(),
 				CreationTimestamp: crd.GetCreationTimestamp(),
 				Labels:            crd.GetLabels(),
+				OwnerReferences:   crd.GetOwnerReferences(),
 				Spec:              data["spec"],
 				Status:            data["status"],
 				SourceType:        "deployed",
