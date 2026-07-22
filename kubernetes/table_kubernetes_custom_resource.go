@@ -151,7 +151,7 @@ func listK8sCustomResources(ctx context.Context, crdName string, resourceName st
 			deployment := content.ParsedData.(*unstructured.Unstructured)
 
 			// Also, the apiVersion of the custom resource must be in format of <groupName in CRD>/<spec version in CRD>
-			if !(deployment.GetAPIVersion() == fmt.Sprintf("%s/%s", groupName, activeVersion)) {
+			if deployment.GetAPIVersion() != fmt.Sprintf("%s/%s", groupName, activeVersion) {
 				continue
 			}
 

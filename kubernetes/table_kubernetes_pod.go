@@ -616,7 +616,8 @@ func transformPodCpuAndMemoryUnit(ctx context.Context, d *transform.TransformDat
 
 	containers := pod.Spec.DeepCopy().Containers
 
-	if param == "limit" {
+	switch param {
+	case "limit":
 		limitCPUMemoryMaps := make([]map[string]interface{}, 0)
 
 		for _, container := range containers {
@@ -646,7 +647,7 @@ func transformPodCpuAndMemoryUnit(ctx context.Context, d *transform.TransformDat
 		}
 
 		return limitCPUMemoryMaps, nil
-	} else if param == "request" {
+	case "request":
 		requestCPUMemoryMaps := make([]map[string]interface{}, 0)
 
 		for _, container := range containers {
