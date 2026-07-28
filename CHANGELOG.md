@@ -1,3 +1,9 @@
+## v1.7.0 [2026-07-28]
+
+_Enhancements_
+
+- Added `owner_references` column to dynamically-generated custom resource tables. ([#374](https://github.com/turbot/steampipe-plugin-kubernetes/pull/374)) (Thanks [@wguilherme](https://github.com/wguilherme) for the contribution!)
+
 ## v1.6.0 [2026-05-31]
 
 _Enhancements_
