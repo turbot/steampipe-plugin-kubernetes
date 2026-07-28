@@ -89,6 +89,7 @@ func k8sCRDResourceCommonColumns(columns []*plugin.Column) []*plugin.Column {
 		{Name: "context_name", Type: proto.ColumnType_STRING, Description: "Kubectl config context name.", Transform: transform.FromField("ContextName").Transform(transform.NullIfZeroValue)},
 		{Name: "source_type", Type: proto.ColumnType_STRING, Description: "The source of the resource. Possible values are: deployed and manifest. If the resource is fetched from the spec file the value will be manifest."},
 		{Name: "annotations", Type: proto.ColumnType_JSON, Description: "Annotations is an unstructured key value map stored with a resource that may be set by external tools to store and retrieve arbitrary metadata."},
+		{Name: "owner_references", Type: proto.ColumnType_JSON, Description: "List of objects depended by this object. If ALL objects in the list have been deleted, this object will be garbage collected. If this object is managed by a controller, then an entry in this list will point to this controller, with the controller field set to true. There cannot be more than one managing controller."},
 	}
 	allColumns = append(allColumns, columns...)
 	allColumns = append(allColumns, manifestResourceColumns()...)

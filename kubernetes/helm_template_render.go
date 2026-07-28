@@ -193,7 +193,7 @@ func renderedHelmTemplateContentUncached(ctx context.Context, d *plugin.QueryDat
 			}
 
 			// Skip if no kind defined
-			if !(strings.Contains(resource, "kind:") || strings.Contains(resource, "\"kind\":")) {
+			if !strings.Contains(resource, "kind:") && !strings.Contains(resource, "\"kind\":") {
 				continue
 			}
 
@@ -254,7 +254,7 @@ func runInstall(args []string, client *action.Install, valueOpts *values.Options
 		return nil, []string{}, err
 	}
 
-	cp, err := client.ChartPathOptions.LocateChart(charts, settings)
+	cp, err := client.LocateChart(charts, settings)
 	if err != nil {
 		return nil, []string{}, err
 	}
