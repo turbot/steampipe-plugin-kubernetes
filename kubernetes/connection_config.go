@@ -1,7 +1,7 @@
 package kubernetes
 
 import (
-	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
+	"github.com/turbot/steampipe-plugin-sdk/v6/plugin"
 )
 
 type kubernetesConfig struct {
@@ -22,9 +22,9 @@ type chartConfig struct {
 
 // GetConfig :: retrieve and cast connection config from query data
 func GetConfig(connection *plugin.Connection) kubernetesConfig {
-	if connection == nil || connection.Config == nil {
+	if connection == nil || connection.GetConfig() == nil {
 		return kubernetesConfig{}
 	}
-	config, _ := connection.Config.(kubernetesConfig)
+	config, _ := connection.GetConfig().(kubernetesConfig)
 	return config
 }

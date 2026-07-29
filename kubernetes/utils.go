@@ -31,9 +31,9 @@ import (
 
 	"github.com/mitchellh/go-homedir"
 	filehelpers "github.com/turbot/go-kit/files"
-	"github.com/turbot/steampipe-plugin-sdk/v5/connection"
-	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
-	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
+	"github.com/turbot/steampipe-plugin-sdk/v6/connection"
+	"github.com/turbot/steampipe-plugin-sdk/v6/plugin"
+	"github.com/turbot/steampipe-plugin-sdk/v6/plugin/transform"
 )
 
 // yamlDocSeparator matches YAML document separator lines: "---" at the start
