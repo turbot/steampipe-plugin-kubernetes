@@ -81,7 +81,7 @@ func GetNewClientset(ctx context.Context, d *plugin.QueryData) (*kubernetes.Clie
 	// have we already created and cached the session?
 	serviceCacheKey := "k8sClient"
 
-	if cachedData, ok := d.ConnectionManager.Cache.Get(serviceCacheKey); ok {
+	if cachedData, ok := d.ConnectionCache.Get(ctx, serviceCacheKey); ok {
 		return cachedData.(*kubernetes.Clientset), nil
 	}
 
@@ -108,7 +108,7 @@ func GetNewClientset(ctx context.Context, d *plugin.QueryData) (*kubernetes.Clie
 			}
 
 			// save clientset in cache
-			d.ConnectionManager.Cache.Set(serviceCacheKey, clientset)
+			_ = d.ConnectionCache.Set(ctx, serviceCacheKey, clientset)
 
 			return clientset, nil
 		}
@@ -122,7 +122,7 @@ func GetNewClientset(ctx context.Context, d *plugin.QueryData) (*kubernetes.Clie
 	}
 
 	// save clientset in cache
-	d.ConnectionManager.Cache.Set(serviceCacheKey, clientset)
+	_ = d.ConnectionCache.Set(ctx, serviceCacheKey, clientset)
 
 	return clientset, err
 }
@@ -148,7 +148,7 @@ func GetNewClientCRD(ctx context.Context, d *plugin.QueryData) (*apiextension.Cl
 	// have we already created and cached the session?
 	serviceCacheKey := "GetNewClientCRD"
 
-	if cachedData, ok := d.ConnectionManager.Cache.Get(serviceCacheKey); ok {
+	if cachedData, ok := d.ConnectionCache.Get(ctx, serviceCacheKey); ok {
 		return cachedData.(*apiextension.Clientset), nil
 	}
 
@@ -175,7 +175,7 @@ func GetNewClientCRD(ctx context.Context, d *plugin.QueryData) (*apiextension.Cl
 			}
 
 			// save clientset in cache
-			d.ConnectionManager.Cache.Set(serviceCacheKey, clientset)
+			_ = d.ConnectionCache.Set(ctx, serviceCacheKey, clientset)
 
 			return clientset, nil
 		}
@@ -190,7 +190,7 @@ func GetNewClientCRD(ctx context.Context, d *plugin.QueryData) (*apiextension.Cl
 	}
 
 	// save clientset in cache
-	d.ConnectionManager.Cache.Set(serviceCacheKey, clientset)
+	_ = d.ConnectionCache.Set(ctx, serviceCacheKey, clientset)
 
 	return clientset, err
 }
@@ -277,7 +277,7 @@ func GetNewClientDynamic(ctx context.Context, d *plugin.QueryData) (dynamic.Inte
 	// have we already created and cached the session?
 	serviceCacheKey := "GetNewClientDynamic"
 
-	if cachedData, ok := d.ConnectionManager.Cache.Get(serviceCacheKey); ok {
+	if cachedData, ok := d.ConnectionCache.Get(ctx, serviceCacheKey); ok {
 		return cachedData.(dynamic.Interface), nil
 	}
 
@@ -302,7 +302,7 @@ func GetNewClientDynamic(ctx context.Context, d *plugin.QueryData) (dynamic.Inte
 			}
 
 			// save clientset in cache
-			d.ConnectionManager.Cache.Set(serviceCacheKey, clientset)
+			_ = d.ConnectionCache.Set(ctx, serviceCacheKey, clientset)
 
 			return clientset, nil
 		}
@@ -316,7 +316,7 @@ func GetNewClientDynamic(ctx context.Context, d *plugin.QueryData) (dynamic.Inte
 	}
 
 	// save clientset in cache
-	d.ConnectionManager.Cache.Set(serviceCacheKey, clientset)
+	_ = d.ConnectionCache.Set(ctx, serviceCacheKey, clientset)
 
 	return clientset, err
 }
@@ -345,7 +345,7 @@ func getK8Config(ctx context.Context, d *plugin.QueryData) (clientcmd.ClientConf
 	// have we already created and cached the session?
 	cacheKey := "getK8Config"
 
-	if cachedData, ok := d.ConnectionManager.Cache.Get(cacheKey); ok {
+	if cachedData, ok := d.ConnectionCache.Get(ctx, cacheKey); ok {
 		return cachedData.(clientcmd.ClientConfig), nil
 	}
 
@@ -375,7 +375,7 @@ func getK8Config(ctx context.Context, d *plugin.QueryData) (clientcmd.ClientConf
 		if kubeconfig, ok, err := tryInlineKubeconfig(*kubernetesConfig.ConfigPath, kubernetesConfig.ConfigContext); err != nil {
 			return nil, err
 		} else if ok {
-			d.ConnectionManager.Cache.Set(cacheKey, kubeconfig)
+			_ = d.ConnectionCache.Set(ctx, cacheKey, kubeconfig)
 			return kubeconfig, nil
 		}
 	}
@@ -431,7 +431,7 @@ func getK8Config(ctx context.Context, d *plugin.QueryData) (clientcmd.ClientConf
 	kubeconfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loader, overrides)
 
 	// save the config in cache
-	d.ConnectionManager.Cache.Set(cacheKey, kubeconfig)
+	_ = d.ConnectionCache.Set(ctx, cacheKey, kubeconfig)
 
 	return kubeconfig, nil
 }
@@ -612,7 +612,7 @@ func pathOrContents(poc string) (string, bool, error) {
 
 func getKubectlContext(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
 	cacheKey := "getKubectlContext"
-	if cachedData, ok := d.ConnectionManager.Cache.Get(cacheKey); ok {
+	if cachedData, ok := d.ConnectionCache.Get(ctx, cacheKey); ok {
 		return cachedData.(string), nil
 	}
 
@@ -637,7 +637,7 @@ func getKubectlContext(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 	}
 
 	// save current context in cache
-	d.ConnectionManager.Cache.Set(cacheKey, currentContext)
+	_ = d.ConnectionCache.Set(ctx, cacheKey, currentContext)
 
 	return currentContext, nil
 }
